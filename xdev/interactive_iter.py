@@ -72,7 +72,6 @@ class InteractiveIter(object):
         iiter.index = startx
         iiter.display_item = display_item
         iiter.verbose = verbose
-        pass
 
     @classmethod
     def eventloop(cls, custom_actions=[]):
@@ -234,27 +233,8 @@ class InteractiveIter(object):
         return ans
 
     def wait_for_input(iiter):
-        #try:
-        #    import time
-        #    import guitool
-        #    #from guitool.__PYQT__ import QtGui
-        #except Exception:
         ans = input().strip()
         return ans
-        #else:
-        #    iiter._is_waiting = True
-        #    qapp = guitool.ensure_qtapp()[0]
-        #    qapp.start_keylog()
-        #    guitool.qtapp_loop()
-        #    print('wait for input')
-        #    import xdev
-        #    xdev.embed()
-        #    while iiter._is_waiting:
-        #        print('waiting')
-        #        #QtWidgets.qApp.processEvents()
-        #        qapp.processEvents()
-        #        time.sleep(.05)
-        #    return ans
 
     def __call__(iiter, iterable=None):
         iiter.iterable = iterable

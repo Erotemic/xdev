@@ -1,0 +1,8 @@
+0.0.1
+-----
+* Initial version
+* Added autogen imports
+* Added embed
+* Added embed_on_exception
+* Added fix_embed_globals
+* Added InteractiveIter
