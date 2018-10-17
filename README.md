@@ -39,7 +39,7 @@ def func(a=1, b=2, c=3):
 
 But I know these things are a little dirty. 
 
-But these aren't production practises. These are development tricks and life
+But these aren't production practices. These are development tricks and life
 hacks to make working faster.
 
 
