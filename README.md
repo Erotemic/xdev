@@ -44,3 +44,18 @@ hacks to make working faster.
 
 
 Also see `xinspect` for things like `autogen_imports`
+
+```python
+    >>> import ubelt as ub
+    >>> source = ub.codeblock(
+    >>>     '''
+    >>>     p = os.path.dirname(join('a', 'b'))
+    >>>     glob.glob(p)
+    >>>     ''')
+    >>> # Generate a list of lines to fix the name errors
+    >>> lines = autogen_imports(source=source)
+    >>> print(lines)
+    ['import glob', 'from os.path import join', 'import os']
+```
+
+https://github.com/Erotemic/xinspect
