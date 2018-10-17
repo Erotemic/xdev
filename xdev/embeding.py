@@ -1,6 +1,6 @@
 import sys
 from functools import partial
-from xdoctest.dynamic_analysis import get_parent_frame
+from xdoctest.dynamic_analysis import get_parent_frame, get_stack_frame
 from . import util
 import time
 
@@ -119,26 +119,56 @@ class EmbedOnException(object):
     def __call__(self):
         return self
 
-    def __exit__(self, type_, value, trace):
-        if trace is not None:
+    def __exit__(__self, __type, __value, __trace):
+        if __trace is not None:
             print('!!! EMBED ON EXCEPTION !!!')
-            print('[util_dbg] %r in context manager!: %s ' % (type_, str(value)))
+            print('[util_dbg] %r in context manager!: %s ' % (__type, str(__value)))
             import traceback
-            traceback.print_exception(type_, value, trace)
+            traceback.print_exception(__type, __value, __trace)
             # Grab the context of the frame where the failure occurred
-            trace_globals = trace.tb_frame.f_globals
-            trace_locals = trace.tb_frame.f_locals
-            trace_ns = trace_globals.copy()
-            trace_ns.update(trace_locals)
-            # Hack to bring back self
-            if 'self' in trace_ns:
-                self = trace_ns['self']
-            # execstr_trace_g = ut.execstr_dict(trace_globals, 'trace_globals')
-            # execstr_trace_l = ut.execstr_dict(trace_locals, 'trace_locals')
-            # execstr_trace = execstr_trace_g + '\n' + execstr_trace_l
-            # exec(execstr_trace)
-            locals().update(trace_ns)
+            __trace_globals = __trace.tb_frame.f_globals
+            __trace_locals = __trace.tb_frame.f_locals
+            __trace_ns = __trace_globals.copy()
+            __trace_ns.update(__trace_locals)
+            # Hack to bring back names that we clobber
+            if '__self' in __trace_ns:
+                __self = __trace_ns['__self']
+            locals().update(__trace_ns)  # I don't think this does anythign
             embed()
+
+
+def fix_embed_globals():
+    """
+    HACK adds current locals() to globals().
+    Can be dangerous.
+
+    Solves the following issue:
+
+        def foo():
+            x = 5
+            # You embed here
+            import xdev
+            xdev.embed()
+
+            '''
+            Now you try and run this line manually but you get a NameError
+
+            result = [x + i for i in range(10)]
+
+            No problem, just use. It changes all local variables to globals
+            xdev.fix_embed_globals()
+
+            '''
+            result = [x + i for i in range(10)]
+
+        foo()
+    """
+    # Get the stack frame of whoever called this function
+    frame = get_stack_frame(n=1)
+    # Hack all of the local variables to be global variables
+    frame.f_globals.update(frame.f_locals)
+    # Leave some trace that we did this
+    frame.f_globals['_did_xdev_fix_embed_globals'] = True
 
 
 embed_on_exception_context = EmbedOnException()
