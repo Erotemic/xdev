@@ -35,6 +35,7 @@ __submodules__ = [
     'interactive_iter',
     'introspect',
     'class_reloader',
+    'misc',
 ]
 
 __extra_all__ = [
@@ -50,14 +51,17 @@ from xdev import embeding
 from xdev import interactive_iter
 from xdev import introspect
 from xdev import class_reloader
+from xdev import misc
 
 from xdev.embeding import (EmbedOnException, embed, embed_on_exception_context,
                            fix_embed_globals,)
 from xdev.interactive_iter import (InteractiveIter,)
 from xdev.introspect import (get_func_kwargs,)
 from xdev.class_reloader import (reload_class,)
+from xdev.misc import (editfile, quantum_random, startfile,)
 
-__all__ = ['EmbedOnException', 'InteractiveIter', 'class_reloader', 'embed',
-           'embed_on_exception_context', 'embeding', 'fix_embed_globals',
-           'get_func_kwargs', 'interactive_iter', 'introspect', 'reload_class',
+__all__ = ['EmbedOnException', 'InteractiveIter', 'class_reloader', 'editfile',
+           'embed', 'embed_on_exception_context', 'embeding',
+           'fix_embed_globals', 'get_func_kwargs', 'interactive_iter',
+           'introspect', 'misc', 'quantum_random', 'reload_class', 'startfile',
            'util']
