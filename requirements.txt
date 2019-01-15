@@ -5,3 +5,4 @@ ubelt >= 0.5.0
 pytest-cov
 numpy
 xinspect
+pyfiglet
