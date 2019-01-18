@@ -58,10 +58,10 @@ from xdev.embeding import (EmbedOnException, embed, embed_on_exception_context,
 from xdev.interactive_iter import (InteractiveIter,)
 from xdev.introspect import (get_func_kwargs,)
 from xdev.class_reloader import (reload_class,)
-from xdev.misc import (editfile, quantum_random, startfile,)
+from xdev.misc import (editfile, quantum_random, startfile, view_directory,)
 
 __all__ = ['EmbedOnException', 'InteractiveIter', 'class_reloader', 'editfile',
            'embed', 'embed_on_exception_context', 'embeding',
            'fix_embed_globals', 'get_func_kwargs', 'interactive_iter',
            'introspect', 'misc', 'quantum_random', 'reload_class', 'startfile',
-           'util']
+           'util', 'view_directory']

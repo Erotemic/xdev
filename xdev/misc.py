@@ -70,10 +70,10 @@ def startfile(fpath, verbose=True):
         >>> proc = ub.startfile(fpath1)
     """
     if verbose:
-        print('[ubelt] startfile("{}")'.format(fpath))
+        print('[xdev] startfile("{}")'.format(fpath))
     fpath = normpath(fpath)
     if not exists(fpath):
-        raise Exception('Cannot start nonexistant file: %r' % fpath)
+        raise Exception('Cannot start nonexistant file: {!r}'.format(fpath))
     if not ub.WIN32:
         fpath = pipes.quote(fpath)
     if ub.LINUX:
@@ -108,3 +108,44 @@ def quantum_random():
     assert data16.flags['C_CONTIGUOUS']
     data32 = data16.view(np.dtype('uint32'))[0]
     return data32
+
+
+def view_directory(dpath=None, verbose=False):
+    """
+    View a directory in the operating system file browser. Currently supports
+    windows explorer, mac open, and linux nautlius.
+
+    Args:
+        dpath (PathLike): directory name
+        verbose (bool): verbosity
+    """
+    if dpath is None:
+        dpath = os.getcwd()
+    dpath = os.path.normpath(dpath)
+    if verbose:
+        print('[xdev] view_directory({!r}) '.format(dpath))
+    if not exists(dpath):
+        raise Exception('Cannot view nonexistant directory: {!r}'.format(dpath))
+    if False:
+        try:
+            import vimtk.xctrl
+            import vimtk.cplat_ctrl
+            if vimtk.xctrl.is_directory_open(dpath):
+                if verbose:
+                    print('[xdev] dpath={!r} is already open'.format(dpath))
+                win = vimtk.cplat_ctrl.Window.find('Nautilus.*' + os.path.basename(dpath))
+                win.focus()
+                return
+        except Exception:
+            pass
+    if ub.LINUX:
+        info = ub.cmd(('nautilus', dpath), detatch=True, verbose=verbose)
+    elif ub.DARWIN:
+        info = ub.cmd(('open', dpath), detatch=True, verbose=verbose)
+    elif ub.WIN32:
+        info = ub.cmd(('explorer.exe', dpath), detatch=True, verbose=verbose)
+    else:
+        raise RuntimeError('Unknown Platform')
+    if info is not None:
+        if not info['proc']:
+            raise Exception('startfile failed')
