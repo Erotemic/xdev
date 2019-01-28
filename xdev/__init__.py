@@ -27,7 +27,7 @@ CommandLine:
 #
 #     - [ ] Automatically add custom defined names in this file to __all__
 """
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 
 
 __submodules__ = [
@@ -36,6 +36,7 @@ __submodules__ = [
     'introspect',
     'class_reloader',
     'misc',
+    'profiler',
 ]
 
 __extra_all__ = [
@@ -52,6 +53,7 @@ from xdev import interactive_iter
 from xdev import introspect
 from xdev import class_reloader
 from xdev import misc
+from xdev import profiler
 
 from xdev.embeding import (EmbedOnException, embed, embed_on_exception_context,
                            fix_embed_globals,)
@@ -59,9 +61,11 @@ from xdev.interactive_iter import (InteractiveIter,)
 from xdev.introspect import (get_func_kwargs,)
 from xdev.class_reloader import (reload_class,)
 from xdev.misc import (editfile, quantum_random, startfile, view_directory,)
+from xdev.profiler import (IS_PROFILING, profile, profile_now,)
 
-__all__ = ['EmbedOnException', 'InteractiveIter', 'class_reloader', 'editfile',
-           'embed', 'embed_on_exception_context', 'embeding',
-           'fix_embed_globals', 'get_func_kwargs', 'interactive_iter',
-           'introspect', 'misc', 'quantum_random', 'reload_class', 'startfile',
-           'util', 'view_directory']
+__all__ = ['EmbedOnException', 'IS_PROFILING', 'InteractiveIter',
+           'class_reloader', 'editfile', 'embed', 'embed_on_exception_context',
+           'embeding', 'fix_embed_globals', 'get_func_kwargs',
+           'interactive_iter', 'introspect', 'misc', 'profile', 'profile_now',
+           'profiler', 'quantum_random', 'reload_class', 'startfile', 'util',
+           'view_directory']
