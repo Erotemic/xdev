@@ -42,6 +42,28 @@ def _dump_global_profile_report():
 
 
 def profile_now(func):
+    """
+    Eagerly report profile information after each call to `func`.
+
+    Args:
+        func (Callable): function to profile
+
+    Example:
+        >>> # xdoctest: +SKIP
+        >>> def func_to_profile():
+        >>>     list(range(10))
+        >>>     tuple(range(100))
+        >>>     set(range(1000))
+        >>> profile_now(func_to_profile)()  # xdoctest: +IGNORE_WANT
+        Total time: 3.8e-05 s
+        Function: func_to_profile at line 1
+        Line #      Hits         Time  Per Hit   % Time  Line Contents
+        ==============================================================
+             1                                           def func_to_profile():
+             2         1          4.0      4.0     10.5      list(range(10))
+             3         1          3.0      3.0      7.9      tuple(range(100))
+             4         1         31.0     31.0     81.6      set(range(1000))
+    """
     import line_profiler
     profile = line_profiler.LineProfiler()
     new_func = profile(func)
