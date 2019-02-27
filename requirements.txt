@@ -6,3 +6,4 @@ pytest-cov
 numpy
 xinspect
 pyfiglet
+line_profiler

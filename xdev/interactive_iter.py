@@ -238,3 +238,14 @@ class InteractiveIter(object):
 
     def __call__(iiter, iterable=None):
         iiter.iterable = iterable
+
+    @classmethod
+    def draw(iiter):
+        """
+        in the common case where InteractiveIter is used to view matplotlib
+        figures, you will have to draw the figure manually. This is a helper
+        for that task.
+        """
+        from matplotlib import pyplot as plt
+        fig = plt.gcf()
+        fig.canvas.draw()
