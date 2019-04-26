@@ -41,6 +41,18 @@ def editfile(fpath, verbose=True):
         print('[xdev] editfile("{}")'.format(fpath))
 
     editor = os.environ.get('VISUAL', 'gvim')
+    if not ub.find_exe(editor):
+        import warnings
+        warnings.warn('Cannot find visual editor={}'.format(editor), UserWarning)
+        # Try and fallback on commonly installed editor
+        alt_candidates = [
+            'gedit',
+            'TextEdit'
+            'Notepad',
+        ]
+        for cand in alt_candidates:
+            if ub.find_exe(cand):
+                editor = cand
 
     if not exists(fpath):
         raise IOError('Cannot start nonexistant file: %r' % fpath)
