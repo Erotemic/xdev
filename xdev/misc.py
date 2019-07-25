@@ -161,3 +161,68 @@ def view_directory(dpath=None, verbose=False):
     if info is not None:
         if not info['proc']:
             raise Exception('startfile failed')
+
+
+def byte_str(num, unit='auto', precision=2):
+    """
+    Automatically chooses relevant unit (KB, MB, or GB) for displaying some
+    number of bytes.
+
+    Args:
+        num (int): number of bytes
+        unit (str): which unit to use, can be auto, B, KB, MB, GB, TB, PB, EB,
+            ZB, or YB.
+
+    References:
+        https://en.wikipedia.org/wiki/Orders_of_magnitude_(data)
+
+    Returns:
+        str: string representing the number of bytes with appropriate units
+
+    Example:
+        >>> num_list = [1, 100, 1024,  1048576, 1073741824, 1099511627776]
+        >>> result = ub.repr2(list(map(byte_str, num_list)), nl=0)
+        >>> print(result)
+        ['0.00 KB', '0.10 KB', '1.00 KB', '1.00 MB', '1.00 GB', '1.00 TB']
+    """
+    abs_num = abs(num)
+    if unit == 'auto':
+        if abs_num < 2.0 ** 10:
+            unit = 'KB'
+        elif abs_num < 2.0 ** 20:
+            unit = 'KB'
+        elif abs_num < 2.0 ** 30:
+            unit = 'MB'
+        elif abs_num < 2.0 ** 40:
+            unit = 'GB'
+        elif abs_num < 2.0 ** 50:
+            unit = 'TB'
+        elif abs_num < 2.0 ** 60:
+            unit = 'PB'
+        elif abs_num < 2.0 ** 70:
+            unit = 'EB'
+        elif abs_num < 2.0 ** 80:
+            unit = 'ZB'
+        else:
+            unit = 'YB'
+    if unit.lower().startswith('b'):
+        num_unit = num
+    elif unit.lower().startswith('k'):
+        num_unit =  num / (2.0 ** 10)
+    elif unit.lower().startswith('m'):
+        num_unit =  num / (2.0 ** 20)
+    elif unit.lower().startswith('g'):
+        num_unit = num / (2.0 ** 30)
+    elif unit.lower().startswith('t'):
+        num_unit = num / (2.0 ** 40)
+    elif unit.lower().startswith('p'):
+        num_unit = num / (2.0 ** 50)
+    elif unit.lower().startswith('e'):
+        num_unit = num / (2.0 ** 60)
+    elif unit.lower().startswith('z'):
+        num_unit = num / (2.0 ** 70)
+    elif unit.lower().startswith('y'):
+        num_unit = num / (2.0 ** 80)
+    else:
+        raise ValueError('unknown num={!r} unit={!r}'.format(num, unit))
+    return ub.repr2(num_unit, precision=precision) + ' ' + unit

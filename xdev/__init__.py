@@ -27,7 +27,7 @@ CommandLine:
 #
 #     - [ ] Automatically add custom defined names in this file to __all__
 """
-__version__ = '0.0.4'
+__version__ = '0.1.0'
 
 
 __submodules__ = [
@@ -60,10 +60,11 @@ from xdev.embeding import (EmbedOnException, embed, embed_on_exception_context,
 from xdev.interactive_iter import (InteractiveIter,)
 from xdev.introspect import (get_func_kwargs,)
 from xdev.class_reloader import (reload_class,)
-from xdev.misc import (editfile, quantum_random, startfile, view_directory,)
+from xdev.misc import (byte_str, editfile, quantum_random, startfile,
+                       view_directory,)
 from xdev.profiler import (IS_PROFILING, profile, profile_now,)
 
-__all__ = ['EmbedOnException', 'IS_PROFILING', 'InteractiveIter',
+__all__ = ['EmbedOnException', 'IS_PROFILING', 'InteractiveIter', 'byte_str',
            'class_reloader', 'editfile', 'embed', 'embed_on_exception_context',
            'embeding', 'fix_embed_globals', 'get_func_kwargs',
            'interactive_iter', 'introspect', 'misc', 'profile', 'profile_now',
