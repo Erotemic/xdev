@@ -90,14 +90,6 @@ def _reload_class_methods(self, class_, verbose=True):
     Args:
         self (object): class instance to reload
         class_ (type): type to reload as
-
-    Example:
-        >>> # DISABLE_DOCTEST
-        >>> from utool.util_class import *  # NOQA
-        >>> self = '?'
-        >>> class_ = '?'
-        >>> result = _reload_class_methods(self, class_)
-        >>> print(result)
     """
     if verbose:
         print('[util_class] Reloading self=%r as class_=%r' % (self, class_))
