@@ -7,3 +7,4 @@ numpy
 xinspect
 pyfiglet
 line_profiler
+pyflakes
