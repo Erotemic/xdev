@@ -179,7 +179,7 @@ if __name__ == '__main__':
         url='https://github.com/Erotemic/xdev',
         description='Developer tools',
         long_description=parse_description(),
-        long_description_content_type='text/md',
+        long_description_content_type='text/x-rst',
         install_requires=parse_requirements('requirements/runtime.txt'),
         extras_require={
             'all': parse_requirements('requirements.txt'),
