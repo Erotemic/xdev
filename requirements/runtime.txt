@@ -3,6 +3,7 @@ xinspect >= 0.0.1
 numpy >= 1.1
 pyfiglet >= 0.7
 pygments >= 2.4.2
-line_profiler
 IPython >= 5.8.0
 parse >= 1.12.1
+line_profiler
+pyflakes 
