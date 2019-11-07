@@ -1,9 +1,2 @@
-pytest >= 3.3.1
-coverage >= 4.3.4
-xdoctest >= 0.3.0
-ubelt >= 0.5.0
-pytest-cov
-numpy
-xinspect
-pyfiglet
-line_profiler
+-r requirements/runtime.txt
+-r requirements/tests.txt

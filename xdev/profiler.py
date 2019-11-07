@@ -282,13 +282,14 @@ def _find_parent_class(fpath, funcname, lineno, readlines=None):
         >>> funcname = 'clean_lprof_file'
         >>> func = getattr(profiler.KernprofParser, funcname)
         >>> lineno = func.__code__.co_firstlineno
-        >>> fpath = profiler.__file__
+        >>> fpath = profiler.__file__.replace('.pyc', '.py')
+        >>> print('fpath = {!r}'.format(fpath))
         >>> #fpath = ub.truepath('~/code/xdev/xdev/profiler.py')
         >>> #lineno   = 264
         >>> readlines = lambda x: open(x, 'r').readlines()
         >>> classname = _find_parent_class(fpath, funcname, lineno, readlines)
         >>> print('classname = {!r}'.format(classname))
-        >>> assert classname == 'KernprofParser'
+        >>> assert classname == 'KernprofParser', str(classname)
     """
     if readlines is None:
         def readlines(fpath):
@@ -303,8 +304,10 @@ def _find_parent_class(fpath, funcname, lineno, readlines=None):
             # get indentation
             # function is nested. fixme
             funcname = '<nested>:' + funcname
+            print('row = {!r}'.format(row))
             return _find_pyclass_above_row(line_list, row, indent)
-    except Exception:
+    except Exception as ex:
+        print('Got Error ex = {!r}'.format(ex))
         pass
 
 
@@ -331,6 +334,8 @@ def _find_pattern_above_row(pattern, line_list, row, indent, maxIter=None):
     # Iterate until we match.
     # Janky way to find function / class name
     retval = None
+    print('row = {!r}'.format(row))
+    print('pattern = {!r}'.format(pattern))
 
     for ix in it.count(0):
         pos = row - ix
