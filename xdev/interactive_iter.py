@@ -32,6 +32,7 @@ class InteractiveIter(object):
 
         Example:
             >>> # DISABLE_DOCTEST
+            >>> from xdev.interactive_iter import *  # NOQA
             >>> iterable = [1, 2, 3]
             >>> enabled = True
             >>> startx = 0
@@ -43,6 +44,20 @@ class InteractiveIter(object):
             >>> iiter = InteractiveIter(iterable, enabled, startx, default_action, custom_actions, wraparound, display_item, verbose)
             >>> for _ in iiter:
             >>>     pass
+
+        Example:
+            >>> # DISABLE_DOCTEST
+            >>> # Interactive matplotlib stuff
+            >>> from xdev.interactive_iter import *  # NOQA
+            >>> import kwimage
+            >>> import kwplot
+            >>> kwplot.autompl()
+            >>> keys = list(kwimage.grab_test_image.keys())
+            >>> iterable = [kwimage.grab_test_image(key) for key in keys]
+            >>> iiter = InteractiveIter(iterable)
+            >>> for img in iiter:
+            >>>     kwplot.imshow(img)
+            >>>     InteractiveIter.draw()
         """
         iiter.wraparound = wraparound
         iiter.enabled = enabled
