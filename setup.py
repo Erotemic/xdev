@@ -185,6 +185,9 @@ if __name__ == '__main__':
             'all': parse_requirements('requirements.txt'),
             'tests': parse_requirements('requirements/tests.txt'),
         },
+        dependency_links=[
+            'https://github.com/pyutils/line_profiler/tarball/master#egg=line_profiler',
+        ],
         license='Apache 2',
         packages=['xdev'],
         classifiers=[

@@ -5,5 +5,7 @@ pyfiglet >= 0.7
 pygments >= 2.4.2
 IPython >= 5.8.0
 parse >= 1.12.1
-line_profiler
 pyflakes 
+# line_profiler
+#-e git://github.com/pyutils/line_profiler.git@master#egg=line_profiler
+-e https://github.com/pyutils/line_profiler/tarball/master#egg=line_profiler
