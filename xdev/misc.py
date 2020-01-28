@@ -226,3 +226,62 @@ def byte_str(num, unit='auto', precision=2):
     else:
         raise ValueError('unknown num={!r} unit={!r}'.format(num, unit))
     return ub.repr2(num_unit, precision=precision) + ' ' + unit
+
+
+def set_overlaps(set1, set2, s1='s1', s2='s2'):
+    """
+    return info about set overlaps
+    """
+    set1 = set(set1)
+    set2 = set(set2)
+    overlaps = ub.odict([
+        (s1, len(set1)),
+        (s2, len(set2)),
+        ('isect', len(set1.intersection(set2))),
+        ('union', len(set1.union(set2))),
+        ('%s - %s' % (s1, s2), len(set1.difference(set2))),
+        ('%s - %s' % (s2, s1), len(set2.difference(set1))),
+    ])
+    return overlaps
+
+
+def edit_distance(string1, string2):
+    """
+    Edit distance algorithm. String1 and string2 can be either
+    strings or lists of strings
+
+    Args:
+        string1 (str | List[str]):
+        string2 (str | List[str]):
+
+    Requirements:
+        pip install python-Levenshtein
+
+    Example:
+        >>> string1 = 'hello world'
+        >>> string2 = ['goodbye world', 'rofl', 'hello', 'world', 'lowo']
+        >>> edit_distance(['hello', 'one'], ['goodbye', 'two'])
+        >>> edit_distance('hello', ['goodbye', 'two'])
+        >>> edit_distance(['hello', 'one'], 'goodbye')
+        >>> edit_distance('hello', 'goodbye')
+        >>> distmat = edit_distance(string1, string2)
+        >>> result = ('distmat = %s' % (ub.repr2(distmat),))
+        >>> print(result)
+        >>> [7, 9, 6, 6, 7]
+    """
+
+    import Levenshtein
+    isiter1 = ub.iterable(string1)
+    isiter2 = ub.iterable(string2)
+    strs1 = string1 if isiter1 else [string1]
+    strs2 = string2 if isiter2 else [string2]
+    distmat = [
+        [Levenshtein.distance(str1, str2) for str2 in strs2]
+        for str1 in strs1
+    ]
+    # broadcast
+    if not isiter2:
+        distmat = [row[0] for row in distmat]
+    if not isiter1:
+        distmat = distmat[0]
+    return distmat
