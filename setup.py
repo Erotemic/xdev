@@ -7,43 +7,13 @@ Installation:
 Developing:
     git clone https://github.com/Erotemic/xdev.git
     pip install -e xdev
-
-Pypi:
-     # Presetup
-     pip install twine
-
-     # First tag the source-code
-     VERSION=$(python -c "import setup; print(setup.version)")
-     echo $VERSION
-     git tag $VERSION -m "tarball tag $VERSION"
-     git push --tags origin master
-
-     # NEW API TO UPLOAD TO PYPI
-     # https://packaging.python.org/tutorials/distributing-packages/
-
-     # Build wheel or source distribution
-     python setup.py bdist_wheel --universal
-
-     # Use twine to upload. This will prompt for username and password
-     # If you get an error:
-     #   403 Client Error: Invalid or non-existent authentication information.
-     # simply try typing your password slower.
-     twine upload --username erotemic --skip-existing dist/*
-
-     # Check the url to make sure everything worked
-     https://pypi.org/project/xdev/
-
-     # ---------- OLD ----------------
-     # Check the url to make sure everything worked
-     https://pypi.python.org/pypi?:action=display&name=xdev
-
 """
 from setuptools import setup
 from os.path import exists
 import sys
 
 
-def parse_version(fpath='xdev/__init__.py'):
+def parse_version(fpath):
     """
     Statically parse the version number from a python file
     """
@@ -81,33 +51,17 @@ def parse_description():
     return ''
 
 
-def parse_requirements_alt(fname='requirements.txt'):
-    """
-    pip install requirements-parser
-    fname='requirements.txt'
-    """
-    import requirements
-    from os.path import dirname, join, exists
-    require_fpath = join(dirname(__file__), fname)
-    if exists(require_fpath):
-        # Dont use until this handles platform specific dependencies
-        with open(require_fpath, 'r') as file:
-            requires = list(requirements.parse(file))
-        packages = [r.name for r in requires]
-        return packages
-    return []
-
-
-def parse_requirements(fname='requirements.txt'):
+def parse_requirements(fname='requirements.txt', with_version=False):
     """
     Parse the package dependencies listed in a requirements file but strips
     specific versioning information.
 
-    TODO:
-        perhaps use https://github.com/davidfischer/requirements-parser instead
+    Args:
+        fname (str): path to requirements file
+        with_version (bool, default=False): if true include version specs
 
-    CommandLine:
-        python -c "import setup; print(setup.parse_requirements())"
+    Returns:
+        List[str]: list of requirements items
     """
     from os.path import exists
     import re
@@ -122,28 +76,28 @@ def parse_requirements(fname='requirements.txt'):
             target = line.split(' ')[1]
             for info in parse_require_file(target):
                 yield info
-        elif line.startswith('-e '):
-            info = {}
-            info['package'] = line.split('#egg=')[1]
-            yield info
         else:
-            # Remove versioning from the package
-            pat = '(' + '|'.join(['>=', '==', '>']) + ')'
-            parts = re.split(pat, line, maxsplit=1)
-            parts = [p.strip() for p in parts]
+            info = {'line': line}
+            if line.startswith('-e '):
+                info['package'] = line.split('#egg=')[1]
+            else:
+                # Remove versioning from the package
+                pat = '(' + '|'.join(['>=', '==', '>']) + ')'
+                parts = re.split(pat, line, maxsplit=1)
+                parts = [p.strip() for p in parts]
 
-            info = {}
-            info['package'] = parts[0]
-            if len(parts) > 1:
-                op, rest = parts[1:]
-                if ';' in rest:
-                    # Handle platform specific dependencies
-                    # http://setuptools.readthedocs.io/en/latest/setuptools.html#declaring-platform-specific-dependencies
-                    version, platform_deps = map(str.strip, rest.split(';'))
-                    info['platform_deps'] = platform_deps
-                else:
-                    version = rest  # NOQA
-                info['version'] = (op, version)
+                info['package'] = parts[0]
+                if len(parts) > 1:
+                    op, rest = parts[1:]
+                    if ';' in rest:
+                        # Handle platform specific dependencies
+                        # setuptools.readthedocs.io/en/latest/setuptools.html
+                        # #declaring-platform-specific-dependencies
+                        version, plat_deps = map(str.strip, rest.split(';'))
+                        info['platform_deps'] = plat_deps
+                    else:
+                        version = rest  # NOQA
+                    info['version'] = (op, version)
             yield info
 
     def parse_require_file(fpath):
@@ -154,26 +108,31 @@ def parse_requirements(fname='requirements.txt'):
                     for info in parse_line(line):
                         yield info
 
-    # This breaks on pip install, so check that it exists.
-    packages = []
-    if exists(require_fpath):
-        for info in parse_require_file(require_fpath):
-            package = info['package']
-            if not sys.version.startswith('3.4'):
-                # apparently package_deps are broken in 3.4
-                platform_deps = info.get('platform_deps')
-                if platform_deps is not None:
-                    package += ';' + platform_deps
-            packages.append(package)
+    def gen_packages_items():
+        if exists(require_fpath):
+            for info in parse_require_file(require_fpath):
+                parts = [info['package']]
+                if with_version and 'version' in info:
+                    parts.extend(info['version'])
+                if not sys.version.startswith('3.4'):
+                    # apparently package_deps are broken in 3.4
+                    plat_deps = info.get('platform_deps')
+                    if plat_deps is not None:
+                        parts.append(';' + plat_deps)
+                item = ''.join(parts)
+                yield item
+
+    packages = list(gen_packages_items())
     return packages
 
 
-version = parse_version('xdev/__init__.py')  # needs to be a global var for git tags
+NAME = 'xdev'
+VERSION = parse_version('xdev/__init__.py')
 
 if __name__ == '__main__':
     setup(
-        name='xdev',
-        version=version,
+        name=NAME,
+        version=VERSION,
         author='Jon Crall',
         author_email='erotemic@gmail.com',
         url='https://github.com/Erotemic/xdev',
@@ -185,9 +144,6 @@ if __name__ == '__main__':
             'all': parse_requirements('requirements.txt'),
             'tests': parse_requirements('requirements/tests.txt'),
         },
-        dependency_links=[
-            'https://github.com/pyutils/line_profiler/tarball/master#egg=line_profiler',
-        ],
         license='Apache 2',
         packages=['xdev'],
         classifiers=[
