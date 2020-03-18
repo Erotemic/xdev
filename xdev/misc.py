@@ -285,3 +285,60 @@ def edit_distance(string1, string2):
     if not isiter1:
         distmat = distmat[0]
     return distmat
+
+
+def nested_type(obj, unions=False):
+    """
+    Compute the :module:`typing` compatible annotation type.
+
+    Args:
+        obj (Any): a typing template based on a specific object
+        unions (bool): if True use unions, otherwise use Any
+
+    Returns:
+        str: type code (might change to return actual type)
+
+    Example:
+        >>> obj = {'a': [1, 2], 'b': [3, 4, 5]}
+        >>> nested_type(obj)
+        Dict[str, List[int]]
+
+        >>> obj = {'b': {'a': 1.0, 'b': 'foo', 'c': np.array([1, 2])}}
+        >>> nested_type(obj, unions=True)
+        Dict[str, Dict[str, float | ndarray | str]]
+    """
+    def _resolve(types):
+        if len(types) == 1:
+            return ub.peek(types)
+        else:
+            if unions:
+                return ' | '.join(types)
+            else:
+                return 'Any'
+
+    from functools  import partial
+    _nested = partial(nested_type, unions=unions)
+    if isinstance(obj, dict):
+        keytypes = {_nested(k) for k in obj.keys()}
+        valtypes = {_nested(v) for v in obj.values()}
+        keytype = _resolve(keytypes)
+        valtype = _resolve(valtypes)
+        objtype = 'Dict[{}, {}]'.format(keytype, valtype)
+    elif isinstance(obj, list):
+        itemtypes = {_nested(item) for item in obj}
+        itemtype = _resolve(itemtypes)
+        objtype = 'List[{}]'.format(itemtype)
+    elif isinstance(obj, set):
+        itemtypes = [_nested(item) for item in obj]
+        itemtype = _resolve(itemtypes)
+        objtype = 'Set[{}]'.format(itemtype)
+    elif isinstance(obj, tuple):
+        itemtypes = [_nested(item) for item in obj]
+        objtype = 'Tuple[{}]'.format(', '.join(itemtypes))
+    else:
+        import typing
+        objtype = type(obj).__name__
+        objtype = typing._normalize_alias.get(objtype, objtype)
+        # objtype = 'Any'
+        return objtype
+    return objtype

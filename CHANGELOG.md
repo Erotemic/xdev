@@ -1,3 +1,8 @@
+0.2.2
+-----
+Added `nested_type`
+
+
 0.0.1
 -----
 * Initial version
