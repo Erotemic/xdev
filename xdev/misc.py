@@ -258,6 +258,7 @@ def edit_distance(string1, string2):
         pip install python-Levenshtein
 
     Example:
+        >>> # xdoctest: +REQUIRES(module:Levenshtein)
         >>> string1 = 'hello world'
         >>> string2 = ['goodbye world', 'rofl', 'hello', 'world', 'lowo']
         >>> edit_distance(['hello', 'one'], ['goodbye', 'two'])
@@ -300,11 +301,12 @@ def nested_type(obj, unions=False):
 
     Example:
         >>> obj = {'a': [1, 2], 'b': [3, 4, 5]}
-        >>> nested_type(obj)
+        >>> print(nested_type(obj))
         Dict[str, List[int]]
 
+        >>> import numpy as np
         >>> obj = {'b': {'a': 1.0, 'b': 'foo', 'c': np.array([1, 2])}}
-        >>> nested_type(obj, unions=True)
+        >>> print(nested_type(obj, unions=True))
         Dict[str, Dict[str, float | ndarray | str]]
     """
     def _resolve(types):
@@ -312,7 +314,7 @@ def nested_type(obj, unions=False):
             return ub.peek(types)
         else:
             if unions:
-                return ' | '.join(types)
+                return ' | '.join(sorted(types))
             else:
                 return 'Any'
 
