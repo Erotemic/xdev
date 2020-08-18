@@ -1,6 +1,7 @@
 0.2.2
 -----
 Added `nested_type`
+Added `difftext`
 
 
 0.0.1
