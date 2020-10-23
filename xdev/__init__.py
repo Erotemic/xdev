@@ -61,14 +61,15 @@ from xdev.interactive_iter import (InteractiveIter,)
 from xdev.introspect import (get_func_kwargs,)
 from xdev.class_reloader import (reload_class,)
 from xdev.misc import (byte_str, difftext, edit_distance, editfile,
-                       nested_type, quantum_random, set_overlaps, startfile,
+                       make_warnings_print_tracebacks, nested_type,
+                       quantum_random, set_overlaps, startfile, tree,
                        view_directory,)
 from xdev.profiler import (IS_PROFILING, profile, profile_now,)
 
 __all__ = ['EmbedOnException', 'IS_PROFILING', 'InteractiveIter', 'byte_str',
            'class_reloader', 'difftext', 'edit_distance', 'editfile', 'embed',
            'embed_on_exception_context', 'embeding', 'fix_embed_globals',
-           'get_func_kwargs', 'interactive_iter', 'introspect', 'misc',
-           'nested_type', 'profile', 'profile_now', 'profiler',
-           'quantum_random', 'reload_class', 'set_overlaps', 'startfile',
-           'util', 'view_directory']
+           'get_func_kwargs', 'interactive_iter', 'introspect',
+           'make_warnings_print_tracebacks', 'misc', 'nested_type', 'profile',
+           'profile_now', 'profiler', 'quantum_random', 'reload_class',
+           'set_overlaps', 'startfile', 'tree', 'util', 'view_directory']
