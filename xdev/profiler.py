@@ -304,7 +304,7 @@ def _find_parent_class(fpath, funcname, lineno, readlines=None):
             # get indentation
             # function is nested. fixme
             funcname = '<nested>:' + funcname
-            print('row = {!r}'.format(row))
+            # print('row = {!r}'.format(row))
             return _find_pyclass_above_row(line_list, row, indent)
     except Exception as ex:
         print('Got Error ex = {!r}'.format(ex))
@@ -334,8 +334,8 @@ def _find_pattern_above_row(pattern, line_list, row, indent, maxIter=None):
     # Iterate until we match.
     # Janky way to find function / class name
     retval = None
-    print('row = {!r}'.format(row))
-    print('pattern = {!r}'.format(pattern))
+    # print('row = {!r}'.format(row))
+    # print('pattern = {!r}'.format(pattern))
 
     for ix in it.count(0):
         pos = row - ix
