@@ -35,12 +35,12 @@ class Pattern(ub.NiceRepr):
 
     @classmethod
     def coerce(cls, data, hint='glob'):
-        backend = cls.coerce_mode(data, hint=hint)
+        backend = cls.coerce_backend(data, hint=hint)
         self = cls(data, backend)
         return self
 
     @classmethod
-    def coerce_mode(cls, data, hint='glob'):
+    def coerce_backend(cls, data, hint='glob'):
         if isinstance(data, re.Pattern):
             backend = 'regex'
         elif isinstance(data, cls) or type(data).__name__ == cls.__name__:
