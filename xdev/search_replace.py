@@ -55,20 +55,29 @@ class Pattern(ub.NiceRepr):
             raise KeyError(self.mode)
 
     def search(self, text):
-        assert self.mode == 'regex'
-        return self.pattern.search(text)
+        if self.mode == 'regex':
+            return self.pattern.search(text)
+        elif self.mode == 'glob':
+            return fnmatch.fnmatch(text, '*{}*'.format(self.pattern))
+        elif self.mode == 'strict':
+            return self.pattern in text
+        else:
+            raise KeyError(self.mode)
 
     def sub(self, repl, text):
-        assert self.mode == 'regex'
-        return self.pattern.sub(repl, text)
+        if self.mode == 'regex':
+            return self.pattern.sub(repl, text)
+        elif self.mode == 'glob':
+            raise NotImplementedError
+        elif self.mode == 'strict':
+            return text.replace(self.pattern, repl)
+        else:
+            raise KeyError(self.mode)
 
 
-def sed(regexpr, repl, dpath=None, dry=False, verbose=1):
+def sed(regexpr, repl, dpath=None, recursive=True, dry=False, verbose=1):
     r"""
     Execute a sed on multiple files.
-
-    TODO:
-        - [ ] Store "SedResult" classes
 
     Example:
         >>> from xdev.search_replace import *  # NOQA
@@ -80,7 +89,7 @@ def sed(regexpr, repl, dpath=None, dry=False, verbose=1):
     num_files_checked = 0
     fpaths_changed = []
 
-    fpath_generator = find(dpath=dpath, type='f')
+    fpath_generator = find(dpath=dpath, type='f', recursive=recursive)
     for fpath in fpath_generator:
         num_files_checked += 1
         changed_lines = sedfile(fpath, regexpr, repl, dry=dry)
@@ -94,12 +103,9 @@ def sed(regexpr, repl, dpath=None, dry=False, verbose=1):
         print('total lines changed = %r' % (num_changed,))
 
 
-def grep(regexpr, dpath=None, dry=False, verbose=1):
+def grep(regexpr, dpath=None, dry=False, recursive=True, verbose=1):
     r"""
-    Execute a sed on multiple files.
-
-    TODO:
-        - [ ] Store "SedResult" classes
+    Execute a grep on multiple files.
 
     Example:
         >>> from xdev.search_replace import *  # NOQA
@@ -109,7 +115,8 @@ def grep(regexpr, dpath=None, dry=False, verbose=1):
     """
     grep_results = []
 
-    fpath_generator = find(dpath=dpath, type='f')
+    fpath_generator = find(dpath=dpath, type='f', recursive=recursive)
+
     for fpath in fpath_generator:
         grepres = grepfile(fpath, regexpr, verbose=verbose)
         if grepres is not None:
