@@ -35,14 +35,19 @@ class Pattern(ub.NiceRepr):
 
     @classmethod
     def coerce(cls, data, hint='glob'):
-        if isinstance(data, cls):
-            return data
-        if isinstance(data, re.Pattern):
-            mode = 'regex'
-        else:
-            mode = hint
+        mode = cls.coerce_mode(data, hint=hint)
         self = cls(data, mode)
         return self
+
+    @classmethod
+    def coerce_mode(cls, data, hint='glob'):
+        if isinstance(data, re.Pattern):
+            mode = 'regex'
+        elif isinstance(data, cls) or type(data).__name__ == cls.__name__:
+            mode = data.mode
+        else:
+            mode = hint
+        return mode
 
     def match(self, text):
         if self.mode == 'regex':
@@ -267,7 +272,7 @@ def sedfile(fpath, regexpr, repl, dry=False, verbose=1):
     import xdev
     mode_text = ['(real-run)', '(dry-run)'][dry]
 
-    pattern = Pattern.coerce(regexpr, 'regex')
+    pattern = Pattern.coerce(regexpr, hint='regex')
 
     path, name = split(fpath)
     new_file_lines = []
@@ -353,7 +358,7 @@ def grepfile(fpath, regexpr, verbose=1):
         >>> print('grep_result = {}'.format(grep_result))
     """
     ret = None
-    pattern = Pattern.coerce(regexpr, 'regex')
+    pattern = Pattern.coerce(regexpr, hint='regex')
     with open(fpath, 'r') as file:
         try:
             lines = file.readlines()
