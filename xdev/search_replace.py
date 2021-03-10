@@ -90,7 +90,7 @@ class Pattern(ub.NiceRepr):
             raise KeyError(self.backend)
 
 
-def sed(regexpr, repl, dpath=None, recursive=True, dry=False, verbose=1):
+def sed(regexpr, repl, dpath=None, include=None, exclude=None, recursive=True, dry=False, verbose=1):
     r"""
     Execute a sed on multiple files.
 
@@ -104,7 +104,8 @@ def sed(regexpr, repl, dpath=None, recursive=True, dry=False, verbose=1):
     num_files_checked = 0
     fpaths_changed = []
 
-    fpath_generator = find(dpath=dpath, type='f', recursive=recursive)
+    fpath_generator = find(dpath=dpath, type='f', include=include,
+                           exclude=exclude, recursive=recursive)
     for fpath in fpath_generator:
         num_files_checked += 1
         changed_lines = sedfile(fpath, regexpr, repl, dry=dry)
@@ -118,7 +119,8 @@ def sed(regexpr, repl, dpath=None, recursive=True, dry=False, verbose=1):
         print('total lines changed = %r' % (num_changed,))
 
 
-def grep(regexpr, dpath=None, dry=False, recursive=True, verbose=1):
+def grep(regexpr, dpath=None, include=None, exclude=None, dry=False,
+         recursive=True, verbose=1):
     r"""
     Execute a grep on multiple files.
 
@@ -130,7 +132,8 @@ def grep(regexpr, dpath=None, dry=False, recursive=True, verbose=1):
     """
     grep_results = []
 
-    fpath_generator = find(dpath=dpath, type='f', recursive=recursive)
+    fpath_generator = find(dpath=dpath, type='f', include=include,
+                           exclude=exclude, recursive=recursive)
 
     for fpath in fpath_generator:
         grepres = grepfile(fpath, regexpr, verbose=verbose)
@@ -236,11 +239,11 @@ def find(pattern=None, dpath=None, include=None, exclude=None, type=None,
 
     def is_included(name):
         if exclude_ is not None:
-            if any(pat.matches(name) for pat in exclude_):
+            if any(pat.match(name) for pat in exclude_):
                 return False
 
         if include_ is not None:
-            if any(pat.matches(name) for pat in include_):
+            if any(pat.match(name) for pat in include_):
                 return True
             else:
                 return False
