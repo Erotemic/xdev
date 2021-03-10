@@ -134,7 +134,7 @@ def grep(regexpr, dpath=None, dry=False, recursive=True, verbose=1):
 
     for fpath in fpath_generator:
         grepres = grepfile(fpath, regexpr, verbose=verbose)
-        if grepres is not None:
+        if grepres:
             grep_results.append(grepres)
 
     if verbose:
@@ -332,12 +332,12 @@ class GrepResult(ub.NiceRepr):
     def __iter__(self):
         return iter(self.found_lines)
 
+    def __len__(self):
+        return len(self.found_lines)
+
     def append(self, lx, line):
         self.found_lines.append(line)
         self.found_lxs.append(lx)
-
-    def __len__(self):
-        return len(self.found_lines)
 
     def format_text(self):
         summary = []
@@ -367,7 +367,7 @@ def grepfile(fpath, regexpr, verbose=1):
         >>> grep_result = grepfile(fpath, r'\bb\b')
         >>> print('grep_result = {}'.format(grep_result))
     """
-    ret = None
+    grep_result = None
     pattern = Pattern.coerce(regexpr, hint='regex')
     with open(fpath, 'r') as file:
         try:
@@ -375,21 +375,21 @@ def grepfile(fpath, regexpr, verbose=1):
         except UnicodeDecodeError:
             print("UNABLE TO READ fpath={}".format(fpath))
         else:
-            ret = GrepResult(fpath, pattern)
-            ret.max_line = len(lines)
+            grep_result = GrepResult(fpath, pattern)
+            grep_result.max_line = len(lines)
 
             # Search each line for the desired pattern
             for lx, line in enumerate(lines):
                 match_object = pattern.search(line)
-                if match_object is not None:
-                    ret.append(lx, line)
+                if match_object:
+                    grep_result.append(lx, line)
 
             # Print the results (if any)
             if verbose:
-                if len(ret):
-                    print(ret.format_text())
+                if len(grep_result):
+                    print(grep_result.format_text())
 
-    return ret
+    return grep_result
 
 
 def _create_test_filesystem():
