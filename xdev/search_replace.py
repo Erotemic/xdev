@@ -35,8 +35,18 @@ class Pattern(ub.NiceRepr):
 
     @classmethod
     def coerce(cls, data, hint='glob'):
-        backend = cls.coerce_backend(data, hint=hint)
-        self = cls(data, backend)
+        """
+        from xdev.search_replace import *  # NOQA
+        pat = Pattern.coerce('foo*', 'glob')
+        pat2 = Pattern.coerce(pat, 'regex')
+        print('pat = {}'.format(ub.repr2(pat, nl=1)))
+        print('pat2 = {}'.format(ub.repr2(pat2, nl=1)))
+        """
+        if isinstance(data, cls) or type(data).__name__ == cls.__name__:
+            self = data
+        else:
+            backend = cls.coerce_backend(data, hint=hint)
+            self = cls(data, backend)
         return self
 
     @classmethod
