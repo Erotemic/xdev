@@ -399,3 +399,12 @@ def _create_test_filesystem():
     }
 
     return info
+
+if __name__ == '__main__':
+    """
+    CommandLine:
+        python ~/code/xdev/xdev/search_replace.py
+        xdoctest ~/code/xdev/xdev/search_replace.py
+    """
+    import xdoctest
+    xdoctest.doctest_module(__file__)
