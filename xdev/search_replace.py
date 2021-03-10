@@ -80,7 +80,7 @@ def sed(regexpr, repl, dpath=None, dry=False, verbose=1):
     num_files_checked = 0
     fpaths_changed = []
 
-    fpath_generator = find(dpath=dpath, type='.')
+    fpath_generator = find(dpath=dpath, type='f')
     for fpath in fpath_generator:
         num_files_checked += 1
         changed_lines = sedfile(fpath, regexpr, repl, dry=dry)
@@ -92,6 +92,36 @@ def sed(regexpr, repl, dpath=None, dry=False, verbose=1):
         print('num_files_checked = %r' % (num_files_checked,))
         print('fpaths_changed = %s' % (ub.repr2(sorted(fpaths_changed)),))
         print('total lines changed = %r' % (num_changed,))
+
+
+def grep(regexpr, dpath=None, dry=False, verbose=1):
+    r"""
+    Execute a sed on multiple files.
+
+    TODO:
+        - [ ] Store "SedResult" classes
+
+    Example:
+        >>> from xdev.search_replace import *  # NOQA
+        >>> from xdev.search_replace import _create_test_filesystem
+        >>> dpath = _create_test_filesystem()['root']
+        >>> grep('a', dpath=dpath, dry=True)
+    """
+    grep_results = []
+
+    fpath_generator = find(dpath=dpath, type='f')
+    for fpath in fpath_generator:
+        grepres = grepfile(fpath, regexpr, verbose=verbose)
+        if grepres is not None:
+            grep_results.append(grepres)
+
+    if verbose:
+        print('====================')
+        print('====================')
+        found_fpaths = [r.fpath for r in grep_results]
+        print('\n'.join(found_fpaths))
+
+    return grep_results
 
 
 def _coerce_multipattern(pattern):
