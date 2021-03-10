@@ -27,7 +27,7 @@ CommandLine:
 #
 #     - [ ] Automatically add custom defined names in this file to __all__
 """
-__version__ = '0.2.2'
+__version__ = '0.2.3'
 
 
 __submodules__ = [

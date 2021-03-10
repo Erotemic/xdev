@@ -1,3 +1,8 @@
+0.2.3
+-----
+Added `sedfile` and `grepfile`.
+
+
 0.2.2
 -----
 Added `nested_type`
