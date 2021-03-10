@@ -24,60 +24,60 @@ class Pattern(ub.NiceRepr):
         >>> assert globpat.match('foobar')
         >>> assert not globpat.match('barfoo')
     """
-    def __init__(self, pattern, mode):
-        if mode == 'regex' and isinstance(pattern, str):
+    def __init__(self, pattern, backend):
+        if backend == 'regex' and isinstance(pattern, str):
             pattern = re.compile(pattern)
         self.pattern = pattern
-        self.mode = mode
+        self.backend = backend
 
     def __nice__(self):
-        return '{}, {}'.format(self.pattern, self.mode)
+        return '{}, {}'.format(self.pattern, self.backend)
 
     @classmethod
     def coerce(cls, data, hint='glob'):
-        mode = cls.coerce_mode(data, hint=hint)
-        self = cls(data, mode)
+        backend = cls.coerce_mode(data, hint=hint)
+        self = cls(data, backend)
         return self
 
     @classmethod
     def coerce_mode(cls, data, hint='glob'):
         if isinstance(data, re.Pattern):
-            mode = 'regex'
+            backend = 'regex'
         elif isinstance(data, cls) or type(data).__name__ == cls.__name__:
-            mode = data.mode
+            backend = data.backend
         else:
-            mode = hint
-        return mode
+            backend = hint
+        return backend
 
     def match(self, text):
-        if self.mode == 'regex':
+        if self.backend == 'regex':
             return self.pattern.match(text)
-        elif self.mode == 'glob':
+        elif self.backend == 'glob':
             return fnmatch.fnmatch(text, self.pattern)
-        elif self.mode == 'strict':
+        elif self.backend == 'strict':
             return self.pattern == text
         else:
-            raise KeyError(self.mode)
+            raise KeyError(self.backend)
 
     def search(self, text):
-        if self.mode == 'regex':
+        if self.backend == 'regex':
             return self.pattern.search(text)
-        elif self.mode == 'glob':
+        elif self.backend == 'glob':
             return fnmatch.fnmatch(text, '*{}*'.format(self.pattern))
-        elif self.mode == 'strict':
+        elif self.backend == 'strict':
             return self.pattern in text
         else:
-            raise KeyError(self.mode)
+            raise KeyError(self.backend)
 
     def sub(self, repl, text):
-        if self.mode == 'regex':
+        if self.backend == 'regex':
             return self.pattern.sub(repl, text)
-        elif self.mode == 'glob':
+        elif self.backend == 'glob':
             raise NotImplementedError
-        elif self.mode == 'strict':
+        elif self.backend == 'strict':
             return text.replace(self.pattern, repl)
         else:
-            raise KeyError(self.mode)
+            raise KeyError(self.backend)
 
 
 def sed(regexpr, repl, dpath=None, recursive=True, dry=False, verbose=1):
@@ -309,8 +309,8 @@ class GrepResult(ub.NiceRepr):
     """
     Manage and format results from grep
     """
-    def __init__(self, fpath, regexpr=None):
-        self.regexpr = regexpr
+    def __init__(self, fpath, pattern=None):
+        self.pattern = pattern
         self.fpath = fpath
         self.found_lxs = []
         self.found_lines = []
@@ -365,10 +365,10 @@ def grepfile(fpath, regexpr, verbose=1):
         except UnicodeDecodeError:
             print("UNABLE TO READ fpath={}".format(fpath))
         else:
-            ret = GrepResult(fpath, regexpr)
+            ret = GrepResult(fpath, pattern)
             ret.max_line = len(lines)
 
-            # Search each line for the desired regexpr
+            # Search each line for the desired pattern
             for lx, line in enumerate(lines):
                 match_object = pattern.search(line)
                 if match_object is not None:
