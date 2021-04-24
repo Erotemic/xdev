@@ -172,6 +172,7 @@ def byte_str(num, unit='auto', precision=2):
         num (int): number of bytes
         unit (str): which unit to use, can be auto, B, KB, MB, GB, TB, PB, EB,
             ZB, or YB.
+        precision (int): number of decimals of precision
 
     References:
         https://en.wikipedia.org/wiki/Orders_of_magnitude_(data)
