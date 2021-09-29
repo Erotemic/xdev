@@ -50,6 +50,7 @@ def profile_now(func):
 
     Example:
         >>> # xdoctest: +SKIP
+        >>> from xdev.profiler import *  # NOQA
         >>> def func_to_profile():
         >>>     list(range(10))
         >>>     tuple(range(100))
@@ -71,8 +72,12 @@ def profile_now(func):
     new_func.print_report = new_func.profile_info.print_report
 
     def wraper(*args, **kwargs):
-        retval = new_func(*args, **kwargs)
-        new_func.print_report()
+        try:
+            retval = new_func(*args, **kwargs)
+        except Exception:
+            pass
+        finally:
+            new_func.print_report()
         return retval
     wraper.new_func = new_func
     return wraper
