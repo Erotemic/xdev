@@ -1,13 +1,20 @@
-xdev
-----
+Xdev - Excellent Developer
+--------------------------
 
 |CircleCI| |Travis| |Appveyor| |Codecov| |Pypi| |Downloads| |ReadTheDocs|
 
+Xdev is an excellent developer tool for excellent developers.
+It contains miscellaneous and/or interactive debugging tools.
 
-Miscellaneous interactive debugging tools for developers
+I mostly maintain this for myself, but I could see polishing it up in the
+future.
 
 
-Perhaps I should just use `ipdb` but I often just like to directly embed with IPython whenever I want:
+Remarks
+-------
+
+Perhaps I should just use `ipdb` but I often just like to directly embed with
+IPython whenever I want:
 
 
 .. code:: python
