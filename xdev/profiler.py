@@ -73,12 +73,11 @@ def profile_now(func):
 
     def wraper(*args, **kwargs):
         try:
-            retval = new_func(*args, **kwargs)
+            return new_func(*args, **kwargs)
         except Exception:
             pass
         finally:
             new_func.print_report()
-        return retval
     wraper.new_func = new_func
     return wraper
 
