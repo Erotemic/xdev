@@ -20,7 +20,5 @@ exclude_lines =
     .*if six.PY2:
 
 omit =
-    xdev/tests/*
-    xdev/_win32_links.py
     xdev/__main__.py
     */setup.py
