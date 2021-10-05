@@ -1,7 +1,7 @@
 Xdev - Excellent Developer
 --------------------------
 
-|CircleCI| |Travis| |Appveyor| |Codecov| |Pypi| |Downloads| |ReadTheDocs|
+|GithubActions| |CircleCI| |Appveyor| |Codecov| |Pypi| |Downloads| |ReadTheDocs|
 
 Xdev is an excellent developer tool for excellent developers.
 It contains miscellaneous and/or interactive debugging tools.
@@ -90,3 +90,5 @@ https://github.com/Erotemic/xinspect
    :target: https://pypistats.org/packages/xdev
 .. |ReadTheDocs| image:: https://readthedocs.org/projects/xdev/badge/?version=latest
     :target: http://xdev.readthedocs.io/en/latest/
+.. |GithubActions| image:: https://github.com/Erotemic/xdev/actions/workflows/tests.yml/badge.svg?branch=main
+    :target: https://github.com/Erotemic/xdev/actions?query=branch%3Amain
