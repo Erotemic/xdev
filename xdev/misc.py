@@ -341,8 +341,18 @@ def nested_type(obj, unions=False):
     else:
         import typing
         objtype = type(obj).__name__
-        objtype = typing._normalize_alias.get(objtype, objtype)
-        # objtype = 'Any'
+        if hasattr(typing, '_normalize_alias'):
+            objtype = typing._normalize_alias.get(objtype, objtype)
+        else:
+            objtype = {'list': 'List',
+                       'tuple': 'Tuple',
+                       'dict': 'Dict',
+                       'set': 'Set',
+                       'frozenset': 'FrozenSet',
+                       'deque': 'Deque',
+                       'defaultdict': 'DefaultDict',
+                       'type': 'Type',
+                       'Set': 'AbstractSet'}.get(objtype, objtype)
         return objtype
     return objtype
 
