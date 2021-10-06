@@ -7,7 +7,7 @@ import re
 import os
 import fnmatch
 import ubelt as ub
-from os.path import relpath, split, join, basename
+from os.path import relpath, split, join, basename, abspath
 
 # try:
 #     from packaging.version import parse as parse_version
@@ -310,7 +310,12 @@ def sedfile(fpath, regexpr, repl, dry=False, verbose=1):
                      if  newline != line]
     nChanged = len(changed_lines)
     if nChanged > 0:
-        rel_fpath = relpath(fpath, os.getcwd())
+        try:
+            rel_fpath = relpath(fpath, os.getcwd())
+        except ValueError:
+            # windows issues
+            rel_fpath = abspath(fpath)
+
         if verbose:
             print(' * {} changed {} lines in {!r} '.format(
                 mode_text, nChanged, rel_fpath))
