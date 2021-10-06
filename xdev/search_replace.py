@@ -7,7 +7,18 @@ import re
 import os
 import fnmatch
 import ubelt as ub
-from os.path import relpath, split, join, basename
+from os.path import relpath, split, join, basename, abspath
+
+# try:
+#     from packaging.version import parse as parse_version
+# except Exception:
+#     from distutils.version import LooseVersion as parse_version
+
+if hasattr(re, 'Pattern'):
+    RE_Pattern = re.Pattern
+else:
+    # sys.version_info[0:2] <= 3.6
+    RE_Pattern = type(re.compile('.*'))
 
 
 class Pattern(ub.NiceRepr):
@@ -51,7 +62,7 @@ class Pattern(ub.NiceRepr):
 
     @classmethod
     def coerce_backend(cls, data, hint='glob'):
-        if isinstance(data, re.Pattern):
+        if isinstance(data, RE_Pattern):
             backend = 'regex'
         elif isinstance(data, cls) or type(data).__name__ == cls.__name__:
             backend = data.backend
@@ -299,7 +310,12 @@ def sedfile(fpath, regexpr, repl, dry=False, verbose=1):
                      if  newline != line]
     nChanged = len(changed_lines)
     if nChanged > 0:
-        rel_fpath = relpath(fpath, os.getcwd())
+        try:
+            rel_fpath = relpath(fpath, os.getcwd())
+        except ValueError:
+            # windows issues
+            rel_fpath = abspath(fpath)
+
         if verbose:
             print(' * {} changed {} lines in {!r} '.format(
                 mode_text, nChanged, rel_fpath))

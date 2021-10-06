@@ -3,7 +3,7 @@ import decimal
 from collections import defaultdict
 
 
-def knapsack(items, maxweight, method='recursive'):
+def knapsack(items, maxweight, method='iterative'):
     r"""
     Solve the knapsack problem by finding the most valuable subsequence of
     `items` subject that weighs no more than `maxweight`.
@@ -48,26 +48,51 @@ def knapsack(items, maxweight, method='recursive'):
         >>> #assert items_subset1 == items_subset, 'NOT EQ\n%r !=\n%r' % (items_subset1, items_subset)
 
     Timeit:
-        >>> import ubelt as ub
-        >>> setup = ub.codeblock(
-        >>>     '''
-                import ubelt as ut
-                weights = [215, 275, 335, 355, 42, 58] * 40
-                items = [(w, w, i) for i, w in enumerate(weights)]
-                maxweight = 2505
-                #import numba
-                #knapsack_numba = numba.autojit(knapsack_iterative)
-                #knapsack_numba = numba.autojit(knapsack_iterative_numpy)
-                ''')
-        >>> # Test load time
-        >>> stmt_list1 = ub.codeblock(
-        >>>     '''
-                knapsack_iterative(items, maxweight)
-                knapsack_ilp(items, maxweight)
-                #knapsack_numba(items, maxweight)
-                #knapsack_iterative_numpy(items, maxweight)
-                ''').split('\n')
-        >>> ut.util_dev.timeit_compare(stmt_list1, setup, int(5))
+        # >>> import ubelt as ub
+        # >>> setup = ub.codeblock(
+        # >>>     '''
+        #         import ubelt as ut
+        #         weights = [215, 275, 335, 355, 42, 58] * 40
+        #         items = [(w, w, i) for i, w in enumerate(weights)]
+        #         maxweight = 2505
+        #         #import numba
+        #         #knapsack_numba = numba.autojit(knapsack_iterative)
+        #         #knapsack_numba = numba.autojit(knapsack_iterative_numpy)
+        #         ''')
+        # >>> # Test load time
+        # >>> stmt_list1 = ub.codeblock(
+        # >>>     '''
+        #         knapsack_iterative(items, maxweight)
+        #         knapsack_ilp(items, maxweight)
+        #         #knapsack_numba(items, maxweight)
+        #         #knapsack_iterative_numpy(items, maxweight)
+        #         ''').split('\n')
+
+        # ut.util_dev.timeit_compare(stmt_list1, setup, int(5))
+
+        from xdev.algo import *  # NOQA
+        def knapsack_inputs(n):
+            rng = np.random
+            items = [
+                (rng.randint(0, 10), rng.randint(0, 10), idx) for idx in range(n)]
+            return {'items':  items, 'maxweight': 100}
+
+        def input_wrapper(func):
+            import functools
+            @functools.wraps(func)
+            def _wrap(kwargs):
+                return func(**kwargs)
+            return _wrap
+
+        import perfplot
+        perfplot.show(
+            setup=knapsack_inputs,
+            kernels=list(map(input_wrapper, [knapsack_iterative, knapsack_ilp])),
+            n_range=[2 ** k for k in range(15)],
+            xlabel="maxweight",
+            equality_check=None,
+        )
+
     """
     if method == 'iterative':
         return knapsack_iterative(items, maxweight)
