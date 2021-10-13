@@ -1,112 +1,16 @@
-import pipes
-from os.path import normpath
-import os
-import six
-from os.path import exists
-from os.path import sys
-from six import types
 import ubelt as ub
 
 
-def editfile(fpath, verbose=True):
-    """
-    Opens a file or code corresponding to a live python object in your
-    preferred visual editor. This function is mainly useful in an interactive
-    IPython session.
-
-    The visual editor is determined by the `VISUAL` environment variable.  If
-    this is not specified it defaults to gvim.
-
-    Args:
-        fpath (PathLike): a file path or python module / function
-        verbose (int): verbosity
-
-    DisableExample:
-        >>> # This test interacts with a GUI frontend, not sure how to test.
-        >>> import xdev
-        >>> ub.editfile(xdev.misc.__file__)
-        >>> ub.editfile(xdev)
-        >>> ub.editfile(xdev.editfile)
-    """
-    if not isinstance(fpath, six.string_types):
-        if isinstance(fpath, types.ModuleType):
-            fpath = fpath.__file__
-        else:
-            fpath =  sys.modules[fpath.__module__].__file__
-        fpath_py = fpath.replace('.pyc', '.py')
-        if exists(fpath_py):
-            fpath = fpath_py
-
-    if verbose:
-        print('[xdev] editfile("{}")'.format(fpath))
-
-    editor = os.environ.get('VISUAL', 'gvim')
-    if not ub.find_exe(editor):
-        import warnings
-        warnings.warn('Cannot find visual editor={}'.format(editor), UserWarning)
-        # Try and fallback on commonly installed editor
-        alt_candidates = [
-            'gedit',
-            'TextEdit'
-            'Notepad',
-        ]
-        for cand in alt_candidates:
-            if ub.find_exe(cand):
-                editor = cand
-
-    if not exists(fpath):
-        raise IOError('Cannot start nonexistant file: %r' % fpath)
-    ub.cmd([editor, fpath], fpath, detatch=True)
-
-
-def startfile(fpath, verbose=True):
-    """
-    Uses default program defined by the system to open a file.
-    This is done via `os.startfile` on windows, `open` on mac, and `xdg-open`
-    on linux.
-
-    Args:
-        fpath (PathLike): a file to open using the program associated with the
-            files extension type.
-        verbose (int): verbosity
-
-    References:
-        http://stackoverflow.com/questions/2692873/quote-posix
-
-    DisableExample:
-        >>> # This test interacts with a GUI frontend, not sure how to test.
-        >>> import ubelt as ub
-        >>> base = ub.ensure_app_cache_dir('ubelt')
-        >>> fpath1 = join(base, 'test_open.txt')
-        >>> ub.touch(fpath1)
-        >>> proc = ub.startfile(fpath1)
-    """
-    if verbose:
-        print('[xdev] startfile("{}")'.format(fpath))
-    fpath = normpath(fpath)
-    if not exists(fpath):
-        raise Exception('Cannot start nonexistant file: {!r}'.format(fpath))
-    if not ub.WIN32:
-        fpath = pipes.quote(fpath)
-    if ub.LINUX:
-        info = ub.cmd(('xdg-open', fpath), detatch=True, verbose=verbose)
-    elif ub.DARWIN:
-        info = ub.cmd(('open', fpath), detatch=True, verbose=verbose)
-    elif ub.WIN32:
-        os.startfile(fpath)
-        info = None
-    else:
-        raise RuntimeError('Unknown Platform')
-    if info is not None:
-        if not info['proc']:
-            raise Exception('startfile failed')
-
-
-def quantum_random():
+def quantum_random(pure=False):
     """
     Returns a quantum random number as a 32 bit unsigned integer.
     Does this by making a network request to the ANU Quantum Random Number
     Generator web service, so an internet connection is required.
+
+    Args:
+        pure (bool): if False, mixes this data with pseudorandom data for
+            security. Otherwise returns the raw quantum numbers that were
+            sent over the web (i.e. subject to MitM attacks).
 
     Requirements:
         quantumrandom >= 1.9.0
@@ -115,52 +19,25 @@ def quantum_random():
         numpy.uint32: the random number
     """
     import numpy as np
+    import os
     import quantumrandom
-    data16 = quantumrandom.uint16(array_length=2)
+
+    # Data was sent over a network
+    qr_data16 = quantumrandom.uint16(array_length=2)
+    nbytes = qr_data16.size * qr_data16.dtype.itemsize
+
+    if pure:
+        data16 = qr_data16
+    else:
+        # Cryptographically generated
+        buf = memoryview(os.urandom(nbytes))
+        pr_data16 = np.frombuffer(buf, dtype=qr_data16.dtype)
+        # xor to mix data
+        data16 = (pr_data16 ^ qr_data16)
+
     assert data16.flags['C_CONTIGUOUS']
     data32 = data16.view(np.dtype('uint32'))[0]
     return data32
-
-
-def view_directory(dpath=None, verbose=False):
-    """
-    View a directory in the operating system file browser. Currently supports
-    windows explorer, mac open, and linux nautlius.
-
-    Args:
-        dpath (PathLike): directory name
-        verbose (bool): verbosity
-    """
-    if dpath is None:
-        dpath = os.getcwd()
-    dpath = os.path.normpath(dpath)
-    if verbose:
-        print('[xdev] view_directory({!r}) '.format(dpath))
-    if not exists(dpath):
-        raise Exception('Cannot view nonexistant directory: {!r}'.format(dpath))
-    if False:
-        try:
-            import vimtk.xctrl
-            import vimtk.cplat_ctrl
-            if vimtk.xctrl.is_directory_open(dpath):
-                if verbose:
-                    print('[xdev] dpath={!r} is already open'.format(dpath))
-                win = vimtk.cplat_ctrl.Window.find('Nautilus.*' + os.path.basename(dpath))
-                win.focus()
-                return
-        except Exception:
-            pass
-    if ub.LINUX:
-        info = ub.cmd(('nautilus', dpath), detatch=True, verbose=verbose)
-    elif ub.DARWIN:
-        info = ub.cmd(('open', dpath), detatch=True, verbose=verbose)
-    elif ub.WIN32:
-        info = ub.cmd(('explorer.exe', dpath), detatch=True, verbose=verbose)
-    else:
-        raise RuntimeError('Unknown Platform')
-    if info is not None:
-        if not info['proc']:
-            raise Exception('startfile failed')
 
 
 def byte_str(num, unit='auto', precision=2):
@@ -246,49 +123,6 @@ def set_overlaps(set1, set2, s1='s1', s2='s2'):
     return overlaps
 
 
-def edit_distance(string1, string2):
-    """
-    Edit distance algorithm. String1 and string2 can be either
-    strings or lists of strings
-
-    Args:
-        string1 (str | List[str]):
-        string2 (str | List[str]):
-
-    Requirements:
-        pip install python-Levenshtein
-
-    Example:
-        >>> # xdoctest: +REQUIRES(module:Levenshtein)
-        >>> string1 = 'hello world'
-        >>> string2 = ['goodbye world', 'rofl', 'hello', 'world', 'lowo']
-        >>> edit_distance(['hello', 'one'], ['goodbye', 'two'])
-        >>> edit_distance('hello', ['goodbye', 'two'])
-        >>> edit_distance(['hello', 'one'], 'goodbye')
-        >>> edit_distance('hello', 'goodbye')
-        >>> distmat = edit_distance(string1, string2)
-        >>> result = ('distmat = %s' % (ub.repr2(distmat),))
-        >>> print(result)
-        >>> [7, 9, 6, 6, 7]
-    """
-
-    import Levenshtein
-    isiter1 = ub.iterable(string1)
-    isiter2 = ub.iterable(string2)
-    strs1 = string1 if isiter1 else [string1]
-    strs2 = string2 if isiter2 else [string2]
-    distmat = [
-        [Levenshtein.distance(str1, str2) for str2 in strs2]
-        for str1 in strs1
-    ]
-    # broadcast
-    if not isiter2:
-        distmat = [row[0] for row in distmat]
-    if not isiter1:
-        distmat = distmat[0]
-    return distmat
-
-
 def nested_type(obj, unions=False):
     """
     Compute the :module:`typing` compatible annotation type.
@@ -310,12 +144,12 @@ def nested_type(obj, unions=False):
         >>> print(nested_type(obj, unions=True))
         Dict[str, Dict[str, float | ndarray | str]]
     """
-    def _resolve(types):
-        if len(types) == 1:
-            return ub.peek(types)
+    def _resolve(_types):
+        if len(_types) == 1:
+            return ub.peek(_types)
         else:
             if unions:
-                return ' | '.join(sorted(types))
+                return ' | '.join(sorted(_types))
             else:
                 return 'Any'
 
@@ -519,86 +353,3 @@ def _print_forest(graph):
     for idx, node in enumerate(sources, start=1):
         islast_next = (idx == len(sources))
         _recurse(node, indent='', islast=islast_next)
-
-
-def make_warnings_print_tracebacks():
-    import warnings
-    import traceback
-    _orig_formatwarning = warnings.formatwarning
-    warnings._orig_formatwarning = _orig_formatwarning
-    def _monkeypatch_formatwarning_tb(*args, **kwargs):
-        s = _orig_formatwarning(*args, **kwargs)
-        if len(s.strip()):
-            tb = traceback.format_stack()
-            s += ''.join(tb[:-1])
-        return s
-    warnings.formatwarning = _monkeypatch_formatwarning_tb
-
-
-# def import_star(module):
-#     """
-#     This is the unholy grail
-
-#     Import all contents of the module into the global scope
-
-#     Args:
-#         module (str | module): a path, module name, or module itself
-
-#     Example:
-#         >>> # xdoctest: +DISABLE_DOCTEST
-#         >>> from xdev.misc import import_star
-#         >>> module = 'ubelt'
-#         >>> print(import_star(module).keys())
-#     """
-#     import ubelt as ub
-#     if isinstance(module, str):
-#         if exists(module):
-#             module = ub.import_module_from_path(module)
-#         else:
-#             module = ub.import_module_from_name(module)
-
-#     mod_attrs = {
-#         key: val for key, val in module.__dict__.items()
-#         if not key.startswith('_')
-#     }
-#     parent_frame = get_stack_frame(N=2)
-#     print('parent_frame.f_code.co_names = {!r}'.format(parent_frame.f_code.co_names))
-#     print('parent_frame.f_code.co_name = {!r}'.format(parent_frame.f_code.co_name))
-#     # Note: locals is usually read only
-#     # parent_frame.f_locals.update(mod_attrs)
-#     parent_frame.f_globals.update(mod_attrs)
-#     return mod_attrs
-
-
-def get_stack_frame(N=0, strict=True):
-    """
-    Args:
-        N (int): N=0 means the frame you called this function in.
-                 N=1 is the parent frame.
-        strict (bool): (default = True)
-    """
-    import inspect
-    frame_cur = inspect.currentframe()
-    for idx in range(N + 1):
-        # always skip the frame of this function
-        frame_next = frame_cur.f_back
-        if frame_next is None:
-            if strict:
-                raise AssertionError('Frame level {:!r} is root'.format(idx))
-            else:
-                break
-        frame_cur = frame_next
-    return frame_cur
-
-
-def distext(func):
-    """
-    Like dis.dis, but returns the text
-    """
-    import dis
-    import io
-    file = io.StringIO()
-    dis.dis(func, file=file)
-    file.seek(0)
-    text = file.read()
-    return text
