@@ -12,8 +12,8 @@ CommandLine:
 
 TODO:
     - [ ] Update mkinit so we can either:
-        (1) blacklist specific modules from importing their attrs or
-        (2) whitelist the modules that will import their attrs
+        (1) blocklist specific modules from importing their attrs or
+        (2) passlist the modules that will import their attrs
 
     - [ ] Perhaps let submodules specify a 2-tuple with the second item
         being a dict that indicates: (nomod, noattr)?
@@ -21,18 +21,20 @@ TODO:
     - [ ] Automatically add custom defined names in this file to __all__
 """
 
-__version__ = '0.2.4'
+__version__ = '0.2.5'
 
 
 __submodules__ = [
     'embeding',
     'interactive_iter',
+    'desktop_interaction',
     'introspect',
     'class_reloader',
     'search_replace',
     'misc',
     'autojit',
     'profiler',
+    'tracebacks',
 ]
 
 __extra_all__ = [
@@ -46,36 +48,37 @@ from xdev.embeding import util
 
 from xdev import autojit
 from xdev import class_reloader
+from xdev import desktop_interaction
 from xdev import embeding
 from xdev import interactive_iter
 from xdev import introspect
 from xdev import misc
 from xdev import profiler
 from xdev import search_replace
+from xdev import tracebacks
 
 from xdev.embeding import (EmbedOnException, embed, embed_on_exception_context,
                            fix_embed_globals,)
 from xdev.interactive_iter import (InteractiveIter,)
-from xdev.introspect import (get_func_kwargs,)
+from xdev.desktop_interaction import (editfile, startfile, view_directory,)
+from xdev.introspect import (distext, get_func_kwargs, get_stack_frame,)
 from xdev.class_reloader import (reload_class,)
-from xdev.search_replace import (GrepResult, Pattern, find, grep, grepfile,
-                                 sed, sedfile,)
-from xdev.misc import (byte_str, difftext, distext, edit_distance, editfile,
-                       get_stack_frame, make_warnings_print_tracebacks,
-                       nested_type, quantum_random, set_overlaps, startfile,
-                       tree, view_directory,)
-from xdev.autojit import (MAX_AUTOJIT_TRIES, NUM_AUTOJIT_TRIES,
-                          import_module_from_pyx,)
+from xdev.search_replace import (GrepResult, Pattern, RE_Pattern, find, grep,
+                                 grepfile, sed, sedfile,)
+from xdev.misc import (byte_str, difftext, nested_type, quantum_random,
+                       set_overlaps, tree,)
+from xdev.autojit import (import_module_from_pyx,)
 from xdev.profiler import (IS_PROFILING, profile, profile_now,)
+from xdev.tracebacks import (make_warnings_print_tracebacks,)
 
 __all__ = ['EmbedOnException', 'GrepResult', 'IS_PROFILING', 'InteractiveIter',
-           'MAX_AUTOJIT_TRIES', 'NUM_AUTOJIT_TRIES', 'Pattern', 'autojit',
-           'byte_str', 'class_reloader', 'difftext', 'distext',
-           'edit_distance', 'editfile', 'embed', 'embed_on_exception_context',
-           'embeding', 'find', 'fix_embed_globals', 'get_func_kwargs',
-           'get_stack_frame', 'grep', 'grepfile', 'import_module_from_pyx',
-           'interactive_iter', 'introspect', 'make_warnings_print_tracebacks',
-           'misc', 'nested_type', 'profile', 'profile_now', 'profiler',
+           'Pattern', 'RE_Pattern', 'autojit', 'byte_str', 'class_reloader',
+           'desktop_interaction', 'difftext', 'distext', 'editfile', 'embed',
+           'embed_on_exception_context', 'embeding', 'find',
+           'fix_embed_globals', 'get_func_kwargs', 'get_stack_frame', 'grep',
+           'grepfile', 'import_module_from_pyx', 'interactive_iter',
+           'introspect', 'make_warnings_print_tracebacks', 'misc',
+           'nested_type', 'profile', 'profile_now', 'profiler',
            'quantum_random', 'reload_class', 'search_replace', 'sed',
-           'sedfile', 'set_overlaps', 'startfile', 'tree', 'util',
-           'view_directory']
+           'sedfile', 'set_overlaps', 'startfile', 'tracebacks', 'tree',
+           'util', 'view_directory']

@@ -1,7 +1,7 @@
 Xdev - Excellent Developer
 --------------------------
 
-|GithubActions| |CircleCI| |Appveyor| |Codecov| |Pypi| |Downloads| |ReadTheDocs|
+|GithubActions| |CircleCI| |Codecov| |Pypi| |Downloads| |ReadTheDocs|
 
 Xdev is an excellent developer tool for excellent developers.
 It contains miscellaneous and/or interactive debugging tools.

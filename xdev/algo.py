@@ -1,6 +1,50 @@
 import numpy as np
 import decimal
 from collections import defaultdict
+import ubelt as ub
+
+
+def edit_distance(string1, string2):
+    """
+    Edit distance algorithm. String1 and string2 can be either
+    strings or lists of strings
+
+    Args:
+        string1 (str | List[str]):
+        string2 (str | List[str]):
+
+    Requirements:
+        pip install python-Levenshtein
+
+    Example:
+        >>> # xdoctest: +REQUIRES(module:Levenshtein)
+        >>> string1 = 'hello world'
+        >>> string2 = ['goodbye world', 'rofl', 'hello', 'world', 'lowo']
+        >>> edit_distance(['hello', 'one'], ['goodbye', 'two'])
+        >>> edit_distance('hello', ['goodbye', 'two'])
+        >>> edit_distance(['hello', 'one'], 'goodbye')
+        >>> edit_distance('hello', 'goodbye')
+        >>> distmat = edit_distance(string1, string2)
+        >>> result = ('distmat = %s' % (ub.repr2(distmat),))
+        >>> print(result)
+        >>> [7, 9, 6, 6, 7]
+    """
+
+    import Levenshtein
+    isiter1 = ub.iterable(string1)
+    isiter2 = ub.iterable(string2)
+    strs1 = string1 if isiter1 else [string1]
+    strs2 = string2 if isiter2 else [string2]
+    distmat = [
+        [Levenshtein.distance(str1, str2) for str2 in strs2]
+        for str1 in strs1
+    ]
+    # broadcast
+    if not isiter2:
+        distmat = [row[0] for row in distmat]
+    if not isiter1:
+        distmat = distmat[0]
+    return distmat
 
 
 def knapsack(items, maxweight, method='iterative'):
