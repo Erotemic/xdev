@@ -281,12 +281,16 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
     return text
 
 
-def tree(cwd=None):
+def tree(cwd=None, max_files=0):
     """
     Like the unix util tree, but allow writing numbers of files per directory
     when given -d option
 
     cwd = '/data/public/Aerial/US_ALASKA_MML_SEALION'
+
+    Args:
+        cwd : directory to print
+        max_files : maximum files to print before supressing a directory
     """
     import os
     from os.path import join, relpath
@@ -308,6 +312,11 @@ def tree(cwd=None):
         label = '{} {}'.format(prefix, pathrep)
 
         tree.nodes[root]['label'] = label
+
+        if len(fnames) < max_files:
+            for fname in fnames:
+                fpath = join(root, fname)
+                tree.add_edge(root, fpath)
 
         for dname in dnames:
             dpath = join(root, dname)
