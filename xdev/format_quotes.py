@@ -29,6 +29,7 @@ def format_quotes_in_text(text):
     Returns:
         str: modified text
     """
+    # TODO: can we move to parso?
     red = redbaron.RedBaron(text)
 
     single_quote = chr(39)
@@ -134,6 +135,45 @@ def format_quotes_in_file(fpath, diff=True, write=False, verbose=3):
                 print('dump formatted text to stdout')
             print(new_text)
 
+
+def format_quotes(path, diff=True, write=False, verbose=3, recursive=True):
+    # TODO:
+    # Implement some sort of PathPattern that could either be a single path or
+    # a pattern that indicates multiple paths
+    # from xdev import search_replace
+    # pat = search_replace.Pattern.coerce(str(path))
+
+    import pathlib
+    path = pathlib.Path(path)
+
+    if path.is_file():
+        if verbose:
+            print('Format file')
+        format_quotes_in_file(path, diff=diff, write=write, verbose=verbose)
+    elif path.is_dir():
+        if verbose:
+            print('Format directory')
+        import os
+        from os.path import join
+        for r, ds, fs in os.walk(path):
+            for f in fs:
+                if f.endswith('.py'):
+                    fpath = join(r, f)
+                    format_quotes_in_file(
+                        fpath, diff=diff, write=write, verbose=verbose)
+            if not recursive:
+                break
+    else:
+        if verbose:
+            print('Format pattern')
+        raise NotImplementedError
+        # if '*' in str(path):
+        #     import glob
+        #     for fpath in glob.glob(str(path), recursive=recursive):
+        #         if pathlib.Path(fpath).is_file():
+        #             pass
+
+
 if __name__ == '__main__':
     import fire
-    fire.Fire(format_quotes_in_file)
+    fire.Fire(format_quotes)

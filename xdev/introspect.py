@@ -70,3 +70,115 @@ def distext(func):
 #     # parent_frame.f_locals.update(mod_attrs)
 #     parent_frame.f_globals.update(mod_attrs)
 #     return mod_attrs
+
+
+def iter_object_tree(obj):
+    # ub.IndexableWalker
+    data = obj.__dict__
+    prefix = []
+
+    list_cls = (list, tuple)
+    dict_cls = (dict,)
+    indexable_cls = dict_cls + list_cls
+
+    seen_ = set()
+    stack = [(data, prefix)]
+    while stack:
+        _data, _prefix = stack.pop()
+        # Create an items iterable of depending on the indexable data type
+        if hasattr(_data, '__dict__'):
+            items = _data.__dict__.items()
+        elif isinstance(_data, list_cls):
+            items = enumerate(_data)
+        elif isinstance(_data, dict_cls):
+            items = _data.items()
+        else:
+            raise TypeError(type(_data))
+
+        for key, value in items:
+            # Yield the full path to this position and its value
+            path = _prefix + [key]
+
+            message = yield path, value
+            # If the value at this path is also indexable, then continue
+            # the traversal, unless the False message was explicitly sent
+            # by the caller.
+            if message is False:
+                # Because the `send` method will return the next value,
+                # we yield a dummy value so we don't clobber the next
+                # item in the traversal.
+                yield None
+            else:
+                if isinstance(value, indexable_cls) or hasattr(value, '__dict__'):
+                    objid = id(value)
+                    if objid not in seen_:
+                        seen_.add(objid)
+                        stack.append((value, path))
+
+
+def test_object_pickleability(obj):
+    # ub.IndexableWalker
+
+    import pickle
+    serialized = pickle.dumps(obj)
+    recon = pickle.loads(serialized)
+
+    data = obj.__dict__
+    prefix = []
+
+    list_cls = (list, tuple)
+    dict_cls = (dict,)
+    indexable_cls = dict_cls + list_cls
+
+    def condition(path, value):
+        import pickle
+        dumped = pickle.dumps(value)
+        try:
+            recon = pickle.loads(dumped)
+        except Exception:
+            return True
+        else:
+            return False
+        ignore_types = (float, int, bool, type(None))
+        return not isinstance(value, ignore_types)
+
+    walker = iter_object_tree(obj)
+    for path, value in walker:
+        flag = condition(path, value)
+        if flag:
+            print('BAD FLAG path = {!r}'.format(path))
+            walker.send(False)
+
+    found = []
+
+
+    keyfn = type
+
+    seen_ = set()
+
+    stack = [(data, prefix)]
+    while stack:
+        _data, _prefix = stack.pop()
+        # Create an items iterable of depending on the indexable data type
+        if isinstance(_data, list_cls):
+            items = enumerate(_data)
+        elif isinstance(_data, dict_cls):
+            items = _data.items()
+        elif hasattr(_data, '__dict__'):
+            items = _data.__dict__.items()
+        else:
+            raise TypeError(type(_data))
+
+        for key, value in items:
+            # Yield the full path to this position and its value
+            path = _prefix + [key]
+            flag = condition(path, value)
+            if flag:
+                store = keyfn(value)
+                found.append((path, store))
+
+                if isinstance(value, indexable_cls) or hasattr(value, '__dict__'):
+                    objid = id(value)
+                    if objid not in seen_:
+                        seen_.add(objid)
+                        stack.append((value, path))
