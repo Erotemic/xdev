@@ -24,14 +24,45 @@ def get_stack_frame(N=0, strict=True):
     return frame_cur
 
 
-def distext(func):
+def distext(obj):
     """
     Like dis.dis, but returns the text
+
+    Args:
+        obj : a compiled object (e.g. a function, class, generator, etc...)
+
+    Returns:
+        str: text of the python byte code
+
+    Example:
+        >>> from xdev.introspect import *  # NOQA
+        >>> import ubelt as ub
+        >>> code = ub.codeblock(
+            '''
+            def foo(a, b):
+                print('hello')
+                if __debug__:
+                    if a is None or b is None:
+                        raise ValueError
+                print('world')
+                # This is not entirely optimized away
+                if __debug__ and (a is None or b is None):
+                    raise ValueError
+                return a + b
+            ''')
+        >>> obj = compile(code, filename='<memory>', mode='exec', dont_inherit=True, optimize=0)
+        >>> print(' ** UNOPTIMIZED')
+        >>> text = distext(obj)
+        >>> print(text)
+        >>> print(' ** OPTIMIZED')
+        >>> obj = compile(code, filename='<memory>', mode='exec', dont_inherit=True, optimize=1)
+        >>> text = distext(obj)
+        >>> print(text)
     """
     import dis
     import io
     file = io.StringIO()
-    dis.dis(func, file=file)
+    dis.dis(obj, file=file)
     file.seek(0)
     text = file.read()
     return text
