@@ -8,7 +8,7 @@ Developing:
     git clone https://github.com/Erotemic/xdev.git
     pip install -e xdev
 """
-from setuptools import setup
+from setuptools import setup, find_packages
 from os.path import exists
 import sys
 
@@ -199,6 +199,13 @@ if __name__ == '__main__':
             'all': parse_requirements('requirements.txt'),
             'tests': parse_requirements('requirements/tests.txt'),
         },
+        entry_points={
+            # the console_scripts entry point creates the xdoctest executable
+            'console_scripts': [
+                'xdev = xdev.__main__:main',
+            ],
+        },
+        # packages=find_packages('.'),
         license='Apache 2',
         packages=['xdev'],
         classifiers=[
