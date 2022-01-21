@@ -11,6 +11,15 @@ class RawDescriptionDefaultsHelpFormatter(
     pass
 
 
+_SUB_CLIS = []
+
+
+def _register(cli_cls):
+    _SUB_CLIS.append(cli_cls)
+    return cli_cls
+
+
+@_register
 class CodeblockCLI(scfg.Config):
     name = 'codeblock'
     description = 'Remove indentation from text'
@@ -24,6 +33,7 @@ class CodeblockCLI(scfg.Config):
         print(ub.codeblock(config['text']))
 
 
+@_register
 class InfoCLI(scfg.Config):
     name = 'info'
     description = 'Info about xdev'
@@ -35,6 +45,50 @@ class InfoCLI(scfg.Config):
         print('sys.version_info = {!r}'.format(sys.version_info))
         print('xdev.__version__ = {!r}'.format(xdev.__version__))
         print('xdev.__file__ = {!r}'.format(xdev.__file__))
+
+
+@_register
+class SedCLI(scfg.Config):
+    name = 'sed'
+    description = 'Search and replace text in files'
+    default = {
+        'regexpr': scfg.Value('', position=1),
+        'repl': scfg.Value('', position=2),
+        'dpath': scfg.Value(None, position=3),
+        'include': scfg.Value(None),
+        'exclude': scfg.Value(None),
+        'recursive': scfg.Value(True),
+        'dry': scfg.Value(True),
+        'verbose': scfg.Value(1),
+    }
+
+    @classmethod
+    def main(cls, cmdline=False, **kwargs):
+        from xdev import search_replace
+        config = cls(cmdline=cmdline, data=kwargs)
+        search_replace.sed(**config)
+
+
+@_register
+class FindCLI(scfg.Config):
+    name = 'find'
+    description = 'Find files based on names'
+    default = {
+        'pattern': scfg.Value('', position=1),
+        'dpath': scfg.Value(None, position=2),
+        'include': scfg.Value(None),
+        'exclude': scfg.Value(None),
+        'type': scfg.Value('f', help="can be f and/or d"),
+        'recursive': scfg.Value(True),
+        'followlinks': scfg.Value(False),
+    }
+
+    @classmethod
+    def main(cls, cmdline=False, **kwargs):
+        from xdev import search_replace
+        config = cls(cmdline=cmdline, data=kwargs)
+        for found in search_replace.find(**config):
+            print(found)
 
 
 class ModalCLI(object):
@@ -102,14 +156,10 @@ class ModalCLI(object):
 
 def main():
     import xdev
-    sub_clis = [
-        CodeblockCLI,
-        InfoCLI,
-    ]
     modal_cli = ModalCLI(
         description='The XDEV CLI',
         version=xdev.__version__,
-        sub_clis=sub_clis,
+        sub_clis=_SUB_CLIS,
     )
     modal_cli.run()
 
@@ -120,6 +170,8 @@ if __name__ == '__main__':
         xdev --help
         xdev --version
         xdev info
+        xdev sed "main" "MAIN" "." --dry=True --include="*_*.py"
+        xdev find "*_*.py"  '.'
         xdev codeblock "
             import sys
             print(sys.argv)

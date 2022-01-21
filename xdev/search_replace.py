@@ -6,7 +6,7 @@ Porting from ~/local/rob/rob/rob_nav.py / ubelt
 import os
 import ubelt as ub
 from os.path import relpath, split, join, basename, abspath
-from xdev.patterns import Pattern, RE_Pattern
+from xdev.patterns import Pattern, RE_Pattern  # NOQA
 
 # try:
 #     from packaging.version import parse as parse_version
@@ -160,8 +160,12 @@ def find(pattern=None, dpath=None, include=None, exclude=None, type=None,
     # Define helper for checking inclusion / exclusion
     include_ = _coerce_multipattern(include)
     exclude_ = _coerce_multipattern(exclude)
+    main_pattern = Pattern.coerce(pattern, hint='glob')
 
     def is_included(name):
+        if not main_pattern.match(name):
+            return False
+
         if exclude_ is not None:
             if any(pat.match(name) for pat in exclude_):
                 return False
