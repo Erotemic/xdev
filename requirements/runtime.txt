@@ -7,6 +7,7 @@ IPython >= 5.8.0
 parse >= 1.12.1
 pyflakes 
 line_profiler >= 3.0.2
+scriptconfig >= 0.5.8
 
 # -e git://github.com/pyutils/line_profiler.git@master#egg=line_profiler
 # -e https://github.com/pyutils/line_profiler/tarball/master#egg=line_profiler
