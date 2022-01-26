@@ -55,10 +55,10 @@ class SedCLI(scfg.Config):
         'regexpr': scfg.Value('', position=1),
         'repl': scfg.Value('', position=2),
         'dpath': scfg.Value(None, position=3),
+        'dry': scfg.Value(True, position=4),
         'include': scfg.Value(None),
         'exclude': scfg.Value(None),
         'recursive': scfg.Value(True),
-        'dry': scfg.Value(True),
         'verbose': scfg.Value(1),
     }
 

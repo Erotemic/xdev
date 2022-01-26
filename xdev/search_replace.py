@@ -14,7 +14,8 @@ from xdev.patterns import Pattern, RE_Pattern  # NOQA
 #     from distutils.version import LooseVersion as parse_version
 
 
-def sed(regexpr, repl, dpath=None, include=None, exclude=None, recursive=True, dry=False, verbose=1):
+def sed(regexpr, repl, dpath=None, include=None, exclude=None, recursive=True,
+        dry=False, verbose=1):
     r"""
     Execute a sed on multiple files.
 
@@ -26,21 +27,27 @@ def sed(regexpr, repl, dpath=None, include=None, exclude=None, recursive=True, d
     """
     num_changed = 0
     num_files_checked = 0
+    num_skipped = 0
     fpaths_changed = []
 
     fpath_generator = find(dpath=dpath, type='f', include=include,
                            exclude=exclude, recursive=recursive)
     for fpath in fpath_generator:
-        num_files_checked += 1
-        changed_lines = sedfile(fpath, regexpr, repl, dry=dry)
-        if len(changed_lines) > 0:
-            fpaths_changed.append(fpath)
-            num_changed += len(changed_lines)
+        try:
+            changed_lines = sedfile(fpath, regexpr, repl, dry=dry)
+        except UnicodeDecodeError:
+            num_skipped += 1
+        else:
+            num_files_checked += 1
+            if len(changed_lines) > 0:
+                fpaths_changed.append(fpath)
+                num_changed += len(changed_lines)
 
     if verbose:
-        print('num_files_checked = %r' % (num_files_checked,))
-        print('fpaths_changed = %s' % (ub.repr2(sorted(fpaths_changed)),))
-        print('total lines changed = %r' % (num_changed,))
+        print('num_files_checked = {}'.format(num_files_checked))
+        print('num probable binary files skipped = {}'.format(num_skipped))
+        print('fpaths_changed = {}'.format(ub.repr2(sorted(fpaths_changed))))
+        print('total lines changed = {!r}'.format(num_changed))
 
 
 def grep(regexpr, dpath=None, include=None, exclude=None, dry=False,
@@ -217,10 +224,20 @@ def sedfile(fpath, regexpr, repl, dry=False, verbose=1):
 
     path, name = split(fpath)
     new_file_lines = []
-    with open(fpath, 'r') as file:
-        file_lines = file.readlines()
-        # Search each line for the desired regexpr
-        new_file_lines = [pattern.sub(repl, line) for line in file_lines]
+    try:
+        with open(fpath, 'r') as file:
+            file_lines = file.readlines()
+            # Search each line for the desired regexpr
+            new_file_lines = [pattern.sub(repl, line) for line in file_lines]
+    except UnicodeDecodeError as ex:
+        # Add the file name into the exception
+        new_last_arg = ex.args[-1] + ' in fpath={!r}'.format(fpath)
+        new_args = ex.args[:-1] + (new_last_arg,)
+        raise UnicodeDecodeError(*new_args) from ex
+    except Exception:
+        raise
+        # This does not preserve exception type
+        # raise Exception('Failed to sedfile fpath = {!r}'.format(fpath)) from ex
 
     changed_lines = [(newline, line)
                      for newline, line in zip(new_file_lines, file_lines)
