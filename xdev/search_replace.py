@@ -50,8 +50,8 @@ def sed(regexpr, repl, dpath=None, include=None, exclude=None, recursive=True,
         print('total lines changed = {!r}'.format(num_changed))
 
 
-def grep(regexpr, dpath=None, include=None, exclude=None, dry=False,
-         recursive=True, verbose=1):
+def grep(regexpr, dpath=None, include=None, exclude=None, recursive=True,
+         verbose=1):
     r"""
     Execute a grep on multiple files.
 
@@ -59,7 +59,7 @@ def grep(regexpr, dpath=None, include=None, exclude=None, dry=False,
         >>> from xdev.search_replace import *  # NOQA
         >>> from xdev.search_replace import _create_test_filesystem
         >>> dpath = _create_test_filesystem()['root']
-        >>> grep('a', dpath=dpath, dry=True)
+        >>> grep('a', dpath=dpath)
     """
     grep_results = []
 
