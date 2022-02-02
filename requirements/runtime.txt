@@ -6,8 +6,14 @@ pygments >= 2.4.2
 IPython >= 5.8.0
 parse >= 1.12.1
 pyflakes 
-line_profiler >= 3.0.2
 scriptconfig >= 0.5.8
+
+line_profiler>=3.4.0     ; python_version >= '3.7'    # Python 3.7+
+line_profiler>=3.4.0     ; python_version < '3.7' and python_version >= '3.6'    # Python 3.6
+line_profiler>=3.3.0     ; python_version < '3.6' and python_version >= '3.5'    # Python 3.5
+line_profiler>=3.0.0     ; python_version < '3.5' and python_version >= '2.7'    # Python 2.7
+
+# python ~/local/tools/supported_python_versions_pip.py line_profiler
 
 # -e git://github.com/pyutils/line_profiler.git@master#egg=line_profiler
 # -e https://github.com/pyutils/line_profiler/tarball/master#egg=line_profiler
