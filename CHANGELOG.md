@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## Version 0.3.0 - Unreleased
 
+### Changed
+
+* Dropped Support for Python < 3.6
+
 ### Added
 
 * Added `xdev.patterns` to abstract away regex vs glob style patterns
