@@ -193,9 +193,12 @@ class KernprofParser(object):
         fileline_match = re.search(fileline_regex, block, flags=re.MULTILINE)
         funcline_match = re.search(funcline_regex, block, flags=re.MULTILINE)
         if fileline_match is not None and funcline_match is not None:
-            fpath    = fileline_match.groupdict()['fpath']
-            funcname = funcline_match.groupdict()['funcname']
-            lineno   = funcline_match.groupdict()['lineno']
+            fileline_group = fileline_match.groupdict()
+            funcline_group = funcline_match.groupdict()
+
+            fpath    = fileline_group['fpath']
+            funcname = funcline_group['funcname']
+            lineno   = funcline_group['lineno']
             # TODO: Determine if the function belongs to a class
 
             if readlines:
@@ -327,6 +330,8 @@ def _find_pyclass_above_row(line_list, row, indent):
     classline, classpos = _find_pattern_above_row(pattern, line_list, row,
                                                   indent, maxIter=None)
     result = parse.parse('class {name}({rest}', classline)
+    if result is None:
+        return None
     classname = result.named['name']
     return classname
 
