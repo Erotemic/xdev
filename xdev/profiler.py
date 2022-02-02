@@ -5,6 +5,7 @@ import operator
 import atexit
 import sys
 import re
+import os
 import itertools as it
 from collections import defaultdict
 
@@ -14,16 +15,17 @@ __all__ = [
     'IS_PROFILING',
 ]
 
-if '--profile' in sys.argv:
+IS_PROFILING = os.environ.get('XDEV_PROFILE', '').lower() in {'1', 'on', 'true', 'yes'}
+IS_PROFILING = IS_PROFILING or '--profile' in sys.argv
+
+if IS_PROFILING:
     import line_profiler
     profile = line_profiler.LineProfiler()
-    IS_PROFILING = True
 else:
     def __dummy_profile__(func):
         """ dummy profiling func. does nothing """
         return func
     profile = __dummy_profile__
-    IS_PROFILING = False
 
 
 @atexit.register

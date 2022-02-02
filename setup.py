@@ -8,7 +8,7 @@ Developing:
     git clone https://github.com/Erotemic/xdev.git
     pip install -e xdev
 """
-from setuptools import setup, find_packages
+from setuptools import setup
 from os.path import exists
 import sys
 
@@ -205,7 +205,6 @@ if __name__ == '__main__':
                 'xdev = xdev.__main__:main',
             ],
         },
-        # packages=find_packages('.'),
         license='Apache 2',
         packages=['xdev'],
         classifiers=[
