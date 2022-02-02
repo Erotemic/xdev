@@ -131,7 +131,7 @@ jobs:
   test-full-3.6:
     <<: *test-full-template
     docker:
-      - image: circleci/python:3.5
+      - image: circleci/python:3.6
     working_directory: ~/repo-full-36
 
   test-full-3.5:
