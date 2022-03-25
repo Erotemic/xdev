@@ -51,7 +51,7 @@ def parse_description():
     return ''
 
 
-def parse_requirements(fname='requirements.txt', with_version=False):
+def parse_requirements(fname='requirements.txt', with_version=True):
     """
     Parse the package dependencies listed in a requirements file but strips
     specific versioning information.
@@ -199,8 +199,15 @@ if __name__ == '__main__':
             'all': parse_requirements('requirements.txt'),
             'tests': parse_requirements('requirements/tests.txt'),
         },
+        entry_points={
+            # the console_scripts entry point creates the xdoctest executable
+            'console_scripts': [
+                'xdev = xdev.__main__:main',
+            ],
+        },
         license='Apache 2',
-        packages=['xdev'],
+        packages=['xdev', 'xdev.cli'],
+        python_requires='>=3.6',
         classifiers=[
             # List of classifiers available at:
             # https://pypi.python.org/pypi?%3Aaction=list_classifiers
@@ -211,7 +218,12 @@ if __name__ == '__main__':
             # This should be interpreted as Apache License v2.0
             'License :: OSI Approved :: Apache Software License',
             # Supported Python versions
-            'Programming Language :: Python :: 2.7',
-            'Programming Language :: Python :: 3',
+            # 'Programming Language :: Python :: 2.7',
+            # 'Programming Language :: Python :: 3.5',
+            'Programming Language :: Python :: 3.6',
+            'Programming Language :: Python :: 3.7',
+            'Programming Language :: Python :: 3.8',
+            'Programming Language :: Python :: 3.9',
+            'Programming Language :: Python :: 3.10',
         ],
     )

@@ -5,6 +5,7 @@ import operator
 import atexit
 import sys
 import re
+import os
 import itertools as it
 from collections import defaultdict
 
@@ -14,16 +15,17 @@ __all__ = [
     'IS_PROFILING',
 ]
 
-if '--profile' in sys.argv:
+IS_PROFILING = os.environ.get('XDEV_PROFILE', '').lower() in {'1', 'on', 'true', 'yes'}
+IS_PROFILING = IS_PROFILING or '--profile' in sys.argv
+
+if IS_PROFILING:
     import line_profiler
     profile = line_profiler.LineProfiler()
-    IS_PROFILING = True
 else:
     def __dummy_profile__(func):
         """ dummy profiling func. does nothing """
         return func
     profile = __dummy_profile__
-    IS_PROFILING = False
 
 
 @atexit.register
@@ -193,9 +195,12 @@ class KernprofParser(object):
         fileline_match = re.search(fileline_regex, block, flags=re.MULTILINE)
         funcline_match = re.search(funcline_regex, block, flags=re.MULTILINE)
         if fileline_match is not None and funcline_match is not None:
-            fpath    = fileline_match.groupdict()['fpath']
-            funcname = funcline_match.groupdict()['funcname']
-            lineno   = funcline_match.groupdict()['lineno']
+            fileline_group = fileline_match.groupdict()
+            funcline_group = funcline_match.groupdict()
+
+            fpath    = fileline_group['fpath']
+            funcname = funcline_group['funcname']
+            lineno   = funcline_group['lineno']
             # TODO: Determine if the function belongs to a class
 
             if readlines:
@@ -327,6 +332,8 @@ def _find_pyclass_above_row(line_list, row, indent):
     classline, classpos = _find_pattern_above_row(pattern, line_list, row,
                                                   indent, maxIter=None)
     result = parse.parse('class {name}({rest}', classline)
+    if result is None:
+        return None
     classname = result.named['name']
     return classname
 

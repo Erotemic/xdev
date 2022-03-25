@@ -16,9 +16,9 @@ workflows:
       - test-full-3.8
       - test-full-3.7
       - test-full-3.6
-      - test-full-3.5
+      #- test-full-3.5
       #- test-full-3.4
-      - test-full-2.7
+      #- test-full-2.7
 
       #- test-minimal-3.8
       #- test-minimal-3.7
@@ -131,7 +131,7 @@ jobs:
   test-full-3.6:
     <<: *test-full-template
     docker:
-      - image: circleci/python:3.5
+      - image: circleci/python:3.6
     working_directory: ~/repo-full-36
 
   test-full-3.5:

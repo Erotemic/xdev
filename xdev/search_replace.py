@@ -3,105 +3,20 @@ Python implementations of sed, grep, and find
 
 Porting from ~/local/rob/rob/rob_nav.py / ubelt
 """
-import re
+from __future__ import absolute_import, division, print_function, unicode_literals
 import os
-import fnmatch
 import ubelt as ub
 from os.path import relpath, split, join, basename, abspath
+from xdev.patterns import Pattern, RE_Pattern  # NOQA
 
 # try:
 #     from packaging.version import parse as parse_version
 # except Exception:
 #     from distutils.version import LooseVersion as parse_version
 
-if hasattr(re, 'Pattern'):
-    RE_Pattern = re.Pattern
-else:
-    # sys.version_info[0:2] <= 3.6
-    RE_Pattern = type(re.compile('.*'))
 
-
-class Pattern(ub.NiceRepr):
-    """
-    A general patterns class, which can be strict, regex, or glob.
-
-    Example:
-        >>> from xdev.search_replace import *  # NOQA
-        >>> repat = Pattern.coerce('foo.*', 'regex')
-        >>> assert repat.match('foobar')
-        >>> assert not repat.match('barfoo')
-
-        >>> globpat = Pattern.coerce('foo*', 'glob')
-        >>> assert globpat.match('foobar')
-        >>> assert not globpat.match('barfoo')
-    """
-    def __init__(self, pattern, backend):
-        if backend == 'regex' and isinstance(pattern, str):
-            pattern = re.compile(pattern)
-        self.pattern = pattern
-        self.backend = backend
-
-    def __nice__(self):
-        return '{}, {}'.format(self.pattern, self.backend)
-
-    @classmethod
-    def coerce(cls, data, hint='glob'):
-        """
-        from xdev.search_replace import *  # NOQA
-        pat = Pattern.coerce('foo*', 'glob')
-        pat2 = Pattern.coerce(pat, 'regex')
-        print('pat = {}'.format(ub.repr2(pat, nl=1)))
-        print('pat2 = {}'.format(ub.repr2(pat2, nl=1)))
-        """
-        if isinstance(data, cls) or type(data).__name__ == cls.__name__:
-            self = data
-        else:
-            backend = cls.coerce_backend(data, hint=hint)
-            self = cls(data, backend)
-        return self
-
-    @classmethod
-    def coerce_backend(cls, data, hint='glob'):
-        if isinstance(data, RE_Pattern):
-            backend = 'regex'
-        elif isinstance(data, cls) or type(data).__name__ == cls.__name__:
-            backend = data.backend
-        else:
-            backend = hint
-        return backend
-
-    def match(self, text):
-        if self.backend == 'regex':
-            return self.pattern.match(text)
-        elif self.backend == 'glob':
-            return fnmatch.fnmatch(text, self.pattern)
-        elif self.backend == 'strict':
-            return self.pattern == text
-        else:
-            raise KeyError(self.backend)
-
-    def search(self, text):
-        if self.backend == 'regex':
-            return self.pattern.search(text)
-        elif self.backend == 'glob':
-            return fnmatch.fnmatch(text, '*{}*'.format(self.pattern))
-        elif self.backend == 'strict':
-            return self.pattern in text
-        else:
-            raise KeyError(self.backend)
-
-    def sub(self, repl, text):
-        if self.backend == 'regex':
-            return self.pattern.sub(repl, text)
-        elif self.backend == 'glob':
-            raise NotImplementedError
-        elif self.backend == 'strict':
-            return text.replace(self.pattern, repl)
-        else:
-            raise KeyError(self.backend)
-
-
-def sed(regexpr, repl, dpath=None, include=None, exclude=None, recursive=True, dry=False, verbose=1):
+def sed(regexpr, repl, dpath=None, include=None, exclude=None, recursive=True,
+        dry=False, verbose=1):
     r"""
     Execute a sed on multiple files.
 
@@ -113,25 +28,31 @@ def sed(regexpr, repl, dpath=None, include=None, exclude=None, recursive=True, d
     """
     num_changed = 0
     num_files_checked = 0
+    num_skipped = 0
     fpaths_changed = []
 
     fpath_generator = find(dpath=dpath, type='f', include=include,
                            exclude=exclude, recursive=recursive)
     for fpath in fpath_generator:
-        num_files_checked += 1
-        changed_lines = sedfile(fpath, regexpr, repl, dry=dry)
-        if len(changed_lines) > 0:
-            fpaths_changed.append(fpath)
-            num_changed += len(changed_lines)
+        try:
+            changed_lines = sedfile(fpath, regexpr, repl, dry=dry)
+        except UnicodeDecodeError:
+            num_skipped += 1
+        else:
+            num_files_checked += 1
+            if len(changed_lines) > 0:
+                fpaths_changed.append(fpath)
+                num_changed += len(changed_lines)
 
     if verbose:
-        print('num_files_checked = %r' % (num_files_checked,))
-        print('fpaths_changed = %s' % (ub.repr2(sorted(fpaths_changed)),))
-        print('total lines changed = %r' % (num_changed,))
+        print('num_files_checked = {}'.format(num_files_checked))
+        print('num probable binary files skipped = {}'.format(num_skipped))
+        print('fpaths_changed = {}'.format(ub.repr2(sorted(fpaths_changed))))
+        print('total lines changed = {!r}'.format(num_changed))
 
 
-def grep(regexpr, dpath=None, include=None, exclude=None, dry=False,
-         recursive=True, verbose=1):
+def grep(regexpr, dpath=None, include=None, exclude=None, recursive=True,
+         verbose=1):
     r"""
     Execute a grep on multiple files.
 
@@ -139,7 +60,7 @@ def grep(regexpr, dpath=None, include=None, exclude=None, dry=False,
         >>> from xdev.search_replace import *  # NOQA
         >>> from xdev.search_replace import _create_test_filesystem
         >>> dpath = _create_test_filesystem()['root']
-        >>> grep('a', dpath=dpath, dry=True)
+        >>> grep('a', dpath=dpath)
     """
     grep_results = []
 
@@ -247,8 +168,12 @@ def find(pattern=None, dpath=None, include=None, exclude=None, type=None,
     # Define helper for checking inclusion / exclusion
     include_ = _coerce_multipattern(include)
     exclude_ = _coerce_multipattern(exclude)
+    main_pattern = Pattern.coerce(pattern, hint='glob')
 
     def is_included(name):
+        if not main_pattern.match(name):
+            return False
+
         if exclude_ is not None:
             if any(pat.match(name) for pat in exclude_):
                 return False
@@ -300,10 +225,20 @@ def sedfile(fpath, regexpr, repl, dry=False, verbose=1):
 
     path, name = split(fpath)
     new_file_lines = []
-    with open(fpath, 'r') as file:
-        file_lines = file.readlines()
-        # Search each line for the desired regexpr
-        new_file_lines = [pattern.sub(repl, line) for line in file_lines]
+    try:
+        with open(fpath, 'r') as file:
+            file_lines = file.readlines()
+            # Search each line for the desired regexpr
+            new_file_lines = [pattern.sub(repl, line) for line in file_lines]
+    except UnicodeDecodeError as ex:
+        # Add the file name into the exception
+        new_last_arg = ex.args[-1] + ' in fpath={!r}'.format(fpath)
+        new_args = ex.args[:-1] + (new_last_arg,)
+        raise UnicodeDecodeError(*new_args) from ex
+    except Exception:
+        raise
+        # This does not preserve exception type
+        # raise Exception('Failed to sedfile fpath = {!r}'.format(fpath)) from ex
 
     changed_lines = [(newline, line)
                      for newline, line in zip(new_file_lines, file_lines)

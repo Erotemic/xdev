@@ -5,7 +5,18 @@ We are currently working on porting this changelog to the specifications in
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Version 0.2.5 - Unreleased
+## Version 0.3.0 - Unreleased
+
+### Changed
+
+* Dropped Support for Python < 3.6
+
+### Added
+
+* Added `xdev.patterns` to abstract away regex vs glob style patterns
+* Added `xdev.regex_builder` for building regular expressions
+* Initial CLI with `sed`, `grep`, `find`, and `codeblock` support
+* Can now specify `XDEV_PROFILE` environment variable to get profiling enable instead of using `--profile` on the command line.
 
 
 ## Version 0.2.4 - Released 2021-10-06

@@ -46,7 +46,6 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         import logging
         logging.getLogger('parso').setLevel(logging.INFO)
 
-
     #from IPython.config.loader import Config
     # cfg = Config()
     #config_dict = {}
