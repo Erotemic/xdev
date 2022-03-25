@@ -1,3 +1,34 @@
+"""
+Notes:
+    http://docs.readthedocs.io/en/latest/getting_started.html
+
+    pip install sphinx sphinx-autobuild sphinx_rtd_theme sphinxcontrib-napoleon
+
+    cd ~/code/xdev
+    mkdir docs
+    cd docs
+
+    sphinx-quickstart
+
+    # need to edit the conf.py
+
+    cd ~/code/xdev/docs
+    make html
+    sphinx-apidoc -f -o ~/code/xdev/docs/source ~/code/xdev/xdev --separate
+    make html
+
+
+    Also:
+        To turn on PR checks
+
+        https://docs.readthedocs.io/en/stable/guides/autobuild-docs-for-pull-requests.html
+
+        https://readthedocs.org/dashboard/xdev/advanced/
+
+        ensure your github account is connected to readthedocs
+        https://readthedocs.org/accounts/social/connections/
+
+"""
 # -*- coding: utf-8 -*-
 #
 # Configuration file for the Sphinx documentation builder.
@@ -19,15 +50,44 @@
 
 # -- Project information -----------------------------------------------------
 
+import sphinx_rtd_theme
+from os.path import exists
+from os.path import dirname
+from os.path import join
+
+
+def parse_version(fpath):
+    """
+    Statically parse the version number from a python file
+    """
+    import ast
+    if not exists(fpath):
+        raise ValueError('fpath={!r} does not exist'.format(fpath))
+    with open(fpath, 'r') as file_:
+        sourcecode = file_.read()
+    pt = ast.parse(sourcecode)
+    class VersionVisitor(ast.NodeVisitor):
+        def visit_Assign(self, node):
+            for target in node.targets:
+                if getattr(target, 'id', None) == '__version__':
+                    self.version = node.value.s
+    visitor = VersionVisitor()
+    visitor.visit(pt)
+    return visitor.version
+
 project = 'xdev'
 copyright = '2018, Jon Crall'
 author = 'Jon Crall'
 
-# The short X.Y version
-import xdev
-version = '.'.join(xdev.__version__.split('.')[0:2])
+# # The short X.Y version
+# import xdev
+# version = '.'.join(xdev.__version__.split('.')[0:2])
+# # The full version, including alpha/beta/rc tags
+# release = ''
+modpath = join(dirname(dirname(dirname(__file__))), 'xdev', '__init__.py')
 # The full version, including alpha/beta/rc tags
-release = ''
+release = parse_version(modpath)
+version = '.'.join(release.split('.')[0:2])
 
 
 # -- General configuration ---------------------------------------------------
@@ -48,6 +108,24 @@ extensions = [
     'sphinx.ext.autosummary',
 ]
 
+todo_include_todos = True
+napoleon_google_docstring = True
+napoleon_use_param = False
+napoleon_use_ivar = True
+
+autodoc_inherit_docstrings = False
+
+autodoc_member_order = 'bysource'
+# autodoc_mock_imports = ['torch', 'torchvision', 'visdom']
+intersphinx_mapping = {
+    # 'pytorch': ('http://pytorch.org/docs/master/', None),
+    'python': ('https://docs.python.org/3', None),
+    'click': ('https://click.palletsprojects.com/', None),
+    # 'xxhash': ('https://pypi.org/project/xxhash/', None),
+    # 'pygments': ('https://pygments.org/docs/', None),
+    # 'tqdm': ('https://tqdm.github.io/', None),
+}
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -55,7 +133,7 @@ templates_path = ['_templates']
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = ['.rst', '.md']
 
 # The master toctree document.
 master_doc = 'index'
@@ -81,7 +159,6 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-import sphinx_rtd_theme  # NOQA
 html_theme = 'sphinx_rtd_theme'
 html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
@@ -89,7 +166,11 @@ html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+html_theme_options = {
+    'collapse_navigation': False,
+    'display_version': True,
+    # 'logo_only': True,
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -171,18 +252,118 @@ texinfo_documents = [
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
 
-# -- Options for todo extension ----------------------------------------------
 
-# If true, `todo` and `todoList` produce output, else they produce nothing.
-todo_include_todos = Truetodo_include_todos = True
-napoleon_google_docstring = True
-napoleon_use_param = False
-napoleon_use_ivar = True
-autodoc_inherit_docstrings = False
-autodoc_member_order = 'bysource'
+# -- Extension configuration -------------------------------------------------
 
-html_theme_options = {
-    'collapse_navigation': False,
-    'display_version': True,
-    # 'logo_only': True,
-}
+
+from sphinx.domains.python import PythonDomain  # NOQA
+# from sphinx.application import Sphinx  # NOQA
+from typing import Any, List  # NOQA
+
+
+class PatchedPythonDomain(PythonDomain):
+    """
+    References:
+        https://github.com/sphinx-doc/sphinx/issues/3866
+    """
+    def resolve_xref(self, env, fromdocname, builder, typ, target, node, contnode):
+        # TODO: can use this to resolve references nicely
+        if target.startswith('ub.'):
+            target = 'ubelt.' + target[3]
+        return_value = super(PatchedPythonDomain, self).resolve_xref(
+            env, fromdocname, builder, typ, target, node, contnode)
+        return return_value
+
+
+def process(app, what_: str, name: str, obj: Any, options: Any, lines:
+            List[str]) -> None:
+    """
+    Custom process to transform docstring lines Remove "Ignore" blocks
+
+    Args:
+        app (sphinx.application.Sphinx): the Sphinx application object
+
+        what (str):
+            the type of the object which the docstring belongs to (one of
+            "module", "class", "exception", "function", "method", "attribute")
+
+        name (str): the fully qualified name of the object
+
+        obj: the object itself
+
+        options: the options given to the directive: an object with
+            attributes inherited_members, undoc_members, show_inheritance
+            and noindex that are true if the flag option of same name was
+            given to the auto directive
+
+        lines (List[str]): the lines of the docstring, see above
+
+    References:
+        https://www.sphinx-doc.org/en/1.5.1/_modules/sphinx/ext/autodoc.html
+        https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html
+    """
+    # if what and what_ not in what:
+    #     return
+    orig_lines = lines[:]
+
+    # text = '\n'.join(lines)
+    # if 'Example' in text and 'CommandLine' in text:
+    #     import xdev
+    #     xdev.embed()
+
+    ignore_tags = tuple(['Ignore'])
+
+    mode = None
+    # buffer = None
+    new_lines = []
+    for i, line in enumerate(orig_lines):
+
+        # See if the line triggers a mode change
+        if line.startswith(ignore_tags):
+            mode = 'ignore'
+        elif line.startswith('CommandLine'):
+            mode = 'cmdline'
+        elif line and not line.startswith(' '):
+            # if the line startswith anything but a space, we are no
+            # longer in the previous nested scope
+            mode = None
+
+        if mode is None:
+            new_lines.append(line)
+        elif mode == 'ignore':
+            # print('IGNORE line = {!r}'.format(line))
+            pass
+        elif mode == 'cmdline':
+            if line.startswith('CommandLine'):
+                new_lines.append('.. rubric:: CommandLine')
+                new_lines.append('')
+                new_lines.append('.. code-block:: bash')
+                new_lines.append('')
+                # new_lines.append('    # CommandLine')
+            else:
+                # new_lines.append(line.strip())
+                new_lines.append(line)
+        else:
+            raise KeyError(mode)
+
+    lines[:] = new_lines
+    # make sure there is a blank line at the end
+    if lines and lines[-1]:
+        lines.append('')
+
+
+def setup(app):
+    app.add_domain(PatchedPythonDomain, override=True)
+    if 1:
+        # New Way
+        # what = None
+        app.connect('autodoc-process-docstring', process)
+    else:
+        # OLD WAY
+        # https://stackoverflow.com/questions/26534184/can-sphinx-ignore-certain-tags-in-python-docstrings
+        # Register a sphinx.ext.autodoc.between listener to ignore everything
+        # between lines that contain the word IGNORE
+        # from sphinx.ext.autodoc import between
+        # app.connect('autodoc-process-docstring', between('^ *Ignore:$', exclude=True))
+        pass
+    return app
