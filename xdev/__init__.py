@@ -21,7 +21,7 @@ TODO:
     - [ ] Automatically add custom defined names in this file to __all__
 """
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 
 
 __submodules__ = [

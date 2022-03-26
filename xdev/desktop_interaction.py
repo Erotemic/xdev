@@ -59,7 +59,7 @@ def editfile(fpath, verbose=True):
 
     if not exists(fpath):
         raise IOError('Cannot start nonexistant file: %r' % fpath)
-    ub.cmd([editor, fpath], fpath, detatch=True)
+    ub.cmd([editor, fpath], fpath, detach=True)
 
 
 def view_directory(dpath=None, verbose=False):
@@ -91,11 +91,11 @@ def view_directory(dpath=None, verbose=False):
         except Exception:
             pass
     if ub.LINUX:
-        info = ub.cmd(('nautilus', dpath), detatch=True, verbose=verbose)
+        info = ub.cmd(('nautilus', dpath), detach=True, verbose=verbose)
     elif ub.DARWIN:
-        info = ub.cmd(('open', dpath), detatch=True, verbose=verbose)
+        info = ub.cmd(('open', dpath), detach=True, verbose=verbose)
     elif ub.WIN32:
-        info = ub.cmd(('explorer.exe', dpath), detatch=True, verbose=verbose)
+        info = ub.cmd(('explorer.exe', dpath), detach=True, verbose=verbose)
     else:
         raise RuntimeError('Unknown Platform')
     if info is not None:
@@ -133,9 +133,9 @@ def startfile(fpath, verbose=True):
     if not ub.WIN32:
         fpath = pipes.quote(fpath)
     if ub.LINUX:
-        info = ub.cmd(('xdg-open', fpath), detatch=True, verbose=verbose)
+        info = ub.cmd(('xdg-open', fpath), detach=True, verbose=verbose)
     elif ub.DARWIN:
-        info = ub.cmd(('open', fpath), detatch=True, verbose=verbose)
+        info = ub.cmd(('open', fpath), detach=True, verbose=verbose)
     elif ub.WIN32:
         os.startfile(fpath)
         info = None
