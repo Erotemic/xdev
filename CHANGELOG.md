@@ -5,7 +5,13 @@ We are currently working on porting this changelog to the specifications in
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Version 0.3.0 - Unreleased
+## Version 0.3.1 - Released 2022-03-26
+
+### Fixed
+* Fixed incorrect usage of deprecated parameter in ubelt
+
+
+## Version 0.3.0 - Released 2022-03-25
 
 ### Changed
 
