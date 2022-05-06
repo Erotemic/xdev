@@ -32,6 +32,7 @@ __submodules__ = [
     'class_reloader',
     'search_replace',
     'misc',
+    'util_path',
     'autojit',
     'profiler',
     'tracebacks',
@@ -56,29 +57,33 @@ from xdev import misc
 from xdev import profiler
 from xdev import search_replace
 from xdev import tracebacks
+from xdev import util_path
 
 from xdev.embeding import (EmbedOnException, embed, embed_on_exception_context,
                            fix_embed_globals,)
 from xdev.interactive_iter import (InteractiveIter,)
 from xdev.desktop_interaction import (editfile, startfile, view_directory,)
-from xdev.introspect import (distext, get_func_kwargs, get_stack_frame,)
+from xdev.introspect import (distext, get_func_kwargs, get_stack_frame,
+                             iter_object_tree, test_object_pickleability,)
 from xdev.class_reloader import (reload_class,)
-from xdev.search_replace import (GrepResult, Pattern, RE_Pattern, find, grep,
-                                 grepfile, sed, sedfile,)
+from xdev.search_replace import (GrepResult, find, grep, grepfile, sed,
+                                 sedfile,)
 from xdev.misc import (byte_str, difftext, nested_type, quantum_random,
                        set_overlaps, tree,)
+from xdev.util_path import (ChDir, sidecar_glob, tree,)
 from xdev.autojit import (import_module_from_pyx,)
 from xdev.profiler import (IS_PROFILING, profile, profile_now,)
 from xdev.tracebacks import (make_warnings_print_tracebacks,)
 
-__all__ = ['EmbedOnException', 'GrepResult', 'IS_PROFILING', 'InteractiveIter',
-           'Pattern', 'RE_Pattern', 'autojit', 'byte_str', 'class_reloader',
+__all__ = ['ChDir', 'EmbedOnException', 'GrepResult', 'IS_PROFILING',
+           'InteractiveIter', 'autojit', 'byte_str', 'class_reloader',
            'desktop_interaction', 'difftext', 'distext', 'editfile', 'embed',
            'embed_on_exception_context', 'embeding', 'find',
            'fix_embed_globals', 'get_func_kwargs', 'get_stack_frame', 'grep',
            'grepfile', 'import_module_from_pyx', 'interactive_iter',
-           'introspect', 'make_warnings_print_tracebacks', 'misc',
-           'nested_type', 'profile', 'profile_now', 'profiler',
+           'introspect', 'iter_object_tree', 'make_warnings_print_tracebacks',
+           'misc', 'nested_type', 'profile', 'profile_now', 'profiler',
            'quantum_random', 'reload_class', 'search_replace', 'sed',
-           'sedfile', 'set_overlaps', 'startfile', 'tracebacks', 'tree',
-           'util', 'view_directory']
+           'sedfile', 'set_overlaps', 'sidecar_glob', 'startfile',
+           'test_object_pickleability', 'tracebacks', 'tree', 'util',
+           'util_path', 'view_directory']

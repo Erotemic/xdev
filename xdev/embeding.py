@@ -13,6 +13,8 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
 
     """
     import IPython
+    import xdev  # NOQA
+    import xdev as xd  # NOQA
 
     if parent_globals is None:
         parent_globals = get_parent_frame(n=n).f_globals
