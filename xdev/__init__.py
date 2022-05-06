@@ -55,6 +55,7 @@ from xdev import embeding
 from xdev import interactive_iter
 from xdev import introspect
 from xdev import misc
+from xdev import patterns
 from xdev import profiler
 from xdev import search_replace
 from xdev import tracebacks
@@ -72,19 +73,21 @@ from xdev.search_replace import (GrepResult, find, grep, grepfile, sed,
 from xdev.misc import (byte_str, difftext, nested_type, quantum_random,
                        set_overlaps, tree,)
 from xdev.util_path import (ChDir, sidecar_glob, tree,)
+from xdev.patterns import (MultiPattern, Pattern, PatternBase, RE_Pattern,)
 from xdev.autojit import (import_module_from_pyx,)
 from xdev.profiler import (IS_PROFILING, profile, profile_now,)
 from xdev.tracebacks import (make_warnings_print_tracebacks,)
 
 __all__ = ['ChDir', 'EmbedOnException', 'GrepResult', 'IS_PROFILING',
-           'InteractiveIter', 'autojit', 'byte_str', 'class_reloader',
+           'InteractiveIter', 'MultiPattern', 'Pattern', 'PatternBase',
+           'RE_Pattern', 'autojit', 'byte_str', 'class_reloader',
            'desktop_interaction', 'difftext', 'distext', 'editfile', 'embed',
            'embed_on_exception_context', 'embeding', 'find',
            'fix_embed_globals', 'get_func_kwargs', 'get_stack_frame', 'grep',
            'grepfile', 'import_module_from_pyx', 'interactive_iter',
            'introspect', 'iter_object_tree', 'make_warnings_print_tracebacks',
-           'misc', 'nested_type', 'profile', 'profile_now', 'profiler',
-           'quantum_random', 'reload_class', 'search_replace', 'sed',
-           'sedfile', 'set_overlaps', 'sidecar_glob', 'startfile',
+           'misc', 'nested_type', 'patterns', 'profile', 'profile_now',
+           'profiler', 'quantum_random', 'reload_class', 'search_replace',
+           'sed', 'sedfile', 'set_overlaps', 'sidecar_glob', 'startfile',
            'test_object_pickleability', 'tracebacks', 'tree', 'util',
            'util_path', 'view_directory']
