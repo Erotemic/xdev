@@ -33,6 +33,7 @@ __submodules__ = [
     'search_replace',
     'misc',
     'util_path',
+    'patterns',
     'autojit',
     'profiler',
     'tracebacks',
