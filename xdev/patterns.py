@@ -140,13 +140,22 @@ class Pattern(PatternBase, ub.NiceRepr):
         else:
             raise KeyError(self.backend)
 
-    def sub(self, repl, text):
+    def sub(self, repl, text, count=-1):
+        """
+        Args:
+            repl (str): text to insert in place of pattern
+            text (str): text to be searched and modified
+            count (int): if non-negative, the maximum number of replacements
+                that will be made.
+        """
+        if count == 0:
+            return text  # make regex conform to the API
         if self.backend == 'regex':
-            return self.pattern.sub(repl, text)
+            return self.pattern.sub(repl, text, count=max(0, count))
         elif self.backend == 'glob':
             raise NotImplementedError
         elif self.backend == 'strict':
-            return text.replace(self.pattern, repl)
+            return text.replace(self.pattern, repl, count=count)
         else:
             raise KeyError(self.backend)
 
