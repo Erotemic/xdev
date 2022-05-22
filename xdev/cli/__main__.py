@@ -52,10 +52,25 @@ class SedCLI(scfg.Config):
     name = 'sed'
     description = 'Search and replace text in files'
     default = {
-        'regexpr': scfg.Value('', position=1),
-        'repl': scfg.Value('', position=2),
-        'dpath': scfg.Value(None, position=3),
-        'dry': scfg.Value(True, position=4),
+        'regexpr': scfg.Value('', position=1, help=ub.paragraph(
+            '''
+            The pattern to search for.
+            ''')),
+        'repl': scfg.Value('', position=2, help=ub.paragraph(
+            '''
+            The pattern to replace with.
+            ''')),
+        'dpath': scfg.Value(None, position=3, help=ub.paragraph(
+            '''
+            The directory to recursively search or a file pattern to match.
+            '''
+        )),
+        'dry': scfg.Value('ask', position=4, help=ub.paragraph(
+            '''
+            if 1, show what would be done. if 0, execute the change, if "ask",
+            then show the dry run and then ask for confirmation.
+            '''
+        )),
         'include': scfg.Value(None),
         'exclude': scfg.Value(None),
         'recursive': scfg.Value(True),
@@ -66,7 +81,16 @@ class SedCLI(scfg.Config):
     def main(cls, cmdline=False, **kwargs):
         from xdev import search_replace
         config = cls(cmdline=cmdline, data=kwargs)
-        search_replace.sed(**config)
+        if config['dry'] in {'ask', 'auto'}:
+            from rich.prompt import Confirm
+            config['dry'] = True
+            search_replace.sed(**config)
+            flag = Confirm.ask('Do you want to execute this sed?')
+            if flag:
+                config['dry'] = False
+                search_replace.sed(**config)
+        else:
+            search_replace.sed(**config)
 
 
 @_register
