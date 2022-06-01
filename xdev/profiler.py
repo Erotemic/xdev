@@ -12,6 +12,7 @@ from collections import defaultdict
 __all__ = [
     'profile',
     'profile_now',
+    'profile_globals',
     'IS_PROFILING',
 ]
 
@@ -494,6 +495,26 @@ def _align_lines(line_list, character='=', replchar=None, pos=0):
         else:
             new_lines.append(replchar.join(tup))
     return new_lines
+
+
+def profile_globals():
+    """
+    Adds the profile decorator to all global functions
+    """
+    import inspect
+    parent_frame = inspect.currentframe().f_back
+
+    parent_frame.f_globals
+    name = parent_frame.f_globals['__name__']
+    module = sys.modules[name]
+
+    from xdoctest.dynamic_analysis import is_defined_by_module
+    import xdev
+    for k, v in module.__dict__.items():
+        if is_defined_by_module(v, module):
+            if callable(v):
+                v = xdev.profile(v)
+                parent_frame.f_globals[k] = v
 
 
 if __name__ == '__main__':

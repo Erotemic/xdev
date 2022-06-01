@@ -71,11 +71,12 @@ from xdev.class_reloader import (reload_class,)
 from xdev.search_replace import (GrepResult, find, grep, grepfile, sed,
                                  sedfile,)
 from xdev.misc import (byte_str, difftext, nested_type, quantum_random,
-                       set_overlaps, tree,)
+                       set_overlaps, tree_repr,)
 from xdev.util_path import (ChDir, sidecar_glob, tree,)
 from xdev.patterns import (MultiPattern, Pattern, PatternBase, RE_Pattern,)
 from xdev.autojit import (import_module_from_pyx,)
-from xdev.profiler import (IS_PROFILING, profile, profile_now,)
+from xdev.profiler import (IS_PROFILING, profile, profile_globals,
+                           profile_now,)
 from xdev.tracebacks import (make_warnings_print_tracebacks,)
 
 __all__ = ['ChDir', 'EmbedOnException', 'GrepResult', 'IS_PROFILING',
@@ -86,8 +87,8 @@ __all__ = ['ChDir', 'EmbedOnException', 'GrepResult', 'IS_PROFILING',
            'fix_embed_globals', 'get_func_kwargs', 'get_stack_frame', 'grep',
            'grepfile', 'import_module_from_pyx', 'interactive_iter',
            'introspect', 'iter_object_tree', 'make_warnings_print_tracebacks',
-           'misc', 'nested_type', 'patterns', 'profile', 'profile_now',
-           'profiler', 'quantum_random', 'reload_class', 'search_replace',
-           'sed', 'sedfile', 'set_overlaps', 'sidecar_glob', 'startfile',
-           'test_object_pickleability', 'tracebacks', 'tree', 'util',
-           'util_path', 'view_directory']
+           'misc', 'nested_type', 'patterns', 'profile', 'profile_globals',
+           'profile_now', 'profiler', 'quantum_random', 'reload_class',
+           'search_replace', 'sed', 'sedfile', 'set_overlaps', 'sidecar_glob',
+           'startfile', 'test_object_pickleability', 'tracebacks', 'tree',
+           'tree_repr', 'util', 'util_path', 'view_directory']

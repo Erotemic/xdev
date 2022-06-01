@@ -283,8 +283,10 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
     return text
 
 
-def tree(cwd=None, max_files=0):
+def tree_repr(cwd=None, max_files=0):
     """
+    Filesystem tree representation
+
     Like the unix util tree, but allow writing numbers of files per directory
     when given -d option
 
@@ -293,6 +295,13 @@ def tree(cwd=None, max_files=0):
     Args:
         cwd : directory to print
         max_files : maximum files to print before supressing a directory
+
+    SeeAlso:
+        xdev.tree - generator
+
+    Ignore:
+        >>> import xdev
+        >>> xdev.tree_repr()
     """
     import os
     from os.path import join, relpath
@@ -324,43 +333,4 @@ def tree(cwd=None, max_files=0):
             dpath = join(root, dname)
             tree.add_edge(root, dpath)
 
-    _print_forest(tree)
-
-
-def _print_forest(graph):
-    """
-    Nice ascii representation of a forest
-
-    Ignore:
-        graph = nx.balanced_tree(r=2, h=3, create_using=nx.DiGraph)
-        _print_forest(graph)
-
-        graph = CategoryTree.demo('coco').graph
-        _print_forest(graph)
-    """
-    if len(graph.nodes) == 0:
-        print('--')
-        return
-
-    import networkx as nx
-    assert nx.is_forest(graph)
-
-    def _recurse(node, indent='', islast=False):
-        if islast:
-            this_prefix = indent + '└── '
-            next_prefix = indent + '    '
-        else:
-            this_prefix = indent + '├── '
-            next_prefix = indent + '│   '
-        label = graph.nodes[node].get('label', node)
-        print(this_prefix + str(label))
-        graph.succ[node]
-        children = graph.succ[node]
-        for idx, child in enumerate(children, start=1):
-            islast_next = (idx == len(children))
-            _recurse(child, indent=next_prefix, islast=islast_next)
-
-    sources = [n for n in graph.nodes if graph.in_degree[n] == 0]
-    for idx, node in enumerate(sources, start=1):
-        islast_next = (idx == len(sources))
-        _recurse(node, indent='', islast=islast_next)
+    print(nx.forest_str(tree))
