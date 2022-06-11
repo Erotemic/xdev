@@ -39,8 +39,8 @@ class ExtendedStubGenerator(StubGenerator):
 
     def visit_func_def(self,
                        o: FuncDef,
-                       is_abstract: bool = ...,
-                       is_overload: bool = ...) -> None:
+                       is_abstract: bool = False,
+                       is_overload: bool = False) -> None:
         ...
 
     def visit_class_def(self, o) -> None:

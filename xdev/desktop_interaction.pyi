@@ -1,13 +1,13 @@
 from os import PathLike
 
 
-def editfile(fpath: PathLike, verbose: int = ...) -> None:
+def editfile(fpath: PathLike, verbose: int = True) -> None:
     ...
 
 
-def view_directory(dpath: PathLike = ..., verbose: bool = ...) -> None:
+def view_directory(dpath: PathLike = None, verbose: bool = False) -> None:
     ...
 
 
-def startfile(fpath: PathLike, verbose: int = ...) -> None:
+def startfile(fpath: PathLike, verbose: int = True) -> None:
     ...

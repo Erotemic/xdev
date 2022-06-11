@@ -4,7 +4,7 @@ from typing import Any
 get_func_kwargs: Any
 
 
-def get_stack_frame(N: int = ..., strict: bool = ...):
+def get_stack_frame(N: int = 0, strict: bool = True):
     ...
 
 

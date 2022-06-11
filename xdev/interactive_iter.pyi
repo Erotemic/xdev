@@ -6,14 +6,14 @@ INDEXABLE_TYPES: Any
 class InteractiveIter:
 
     def __init__(iiter,
-                 iterable: None = ...,
-                 enabled: bool = ...,
-                 startx: int = ...,
-                 default_action: str = ...,
+                 iterable: None = None,
+                 enabled: bool = True,
+                 startx: int = 0,
+                 default_action: str = 'next',
                  custom_actions: list = ...,
-                 wraparound: bool = ...,
-                 display_item: bool = ...,
-                 verbose: bool = ...) -> None:
+                 wraparound: bool = False,
+                 display_item: bool = False,
+                 verbose: bool = True) -> None:
         ...
 
     @classmethod

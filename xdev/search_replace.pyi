@@ -25,13 +25,13 @@ def grep(regexpr,
     ...
 
 
-def find(pattern: str = ...,
-         dpath: str = ...,
-         include: Union[str, List[str]] = ...,
-         exclude: Union[str, List[str]] = ...,
-         type: Union[str, List[str]] = ...,
+def find(pattern: str = None,
+         dpath: str = None,
+         include: Union[str, List[str]] = None,
+         exclude: Union[str, List[str]] = None,
+         type: Union[str, List[str]] = None,
          recursive: bool = ...,
-         followlinks: bool = ...) -> Generator[Any, None, Any]:
+         followlinks: bool = False) -> Generator[Any, None, Any]:
     ...
 
 

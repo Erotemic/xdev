@@ -378,6 +378,9 @@ def common_unreferenced():
         {'name': 'PathLike', 'modname': 'os'},
         {'name': 'ModuleType', 'modname': 'types'},
         {'name': 'Callable', 'modname': 'typing'},
+        {'name': 'NoParam', 'modname': 'ubelt.util_const'},
+        {'name': '_NoParamType', 'modname': 'ubelt.util_const'},
+        {'name': 'NoParamType', 'modname': 'ubelt.util_const'},
     ]
     return unref
 
@@ -604,9 +607,6 @@ class ExtendedStubGenerator(StubGenerator):
             XDEV_KEEP_SOME_DEFAULTS = True
 
             if arg_.initializer:
-                print(f'name={name}')
-                print(f'arg_.initializer={arg_.initializer}')
-                print(f'annotation={annotation}')
                 if kind.is_named() and not any(arg.startswith('*') for arg in args):
                     args.append('*')
                 if not annotation:
@@ -623,12 +623,15 @@ class ExtendedStubGenerator(StubGenerator):
                     if XDEV_KEEP_SOME_DEFAULTS:
                         import mypy
                         # arg_.initializer.is_special_form
-                        if isinstance(arg_.initializer, mypy.nodes.IntExpr):
-                            annotation += '={}'.format(arg_.initializer.value)
+                        if isinstance(arg_.initializer, (mypy.nodes.IntExpr, mypy.nodes.FloatExpr)):
+                            annotation += '={!r}'.format(arg_.initializer.value)
+                        elif isinstance(arg_.initializer, mypy.nodes.StrExpr):
+                            annotation += '={!r}'.format(arg_.initializer.value)
                         elif isinstance(arg_.initializer, mypy.nodes.NameExpr):
                             annotation += '={}'.format(arg_.initializer.name)
                         else:
                             # fallback, unhandled default
+                            print(f'todo: Unhandled arg_.initializer={type(arg_.initializer)}')
                             annotation += '=...'
                     else:
                         annotation += ' = ...'

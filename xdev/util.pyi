@@ -1,8 +1,8 @@
-def bubbletext(text, font: str = ...):
+def bubbletext(text, font: str = 'cybermedium'):
     ...
 
 
-def conj_phrase(list_: list, cond: str = ...) -> str:
+def conj_phrase(list_: list, cond: str = 'or') -> str:
     ...
 
 
