@@ -17,40 +17,44 @@ CommandLine:
     # Run mypy to check that type annotations are correct
     mypy ubelt
 """
-from mypy.stubgen import (StubGenerator, find_self_initializers, FUNC, EMPTY,
-                          METHODS_WITH_RETURN_VALUE,)
-import sys
 
+try:
+    from mypy.stubgen import (StubGenerator, find_self_initializers, FUNC, EMPTY,
+                              METHODS_WITH_RETURN_VALUE,)
+    from mypy.nodes import (
+        # Expression, IntExpr, UnaryExpr, StrExpr, BytesExpr, NameExpr, FloatExpr, MemberExpr,
+        # TupleExpr, ListExpr, ComparisonExpr, CallExpr, IndexExpr, EllipsisExpr,
+        # ClassDef, MypyFile, Decorator, AssignmentStmt, TypeInfo,
+        # IfStmt, ImportAll, ImportFrom, Import,
+        FuncDef,
+        # FuncBase, Block,
+        # Statement, OverloadedFuncDef, ARG_POS,
+        ARG_STAR, ARG_STAR2,
+        # ARG_NAMED,
+    )
+    from mypy.types import (
+        # Type, TypeStrVisitor,
+        CallableType,
+        # UnboundType, NoneType, TupleType, TypeList, Instance,
+        AnyType,
+        get_proper_type
+    )
+    from mypy.traverser import (
+        all_yield_expressions,
+        has_return_statement,
+        has_yield_expression
+    )
+except Exception:
+    StubGenerator = object
+
+import sys
 from typing import (List, Dict, Optional)
-from mypy.nodes import (
-    # Expression, IntExpr, UnaryExpr, StrExpr, BytesExpr, NameExpr, FloatExpr, MemberExpr,
-    # TupleExpr, ListExpr, ComparisonExpr, CallExpr, IndexExpr, EllipsisExpr,
-    # ClassDef, MypyFile, Decorator, AssignmentStmt, TypeInfo,
-    # IfStmt, ImportAll, ImportFrom, Import,
-    FuncDef,
-    # FuncBase, Block,
-    # Statement, OverloadedFuncDef, ARG_POS,
-    ARG_STAR, ARG_STAR2,
-    # ARG_NAMED,
-)
 # from mypy.stubgenc import generate_stub_for_c_module
 # from mypy.stubutil import (
 #     default_py2_interpreter, CantImport, generate_guarded,
 #     walk_packages, find_module_path_and_all_py2, find_module_path_and_all_py3,
 #     report_missing, fail_missing, remove_misplaced_type_comments, common_dir_prefix
 # )
-from mypy.types import (
-    # Type, TypeStrVisitor,
-    CallableType,
-    # UnboundType, NoneType, TupleType, TypeList, Instance,
-    AnyType,
-    get_proper_type
-)
-from mypy.traverser import (
-    all_yield_expressions,
-    has_return_statement,
-    has_yield_expression
-)
 import ubelt as ub
 
 
@@ -719,6 +723,7 @@ def modpath_coerce(modpath_coercable):
         str : the coerced modpath
 
     Example:
+        >>> # xdoctest: +SKIP
         >>> from xdev.cli.docstr_stubgen import *  # NOQA
         >>> import xdev
         >>> modpath_coercable = xdev
