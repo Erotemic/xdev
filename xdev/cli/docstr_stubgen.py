@@ -69,7 +69,12 @@ def generate_typed_stubs(modpath):
             A dictionary mapping the path of each file to write to the text to
             be written.
 
+    Notes:
+        FIXME: This currently requires my hacked version of mypy
+
     Example:
+        >>> # xdoctest: +REQUIRES(module:mypy)
+        >>> # xdoctest: +REQUIRES(--hacked)
         >>> from xdev.cli.docstr_stubgen import *  # NOQA
         >>> import xdev
         >>> import ubelt as ub
