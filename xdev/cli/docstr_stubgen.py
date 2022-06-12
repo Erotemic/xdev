@@ -73,6 +73,7 @@ def generate_typed_stubs(modpath):
         FIXME: This currently requires my hacked version of mypy
 
     Example:
+        >>> # xdoctest: +SKIP
         >>> # xdoctest: +REQUIRES(module:mypy)
         >>> # xdoctest: +REQUIRES(--hacked)
         >>> from xdev.cli.docstr_stubgen import *  # NOQA
