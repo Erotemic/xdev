@@ -76,7 +76,7 @@ def generate_typed_stubs(modpath):
         >>> from xdev.cli import docstr_stubgen
         >>> modpath = ub.Path(docstr_stubgen.__file__)
         >>> generated = generate_typed_stubs(modpath)
-        >>> text = generated[str(modpath.augment(ext='.pyi'))]
+        >>> text = generated[ub.peek(generated.keys())]
         >>> assert 'PathLike' in text
         >>> assert 'Dict' in text
         >>> print(text)
