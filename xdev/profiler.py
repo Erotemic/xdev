@@ -1,6 +1,4 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-from six.moves import range, cStringIO
-import six
+import io
 import operator
 import atexit
 import sys
@@ -51,6 +49,9 @@ def profile_now(func):
     Args:
         func (Callable): function to profile
 
+    Returns:
+        Callable:
+
     Example:
         >>> # xdoctest: +SKIP
         >>> from xdev.profiler import *  # NOQA
@@ -91,7 +92,11 @@ class KernprofParser(object):
         self.profile = profile
 
     def raw_text(self):
-        file_ = cStringIO()
+        """
+        Returns:
+            str:
+        """
+        file_ = io.StringIO()
         self.profile.print_stats(stream=file_, stripzeros=True)
         file_.seek(0)
         text =  file_.read()
@@ -101,6 +106,12 @@ class KernprofParser(object):
         print(self.raw_text())
 
     def get_text(self):
+        """
+        The cleaned output and summary text
+
+        Returns:
+            Tuple[str, str]:
+        """
         text = self.raw_text()
         output_text, summary_text = self.clean_line_profile_text(text)
         return output_text, summary_text
@@ -126,6 +137,12 @@ class KernprofParser(object):
         """
         Split the file into blocks along delimters and and put delimeters back in
         the list
+
+        Args:
+            text (str):
+
+        Returns:
+            List[str]:
         """
         # The total time reported in the raw output is from pystone not kernprof
         # The pystone total time is actually the average time spent in the function
@@ -149,7 +166,7 @@ class KernprofParser(object):
         # FIXME can be written much nicer
         prefix_list, timemap = self.parse_timemap_from_blocks(profile_block_list)
         # Sort the blocks by time
-        sorted_lists = sorted(six.iteritems(timemap), key=operator.itemgetter(0))
+        sorted_lists = sorted(timemap.items(), key=operator.itemgetter(0))
         newlist = prefix_list[:]
         for key, val in sorted_lists:
             newlist.extend(val)
@@ -162,6 +179,13 @@ class KernprofParser(object):
         return output_text, summary_text
 
     def get_block_totaltime(self, block):
+        """
+        Args:
+            block (str):
+
+        Returns:
+            str | None:
+        """
 
         def get_match_text(match):
             if match is not None:
@@ -181,6 +205,15 @@ class KernprofParser(object):
             return None
 
     def get_block_id(self, block, readlines=None):
+        """
+        Args:
+            block (str):
+            readlines (None | Callable):
+
+        Returns:
+            str:
+                in the form '{funcname}:{fpath}:{lineno}'
+        """
 
         def named_field(key, regex, vim=False):
             return r'(?P<%s>%s)' % (key, regex)
@@ -233,6 +266,13 @@ class KernprofParser(object):
 
     def get_summary(self, profile_block_list, maxlines=20):
         """
+        Args:
+            profile_block_list (List[str]):
+            maxlines (int):
+
+        Returns:
+            str:
+
         References:
             https://github.com/rkern/line_profiler
         """

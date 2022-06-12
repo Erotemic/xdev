@@ -58,7 +58,9 @@ def knapsack(items, maxweight, method='iterative'):
             `value` is a number and `weight` is a non-negative integer, and
             `id_` is an item identifier.
 
-        maxweight (scalar):  is a non-negative integer.
+        maxweight (numbers.Real):
+            a non-negative number indicating the maximum weight of items we can
+            take.
 
     Returns:
         tuple: (total_value, items_subset) - a pair whose first element is the
