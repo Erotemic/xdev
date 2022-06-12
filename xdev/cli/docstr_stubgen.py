@@ -460,255 +460,260 @@ def hacked_typing_info(type_name):
     return result
 
 
-class ExtendedStubGenerator(StubGenerator):
+try:
+    mypy
 
-    def visit_func_def(self, o: FuncDef, is_abstract: bool = False,
-                       is_overload: bool = False) -> None:
-        import ubelt as ub
-        if (self.is_private_name(o.name, o.fullname)
-                or self.is_not_in_all(o.name)
-                or (self.is_recorded_name(o.name) and not is_overload)):
+    class ExtendedStubGenerator(StubGenerator):
+        def visit_func_def(self, o: FuncDef, is_abstract: bool = False,
+                           is_overload: bool = False) -> None:
+            import ubelt as ub
+            if (self.is_private_name(o.name, o.fullname)
+                    or self.is_not_in_all(o.name)
+                    or (self.is_recorded_name(o.name) and not is_overload)):
+                self.clear_decorators()
+                return
+            if not self._indent and self._state not in (EMPTY, FUNC) and not o.is_awaitable_coroutine:
+                self.add('\n')
+            if not self.is_top_level():
+                self_inits = find_self_initializers(o)
+                for init, value in self_inits:
+                    if init in self.method_names:
+                        # Can't have both an attribute and a method/property with the same name.
+                        continue
+                    init_code = self.get_init(init, value)
+                    if init_code:
+                        self.add(init_code)
+            # dump decorators, just before "def ..."
+            for s in self._decorators:
+                self.add(s)
             self.clear_decorators()
-            return
-        if not self._indent and self._state not in (EMPTY, FUNC) and not o.is_awaitable_coroutine:
-            self.add('\n')
-        if not self.is_top_level():
-            self_inits = find_self_initializers(o)
-            for init, value in self_inits:
-                if init in self.method_names:
-                    # Can't have both an attribute and a method/property with the same name.
-                    continue
-                init_code = self.get_init(init, value)
-                if init_code:
-                    self.add(init_code)
-        # dump decorators, just before "def ..."
-        for s in self._decorators:
-            self.add(s)
-        self.clear_decorators()
-        self.add("%s%sdef %s(" % (self._indent, 'async ' if o.is_coroutine else '', o.name))
-        self.record_name(o.name)
-        # import ubelt as ub
-        # if o.name == 'dzip':
-        #     import xdev
-        #     xdev.embed()
+            self.add("%s%sdef %s(" % (self._indent, 'async ' if o.is_coroutine else '', o.name))
+            self.record_name(o.name)
+            # import ubelt as ub
+            # if o.name == 'dzip':
+            #     import xdev
+            #     xdev.embed()
 
-        def _hack_for_info(info):
-            type_name = info['type']
-            if type_name is not None:
-                results = hacked_typing_info(type_name)
-                for typing_arg in results['typing_imports']:
-                    self.add_typing_import(typing_arg)
-                for line in results['import_lines']:
-                    self.add_import_line(line)
-                info['type'] = results['type_name']
+            def _hack_for_info(info):
+                type_name = info['type']
+                if type_name is not None:
+                    results = hacked_typing_info(type_name)
+                    for typing_arg in results['typing_imports']:
+                        self.add_typing_import(typing_arg)
+                    for line in results['import_lines']:
+                        self.add_import_line(line)
+                    info['type'] = results['type_name']
 
-        name_to_parsed_docstr_info = {}
-        return_parsed_docstr_info = None
-        fullname = o.name
-        if getattr(self, '_IN_CLASS', None) is not None:
-            fullname = self._IN_CLASS + '.' + o.name
+            name_to_parsed_docstr_info = {}
+            return_parsed_docstr_info = None
+            fullname = o.name
+            if getattr(self, '_IN_CLASS', None) is not None:
+                fullname = self._IN_CLASS + '.' + o.name
 
-        curr = ub.import_module_from_name(self.module)
-        # curr = sys.modules.get(self.module)
-        # print('o.name = {!r}'.format(o.name))
-        # print('fullname = {!r}'.format(fullname))
-        for part in fullname.split('.'):
-            # print('part = {!r}'.format(part))
+            curr = ub.import_module_from_name(self.module)
+            # curr = sys.modules.get(self.module)
+            # print('o.name = {!r}'.format(o.name))
+            # print('fullname = {!r}'.format(fullname))
+            for part in fullname.split('.'):
+                # print('part = {!r}'.format(part))
+                # print('curr = {!r}'.format(curr))
+                curr = getattr(curr, part, None)
             # print('curr = {!r}'.format(curr))
-            curr = getattr(curr, part, None)
-        # print('curr = {!r}'.format(curr))
-        real_func = curr
-        # print('real_func = {!r}'.format(real_func))
-        # if o.name == 'dict_union':
-        #     import xdev
-        #     xdev.embed()
-        if real_func is not None and real_func.__doc__ is not None:
-            from mypy import fastparse
-            from xdoctest.docstr import docscrape_google
-            parsed_args = None
-            # parsed_ret = None
+            real_func = curr
+            # print('real_func = {!r}'.format(real_func))
+            # if o.name == 'dict_union':
+            #     import xdev
+            #     xdev.embed()
+            if real_func is not None and real_func.__doc__ is not None:
+                from mypy import fastparse
+                from xdoctest.docstr import docscrape_google
+                parsed_args = None
+                # parsed_ret = None
 
-            blocks = docscrape_google.split_google_docblocks(real_func.__doc__)
-            # print('blocks = {}'.format(ub.repr2(blocks, nl=1)))
-            for key, block in blocks:
-                # print(f'key={key}')
-                lines = block[0]
-                if key == 'Returns':
-                    # print(f'lines={lines}')
-                    for retdict in docscrape_google.parse_google_retblock(lines):
-                        # print(f'retdict={retdict}')
-                        _hack_for_info(retdict)
-                        return_parsed_docstr_info = (key, retdict['type'])
-                    if return_parsed_docstr_info is None:
-                        print('Warning: return block for {} might be malformed'.format(real_func))
-                if key == 'Yields':
-                    for retdict in docscrape_google.parse_google_retblock(lines):
-                        _hack_for_info(retdict)
-                        return_parsed_docstr_info = (key, retdict['type'])
-                    if return_parsed_docstr_info is None:
-                        print('Warning: return block for {} might be malformed'.format(real_func))
-                if key == 'Args':
-                    # hack for *args
-                    lines = '\n'.join([line.lstrip('*') for line in lines.split('\n')])
-                    # print('lines = {!r}'.format(lines))
-                    parsed_args = list(docscrape_google.parse_google_argblock(lines))
-                    for info in parsed_args:
-                        _hack_for_info(info)
-                        name = info['name'].replace('*', '')
-                        name_to_parsed_docstr_info[name] = info
+                blocks = docscrape_google.split_google_docblocks(real_func.__doc__)
+                # print('blocks = {}'.format(ub.repr2(blocks, nl=1)))
+                for key, block in blocks:
+                    # print(f'key={key}')
+                    lines = block[0]
+                    if key == 'Returns':
+                        # print(f'lines={lines}')
+                        for retdict in docscrape_google.parse_google_retblock(lines):
+                            # print(f'retdict={retdict}')
+                            _hack_for_info(retdict)
+                            return_parsed_docstr_info = (key, retdict['type'])
+                        if return_parsed_docstr_info is None:
+                            print('Warning: return block for {} might be malformed'.format(real_func))
+                    if key == 'Yields':
+                        for retdict in docscrape_google.parse_google_retblock(lines):
+                            _hack_for_info(retdict)
+                            return_parsed_docstr_info = (key, retdict['type'])
+                        if return_parsed_docstr_info is None:
+                            print('Warning: return block for {} might be malformed'.format(real_func))
+                    if key == 'Args':
+                        # hack for *args
+                        lines = '\n'.join([line.lstrip('*') for line in lines.split('\n')])
+                        # print('lines = {!r}'.format(lines))
+                        parsed_args = list(docscrape_google.parse_google_argblock(lines))
+                        for info in parsed_args:
+                            _hack_for_info(info)
+                            name = info['name'].replace('*', '')
+                            name_to_parsed_docstr_info[name] = info
 
-            parsed_rets = list(docscrape_google.parse_google_returns(real_func.__doc__))
-            ret_infos = []
-            for info in parsed_rets:
-                try:
-                    got = fastparse.parse_type_string(info['type'], 'Any', 0, 0)
+                parsed_rets = list(docscrape_google.parse_google_returns(real_func.__doc__))
+                ret_infos = []
+                for info in parsed_rets:
+                    try:
+                        got = fastparse.parse_type_string(info['type'], 'Any', 0, 0)
 
-                    ret_infos.append(got)
-                except Exception:
-                    pass
+                        ret_infos.append(got)
+                    except Exception:
+                        pass
 
-        # print('o = {!r}'.format(o))
-        # print('o.arguments = {!r}'.format(o.arguments))
-        args: List[str] = []
-        for i, arg_ in enumerate(o.arguments):
-            var = arg_.variable
-            kind = arg_.kind
-            name = var.name
-            annotated_type = (o.unanalyzed_type.arg_types[i]
-                              if isinstance(o.unanalyzed_type, CallableType) else None)
+            # print('o = {!r}'.format(o))
+            # print('o.arguments = {!r}'.format(o.arguments))
+            args: List[str] = []
+            for i, arg_ in enumerate(o.arguments):
+                var = arg_.variable
+                kind = arg_.kind
+                name = var.name
+                annotated_type = (o.unanalyzed_type.arg_types[i]
+                                  if isinstance(o.unanalyzed_type, CallableType) else None)
 
-            if annotated_type is None:
-                if name in name_to_parsed_docstr_info:
-                    name = name.replace('*', '')
-                    doc_type_str = name_to_parsed_docstr_info[name].get('type', None)
-                    if doc_type_str is not None:
-                        doc_type_str = doc_type_str.split(', default')[0]
-                        # annotated_type = doc_type_str
-                        # import mypy.types as mypy_types
-                        from mypy import fastparse
-                        # globals_ = {**mypy_types.__dict__}
-                        try:
-                            # # got = mypy_types.deserialize_type(doc_type_str)
-                            # got = eval(doc_type_str, globals_)
-                            # got = mypy_types.get_proper_type(got)
-                            # got = mypy_types.Iterable
-                            got = fastparse.parse_type_string(doc_type_str, 'Any', 0, 0)
-                        except Exception as ex:
-                            print('ex = {!r}'.format(ex))
-                            print('Failed to parse doc_type_str = {!r}'.format(doc_type_str))
+                if annotated_type is None:
+                    if name in name_to_parsed_docstr_info:
+                        name = name.replace('*', '')
+                        doc_type_str = name_to_parsed_docstr_info[name].get('type', None)
+                        if doc_type_str is not None:
+                            doc_type_str = doc_type_str.split(', default')[0]
+                            # annotated_type = doc_type_str
+                            # import mypy.types as mypy_types
+                            from mypy import fastparse
+                            # globals_ = {**mypy_types.__dict__}
+                            try:
+                                # # got = mypy_types.deserialize_type(doc_type_str)
+                                # got = eval(doc_type_str, globals_)
+                                # got = mypy_types.get_proper_type(got)
+                                # got = mypy_types.Iterable
+                                got = fastparse.parse_type_string(doc_type_str, 'Any', 0, 0)
+                            except Exception as ex:
+                                print('ex = {!r}'.format(ex))
+                                print('Failed to parse doc_type_str = {!r}'.format(doc_type_str))
+                            else:
+                                annotated_type = got
+                                # print('PARSED: annotated_type = {!r}'.format(annotated_type))
+                            # print('annotated_type = {!r}'.format(annotated_type))
+
+                # I think the name check is incorrect: there are libraries which
+                # name their 0th argument other than self/cls
+                is_self_arg = i == 0 and name == 'self'
+                is_cls_arg = i == 0 and name == 'cls'
+                annotation = ""
+                if annotated_type and not is_self_arg and not is_cls_arg:
+                    # Luckily, an argument explicitly annotated with "Any" has
+                    # type "UnboundType" and will not match.
+                    if not isinstance(get_proper_type(annotated_type), AnyType):
+                        annotation = ": {}".format(self.print_annotation(annotated_type))
+
+                # xdev change, where we try to port the defaults over to the stubs
+                # as well (otherwise they dont show up in the function help text)
+                XDEV_KEEP_SOME_DEFAULTS = True
+
+                if arg_.initializer:
+                    if kind.is_named() and not any(arg.startswith('*') for arg in args):
+                        args.append('*')
+                    if not annotation:
+                        typename = self.get_str_type_of_node(arg_.initializer, True, False)
+                        if typename == '':
+                            if XDEV_KEEP_SOME_DEFAULTS:
+                                # TODO
+                                annotation = '=...'
+                            else:
+                                annotation = '=...'
                         else:
-                            annotated_type = got
-                            # print('PARSED: annotated_type = {!r}'.format(annotated_type))
-                        # print('annotated_type = {!r}'.format(annotated_type))
-
-            # I think the name check is incorrect: there are libraries which
-            # name their 0th argument other than self/cls
-            is_self_arg = i == 0 and name == 'self'
-            is_cls_arg = i == 0 and name == 'cls'
-            annotation = ""
-            if annotated_type and not is_self_arg and not is_cls_arg:
-                # Luckily, an argument explicitly annotated with "Any" has
-                # type "UnboundType" and will not match.
-                if not isinstance(get_proper_type(annotated_type), AnyType):
-                    annotation = ": {}".format(self.print_annotation(annotated_type))
-
-            # xdev change, where we try to port the defaults over to the stubs
-            # as well (otherwise they dont show up in the function help text)
-            XDEV_KEEP_SOME_DEFAULTS = True
-
-            if arg_.initializer:
-                if kind.is_named() and not any(arg.startswith('*') for arg in args):
-                    args.append('*')
-                if not annotation:
-                    typename = self.get_str_type_of_node(arg_.initializer, True, False)
-                    if typename == '':
+                            annotation = ': {} = ...'.format(typename)
+                    else:
                         if XDEV_KEEP_SOME_DEFAULTS:
-                            # TODO
-                            annotation = '=...'
+                            import mypy
+                            # arg_.initializer.is_special_form
+                            if isinstance(arg_.initializer, (mypy.nodes.IntExpr, mypy.nodes.FloatExpr)):
+                                annotation += '={!r}'.format(arg_.initializer.value)
+                            elif isinstance(arg_.initializer, mypy.nodes.StrExpr):
+                                annotation += '={!r}'.format(arg_.initializer.value)
+                            elif isinstance(arg_.initializer, mypy.nodes.NameExpr):
+                                annotation += '={}'.format(arg_.initializer.name)
+                            else:
+                                # fallback, unhandled default
+                                print(f'todo: Unhandled arg_.initializer={type(arg_.initializer)}')
+                                annotation += '=...'
                         else:
-                            annotation = '=...'
-                    else:
-                        annotation = ': {} = ...'.format(typename)
+                            annotation += ' = ...'
+                    arg = name + annotation
+                elif kind == ARG_STAR:
+                    arg = '*%s%s' % (name, annotation)
+                elif kind == ARG_STAR2:
+                    arg = '**%s%s' % (name, annotation)
                 else:
-                    if XDEV_KEEP_SOME_DEFAULTS:
-                        import mypy
-                        # arg_.initializer.is_special_form
-                        if isinstance(arg_.initializer, (mypy.nodes.IntExpr, mypy.nodes.FloatExpr)):
-                            annotation += '={!r}'.format(arg_.initializer.value)
-                        elif isinstance(arg_.initializer, mypy.nodes.StrExpr):
-                            annotation += '={!r}'.format(arg_.initializer.value)
-                        elif isinstance(arg_.initializer, mypy.nodes.NameExpr):
-                            annotation += '={}'.format(arg_.initializer.name)
-                        else:
-                            # fallback, unhandled default
-                            print(f'todo: Unhandled arg_.initializer={type(arg_.initializer)}')
-                            annotation += '=...'
-                    else:
-                        annotation += ' = ...'
-                arg = name + annotation
-            elif kind == ARG_STAR:
-                arg = '*%s%s' % (name, annotation)
-            elif kind == ARG_STAR2:
-                arg = '**%s%s' % (name, annotation)
-            else:
-                arg = name + annotation
-            args.append(arg)
-        retname = None
-        if o.name != '__init__' and isinstance(o.unanalyzed_type, CallableType):
-            if isinstance(get_proper_type(o.unanalyzed_type.ret_type), AnyType):
-                # Luckily, a return type explicitly annotated with "Any" has
-                # type "UnboundType" and will enter the else branch.
+                    arg = name + annotation
+                args.append(arg)
+            retname = None
+            if o.name != '__init__' and isinstance(o.unanalyzed_type, CallableType):
+                if isinstance(get_proper_type(o.unanalyzed_type.ret_type), AnyType):
+                    # Luckily, a return type explicitly annotated with "Any" has
+                    # type "UnboundType" and will enter the else branch.
+                    retname = None  # implicit Any
+                else:
+                    retname = self.print_annotation(o.unanalyzed_type.ret_type)
+            elif isinstance(o, FuncDef) and (o.is_abstract or o.name in METHODS_WITH_RETURN_VALUE):
+                # Always assume abstract methods return Any unless explicitly annotated. Also
+                # some dunder methods should not have a None return type.
                 retname = None  # implicit Any
-            else:
-                retname = self.print_annotation(o.unanalyzed_type.ret_type)
-        elif isinstance(o, FuncDef) and (o.is_abstract or o.name in METHODS_WITH_RETURN_VALUE):
-            # Always assume abstract methods return Any unless explicitly annotated. Also
-            # some dunder methods should not have a None return type.
-            retname = None  # implicit Any
-        elif has_yield_expression(o):
-            self.add_abc_import('Generator')
-            yield_name = 'None'
-            send_name = 'None'
-            return_name = 'None'
-            for expr, in_assignment in all_yield_expressions(o):
-                if expr.expr is not None and not self.is_none_expr(expr.expr):
+            elif has_yield_expression(o):
+                self.add_abc_import('Generator')
+                yield_name = 'None'
+                send_name = 'None'
+                return_name = 'None'
+                for expr, in_assignment in all_yield_expressions(o):
+                    if expr.expr is not None and not self.is_none_expr(expr.expr):
+                        self.add_typing_import('Any')
+                        yield_name = 'Any'
+                    if in_assignment:
+                        self.add_typing_import('Any')
+                        send_name = 'Any'
+                if has_return_statement(o):
                     self.add_typing_import('Any')
-                    yield_name = 'Any'
-                if in_assignment:
-                    self.add_typing_import('Any')
-                    send_name = 'Any'
-            if has_return_statement(o):
-                self.add_typing_import('Any')
-                return_name = 'Any'
-            generator_name = self.typing_name('Generator')
-            if return_parsed_docstr_info is not None:
-                print(f'return_parsed_docstr_info={return_parsed_docstr_info}')
-                yield_name = return_parsed_docstr_info[1]
-            retname = f'{generator_name}[{yield_name}, {send_name}, {return_name}]'
-            # print('o.name = {}'.format(ub.repr2(o.name, nl=1)))
-            # print('retname = {!r}'.format(retname))
-            # print('retfield = {!r}'.format(retfield))
-        elif not has_return_statement(o) and not is_abstract:
-            retname = 'None'
+                    return_name = 'Any'
+                generator_name = self.typing_name('Generator')
+                if return_parsed_docstr_info is not None:
+                    print(f'return_parsed_docstr_info={return_parsed_docstr_info}')
+                    yield_name = return_parsed_docstr_info[1]
+                retname = f'{generator_name}[{yield_name}, {send_name}, {return_name}]'
+                # print('o.name = {}'.format(ub.repr2(o.name, nl=1)))
+                # print('retname = {!r}'.format(retname))
+                # print('retfield = {!r}'.format(retfield))
+            elif not has_return_statement(o) and not is_abstract:
+                retname = 'None'
 
-        if retname is None:
-            if return_parsed_docstr_info is not None:
-                retname = return_parsed_docstr_info[1]
+            if retname is None:
+                if return_parsed_docstr_info is not None:
+                    retname = return_parsed_docstr_info[1]
 
-        retfield = ''
-        if retname is not None:
-            retfield = ' -> ' + retname
+            retfield = ''
+            if retname is not None:
+                retfield = ' -> ' + retname
 
-        self.add(', '.join(args))
-        self.add("){}: ...\n".format(retfield))
-        self._state = FUNC
+            self.add(', '.join(args))
+            self.add("){}: ...\n".format(retfield))
+            self._state = FUNC
 
-    def visit_class_def(self, o) -> None:
-        self._IN_CLASS = o.name
-        # print('o.name = {!r}'.format(o.name))
-        ret = super().visit_class_def(o)
-        self._IN_CLASS = None
-        return ret
+        def visit_class_def(self, o) -> None:
+            self._IN_CLASS = o.name
+            # print('o.name = {!r}'.format(o.name))
+            ret = super().visit_class_def(o)
+            self._IN_CLASS = None
+            return ret
+
+except NameError:
+    pass
 
 
 def modpath_coerce(modpath_coercable):
