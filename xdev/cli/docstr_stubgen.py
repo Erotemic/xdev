@@ -60,6 +60,15 @@ from typing import (List, Dict, Optional)
 import ubelt as ub
 
 
+def _hack_away_compiled_mypy():
+    # This doesn't seem to work. The only thing that has worked so far is a
+    # custom checkout and developer install. Not sure why that is the case.
+    modpath = ub.Path(ub.modname_to_modpath('mypy'))
+    compiled_modules = list(modpath.glob('*.so'))
+    for p in compiled_modules:
+        p.delete()
+
+
 def generate_typed_stubs(modpath):
     """
     Attempt to use google-style docstrings, xdoctest, and mypy to generate
@@ -78,8 +87,10 @@ def generate_typed_stubs(modpath):
     Notes:
         FIXME: This currently requires my hacked version of mypy
 
+    CommandLine:
+        xdoctest -m /home/joncrall/code/xdev/xdev/cli/docstr_stubgen.py generate_typed_stubs --hacked
+
     Example:
-        >>> # xdoctest: +SKIP
         >>> # xdoctest: +REQUIRES(module:mypy)
         >>> # xdoctest: +REQUIRES(--hacked)
         >>> from xdev.cli.docstr_stubgen import *  # NOQA
@@ -94,6 +105,9 @@ def generate_typed_stubs(modpath):
         >>> print(text)
 
     Ignore:
+        # This was done with mypy version:
+        # 0.920+dev.5c4aea39ab6a14eeef85cc849d6057bebf2147a3
+
         pyfile mypy.stubgen
         # Delete compiled verisons so we can hack it
 
@@ -177,10 +191,10 @@ def generate_typed_stubs(modpath):
         ignore_errors=False,
         parse_only=True,
         include_private=False,
-        output_dir=output_dir,
+        output_dir=os.fspath(output_dir),
         modules=[],
         packages=[],
-        files=files,
+        files=[os.fspath(p) for p in files],
         verbose=False,
         quiet=False,
         export_less=True)
