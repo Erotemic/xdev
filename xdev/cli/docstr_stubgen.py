@@ -213,6 +213,8 @@ def generate_typed_stubs(modpath):
 
     generated = {}
 
+    verbose = 3
+
     for mod in py_modules:
         assert mod.path is not None, "Not found module was not skipped"
         target = mod.module.replace('.', '/')
@@ -221,6 +223,8 @@ def generate_typed_stubs(modpath):
         else:
             target += '.pyi'
         target = join(options.output_dir, target)
+        if verbose > 1:
+            print(f'target={target}')
         files.append(target)
         with stubgen.generate_guarded(mod.module, target, options.ignore_errors, options.verbose):
             stubgen.generate_stub_from_ast(mod, target, options.parse_only,
@@ -241,14 +245,16 @@ def generate_typed_stubs(modpath):
 
             known_one_letter_types = {
                 # 'T', 'K', 'A', 'B', 'C', 'V',
-                'DT', 'KT', 'VT', 'T'
+                'DT', 'KT', 'VT', 'T', 'T1', 'T2', 'T3', 'T4', 'T5',
+                # Hack for kwcoco
+                'ObjT',
             }
             for type_var_name in set(gen.import_tracker.required_names) & set(known_one_letter_types):
                 gen.add_typing_import('TypeVar')
                 # gen.add_import_line('from typing import {}\n'.format('TypeVar'))
                 gen._output = ['{} = TypeVar("{}")\n'.format(type_var_name, type_var_name)] + gen._output
 
-            custom_types = {'Hasher'}
+            custom_types = {'Hasher', 'Sliceable'}
             for type_var_name in set(gen.import_tracker.required_names) & set(custom_types):
                 gen.add_typing_import('TypeVar')
                 # gen.add_import_line('from typing import {}\n'.format('TypeVar'))
@@ -268,6 +274,8 @@ def generate_typed_stubs(modpath):
             # if subdir and not os.path.isdir(subdir):
             #     os.makedirs(subdir)
             generated[target] = text
+            if verbose > 1:
+                print(f'generated target={target}')
             # with open(target, 'w') as file:
             #     file.write(text)
     return generated
@@ -341,28 +349,17 @@ def common_module_names():
     names = stdlib_names().copy()
     # https://github.com/hugovk/top-pypi-packages
     names.extend([
-        'numpy',
-        'torch',
-        'pandas',
-        'h5py',
-        'networkx',
+        'numpy', 'torch', 'pandas', 'h5py', 'networkx',
 
-        'scipy',
-        'sklearn',
-        'matplotlib',
-        'seaborn',
-        'attrs',
+        # Hack: determine this from env
+        'kwcoco',
+        'kwimage',
+        'kwarray',
 
-        'keras',
-        'ujson',
-        'black',
-        'mypy',
-        'simplejson',
-        'parso',
-        'tensorflow',
-        'cython',
-        'git',
-        'openpyxl',
+        'scipy', 'sklearn', 'matplotlib', 'seaborn', 'attrs',
+
+        'keras', 'ujson', 'black', 'mypy', 'simplejson', 'parso', 'tensorflow',
+        'cython', 'git', 'openpyxl',
 
         'concurrent.futures',
         'hashlib._hashlib',
@@ -391,6 +388,7 @@ def common_module_aliases():
     aliases = [
         {'modname': 'numpy', 'alias': ['np']},
         {'modname': 'scipy', 'alias': ['sp']},
+        {'modname': 'pandas', 'alias': ['pd']},
         {'modname': 'matplotlib', 'alias': ['mpl']},
         {'modname': 'seaborn', 'alias': ['sns']},
         # I'm biased, what can I say?
@@ -401,15 +399,49 @@ def common_module_aliases():
 
 @ub.memoize
 def common_unreferenced():
+
+    modname_to_refs = {
+        'numpy': [
+            'ndarray',
+        ],
+
+        'numbers': [
+            'Number', 'Real', 'Integral', 'Rational', 'Complex',
+        ],
+
+        'numpy.random': [
+            'RandomState',
+        ],
+
+        # https://github.com/ramonhagenaars/nptyping/blob/master/USERDOCS.md#Shape-expressions
+        'numpy.typing': [
+            'ArrayLike',
+        ],
+
+        'torch': [
+            'Tensor',
+        ],
+
+        'typing': [
+            'Callable',
+            'Any',
+            'IO',
+        ],
+    }
+
+    import nptyping
+    modname_to_refs['nptyping'] = ['NDArray', 'DType'] + list(set(nptyping.typing_.dtype_per_name.keys()) - {'Number'})
+
     unref = [
         {'name': 'PathLike', 'modname': 'os'},
-        {'name': 'ndarray', 'modname': 'numpy'},
         {'name': 'ModuleType', 'modname': 'types'},
-        {'name': 'Callable', 'modname': 'typing'},
         {'name': 'NoParam', 'modname': 'ubelt.util_const'},
         {'name': '_NoParamType', 'modname': 'ubelt.util_const'},
         {'name': 'NoParamType', 'modname': 'ubelt.util_const'},
     ]
+    for modname, refs in modname_to_refs.items():
+        for ref in refs:
+            unref.append({'name': ref, 'modname': modname})
     return unref
 
 
@@ -699,7 +731,6 @@ class ExtendedStubGenerator(StubGenerator):
                 return_name = 'Any'
             generator_name = self.typing_name('Generator')
             if return_parsed_docstr_info is not None:
-                print(f'return_parsed_docstr_info={return_parsed_docstr_info}')
                 yield_name = return_parsed_docstr_info[1]
             retname = f'{generator_name}[{yield_name}, {send_name}, {return_name}]'
             # print('o.name = {}'.format(ub.repr2(o.name, nl=1)))
