@@ -349,7 +349,7 @@ def common_module_names():
     names = stdlib_names().copy()
     # https://github.com/hugovk/top-pypi-packages
     names.extend([
-        'numpy', 'torch', 'pandas', 'h5py', 'networkx',
+        'numpy', 'torch', 'pandas', 'h5py', 'networkx', 'torch.nn',
 
         # Hack: determine this from env
         'kwcoco',
