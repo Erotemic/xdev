@@ -14,8 +14,26 @@ CommandLine:
     # Run script to parse google-style docstrings and write pyi files
     python ~/code/ubelt/dev/gen_typed_stubs.py
 
+    See:
+    ~/code/mypy/mypy/stubgen.py
+
     # Run mypy to check that type annotations are correct
     mypy ubelt
+
+
+Ignore:
+    # Can we use liberator to help automatically extract some of these imports?
+
+    # The idea is check if the name is defined, and if not try to define it.
+    # Very similar to how liberator works.
+    import liberator
+
+    from kwcoco.util.delayed_poc import delayed_nodes
+    modpath = delayed_nodes.__file__
+    name = 'DelayedVisionOperation'
+    lib = liberator.Liberator()
+    lib.add_static(name, modpath)
+    print(lib.current_sourcecode())
 """
 
 try:
@@ -151,7 +169,6 @@ def generate_typed_stubs(modpath):
         parse_type_string('dict', 'dict', 0, 0)
         z = parse_type_string('typing.Iterator', 'Any', 0, 0)
         get_proper_type(z)
-
     """
     # import pathlib
     # import ubelt as ub
@@ -159,7 +176,7 @@ def generate_typed_stubs(modpath):
     from mypy import stubgen
     from mypy import defaults
     from xdoctest import static_analysis
-    from os.path import join
+    # from os.path import join
     import ubelt as ub
 
     # modname = 'scriptconfig'
@@ -173,7 +190,7 @@ def generate_typed_stubs(modpath):
     files = list(static_analysis.package_modpaths(
         modpath, recursive=True, with_libs=0, with_pkg=0))
 
-    print('files = {}'.format(ub.repr2(files, nl=1)))
+    # print('files = {}'.format(ub.repr2(files, nl=1)))
     # files = [f for f in files if 'deprecated' not in f]
     # files = [join(ubelt_dpath, 'util_dict.py')]
 
@@ -181,6 +198,7 @@ def generate_typed_stubs(modpath):
         output_dir = modpath.parent.parent
     else:
         output_dir = modpath.parent
+    # print(f'output_dir={output_dir}')
 
     options = stubgen.Options(
         pyversion=defaults.PYTHON3_VERSION,
@@ -217,14 +235,20 @@ def generate_typed_stubs(modpath):
 
     for mod in py_modules:
         assert mod.path is not None, "Not found module was not skipped"
-        target = mod.module.replace('.', '/')
-        if os.path.basename(mod.path) == '__init__.py':
-            target += '/__init__.pyi'
-        else:
-            target += '.pyi'
-        target = join(options.output_dir, target)
+        # print(f'mod.module={mod.module}')
+        # import xdev
+        # xdev.embed()
+        target = mod.path + 'i'
+        # target = mod.module.replace('.', '/')
+        # if os.path.basename(mod.path) == '__init__.py':
+        #     target += '/__init__.pyi'
+        # else:
+        #     target += '.pyi'
+        # target = join(options.output_dir, target)
         if verbose > 1:
             print(f'target={target}')
+        # print(f'options.output_dir={options.output_dir}')
+        # print(f'target={target}')
         files.append(target)
         with stubgen.generate_guarded(mod.module, target, options.ignore_errors, options.verbose):
             stubgen.generate_stub_from_ast(mod, target, options.parse_only,
@@ -351,6 +375,8 @@ def common_module_names():
     names.extend([
         'numpy', 'torch', 'pandas', 'h5py', 'networkx', 'torch.nn',
 
+        'shapely',
+
         # Hack: determine this from env
         'kwcoco',
         'kwimage',
@@ -363,6 +389,10 @@ def common_module_names():
 
         'concurrent.futures',
         'hashlib._hashlib',
+
+        'kwcoco.util.delayed_poc.delayed_nodes',
+        'kwcoco.coco_objects1d',
+        'kwcoco.metrics.confusion_measures',
     ])
     names.extend([
         'jinja2', 'boto3', 'requests', 'dateutil', 'yaml', 'boto3', 'botocore',
@@ -430,7 +460,7 @@ def common_unreferenced():
     }
 
     import nptyping
-    modname_to_refs['nptyping'] = ['NDArray', 'DType'] + list(set(nptyping.typing_.dtype_per_name.keys()) - {'Number'})
+    modname_to_refs['nptyping'] = ['NDArray', 'Shape', 'DType'] + list(set(nptyping.typing_.dtype_per_name.keys()) - {'Number'})
 
     unref = [
         {'name': 'PathLike', 'modname': 'os'},
@@ -438,6 +468,7 @@ def common_unreferenced():
         {'name': 'NoParam', 'modname': 'ubelt.util_const'},
         {'name': '_NoParamType', 'modname': 'ubelt.util_const'},
         {'name': 'NoParamType', 'modname': 'ubelt.util_const'},
+        {'name': 'GeometricTransform', 'modname': 'skimage.transform._geometric'},
     ]
     for modname, refs in modname_to_refs.items():
         for ref in refs:
@@ -449,11 +480,14 @@ def hacked_typing_info(type_name):
     result = {
         'import_lines': [],
         'typing_imports': [],
+        'hacks': [],
     }
     add_import_line = result['import_lines'].append
     add_typing_import = result['typing_imports'].append
 
-    if type_name.startswith('callable'):
+    # TODO: do a real parsing of the type names with a node transformer
+
+    if 'callable' in type_name:
         # TODO: generalize, allow the "callable" func to be transformed
         # into the type if given in the docstring
         type_name = type_name.replace('callable', 'Callable')
@@ -488,6 +522,26 @@ def hacked_typing_info(type_name):
     for item in common_unref:
         if item['name'] in type_name:
             add_import_line('from {} import {}\n'.format(item['modname'], item['name']))
+
+    if 1:
+        # HACKS
+        # if type_name == 'Sliceable':
+        #     result['hacks'].append('sliceable')
+        hack_to_any = {
+            'imgaug.augmenters.Augmenter',
+            'imgaug.KeypointsOnImage',
+            'ia.BoundingBoxesOnImage',
+            'Sliceable',
+            'Augmenter',
+        }
+        for h in hack_to_any:
+            if h in type_name:
+                add_import_line('from typing import {}\n'.format('Any'))
+                break
+
+        for h in hack_to_any:
+            if h in type_name:
+                type_name = type_name.replace(h, 'Any')
 
     # types.ModuleType
     # if 'PathLike' in type_name:
@@ -549,6 +603,21 @@ class ExtendedStubGenerator(StubGenerator):
                     self.add_typing_import(typing_arg)
                 for line in results['import_lines']:
                     self.add_import_line(line)
+                for hack in results['hacks']:
+                    if hack == 'sliceable':
+                        hacked = ub.codeblock(
+                            '''
+                            from typing import Any
+                            from typing_extensions import Protocol
+
+                            class Sliceable(Protocol):
+                                def __getitem__(self: 'Sliceable', key: Any) -> Any:
+                                    ...
+                            ''') + '\n'
+
+                        self.add_import_line(hacked)
+                    else:
+                        raise NotImplementedError(hack)
                 info['type'] = results['type_name']
 
         name_to_parsed_docstr_info = {}
@@ -558,9 +627,13 @@ class ExtendedStubGenerator(StubGenerator):
             fullname = self._IN_CLASS + '.' + o.name
 
         curr = ub.import_module_from_name(self.module)
-        # curr = sys.modules.get(self.module)
-        # print('o.name = {!r}'.format(o.name))
-        # print('fullname = {!r}'.format(fullname))
+
+        DEBUG = 0
+
+        if DEBUG:
+            curr = sys.modules.get(self.module)
+            print('o.name = {!r}'.format(o.name))
+            print('fullname = {!r}'.format(fullname))
         for part in fullname.split('.'):
             # print('part = {!r}'.format(part))
             # print('curr = {!r}'.format(curr))
@@ -571,6 +644,7 @@ class ExtendedStubGenerator(StubGenerator):
         # if o.name == 'dict_union':
         #     import xdev
         #     xdev.embed()
+        force_yield = False
         if real_func is not None and real_func.__doc__ is not None:
             from mypy import fastparse
             from xdoctest.docstr import docscrape_google
@@ -580,7 +654,7 @@ class ExtendedStubGenerator(StubGenerator):
             blocks = docscrape_google.split_google_docblocks(real_func.__doc__)
             # print('blocks = {}'.format(ub.repr2(blocks, nl=1)))
             for key, block in blocks:
-                # print(f'key={key}')
+                # print(f'block key={key}')
                 lines = block[0]
                 if key == 'Returns':
                     # print(f'lines={lines}')
@@ -594,6 +668,7 @@ class ExtendedStubGenerator(StubGenerator):
                     for retdict in docscrape_google.parse_google_retblock(lines):
                         _hack_for_info(retdict)
                         return_parsed_docstr_info = (key, retdict['type'])
+                        force_yield = True
                     if return_parsed_docstr_info is None:
                         print('Warning: return block for {} might be malformed'.format(real_func))
                 if key == 'Args':
@@ -647,7 +722,7 @@ class ExtendedStubGenerator(StubGenerator):
                             print('Failed to parse doc_type_str = {!r}'.format(doc_type_str))
                         else:
                             annotated_type = got
-                            # print('PARSED: annotated_type = {!r}'.format(annotated_type))
+                        #     print('PARSED: annotated_type = {!r}'.format(annotated_type))
                         # print('annotated_type = {!r}'.format(annotated_type))
 
             # I think the name check is incorrect: there are libraries which
@@ -714,7 +789,7 @@ class ExtendedStubGenerator(StubGenerator):
             # Always assume abstract methods return Any unless explicitly annotated. Also
             # some dunder methods should not have a None return type.
             retname = None  # implicit Any
-        elif has_yield_expression(o):
+        elif has_yield_expression(o) or force_yield:
             self.add_abc_import('Generator')
             yield_name = 'None'
             send_name = 'None'
@@ -739,13 +814,21 @@ class ExtendedStubGenerator(StubGenerator):
         elif not has_return_statement(o) and not is_abstract:
             retname = 'None'
 
-        if retname is None:
+        # print('---')
+        # print(f'retname={retname!r}')
+        # print(f'return_parsed_docstr_info={return_parsed_docstr_info}')
+        if retname is None or retname == 'None':
+            # print('need retname')
             if return_parsed_docstr_info is not None:
+                # print('not none')
                 retname = return_parsed_docstr_info[1]
+        # print('after')
+        # print(f'retname={retname}')
 
         retfield = ''
         if retname is not None:
             retfield = ' -> ' + retname
+        # print(f'retfield={retfield}')
 
         self.add(', '.join(args))
         self.add("){}: ...\n".format(retfield))

@@ -222,6 +222,8 @@ def sedfile(fpath, regexpr, repl, dry=False, verbose=1):
     mode_text = ['(real-run)', '(dry-run)'][dry]
 
     pattern = Pattern.coerce(regexpr, hint='regex')
+    # print(f'regexpr={regexpr}')
+    # print(f'pattern={pattern!r}')
 
     path, name = split(fpath)
     new_file_lines = []

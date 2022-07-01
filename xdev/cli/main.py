@@ -73,10 +73,12 @@ class DocstrStubgenCLI(scfg.Config):
         modpath = docstr_stubgen.modpath_coerce(modname_or_path)
         modpath = ub.Path(modpath)
         generated = docstr_stubgen.generate_typed_stubs(modpath)
+
         for fpath, text in generated.items():
             fpath = ub.Path(fpath)
             print(f'Write fpath={fpath}')
             fpath.write_text(text)
+
         # Generate a py.typed file to mark the package as typed
         if modpath.is_dir():
             pytyped_fpath = (modpath / 'py.typed')

@@ -43,6 +43,13 @@ class PatternBase:
 #         return True
 
 
+def our_extended_regex_compile():
+    r"""
+    Adds suppport for vim-like \< and \> syntax to represent \b
+    """
+    pass
+
+
 class Pattern(PatternBase, ub.NiceRepr):
     """
     Provides a common API to several common pattern matching syntaxes.
