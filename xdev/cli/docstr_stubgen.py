@@ -382,6 +382,8 @@ def common_module_names():
         'kwimage',
         'kwarray',
 
+        'xdoctest',
+
         'scipy', 'sklearn', 'matplotlib', 'seaborn', 'attrs',
 
         'keras', 'ujson', 'black', 'mypy', 'simplejson', 'parso', 'tensorflow',
@@ -465,6 +467,7 @@ def common_unreferenced():
     unref = [
         {'name': 'PathLike', 'modname': 'os'},
         {'name': 'ModuleType', 'modname': 'types'},
+        {'name': 'FrameType', 'modname': 'types'},
         {'name': 'NoParam', 'modname': 'ubelt.util_const'},
         {'name': '_NoParamType', 'modname': 'ubelt.util_const'},
         {'name': 'NoParamType', 'modname': 'ubelt.util_const'},
@@ -565,85 +568,52 @@ def hacked_typing_info(type_name):
 
 
 class ExtendedStubGenerator(StubGenerator):
+
+    def _hack_for_info(self, info):
+        type_name = info['type']
+        if type_name is not None:
+            results = hacked_typing_info(type_name)
+            for typing_arg in results['typing_imports']:
+                self.add_typing_import(typing_arg)
+            for line in results['import_lines']:
+                self.add_import_line(line)
+            for hack in results['hacks']:
+                if hack == 'sliceable':
+                    hacked = ub.codeblock(
+                        '''
+                        from typing import Any
+                        from typing_extensions import Protocol
+
+                        class Sliceable(Protocol):
+                            def __getitem__(self: 'Sliceable', key: Any) -> Any:
+                                ...
+                        ''') + '\n'
+
+                    self.add_import_line(hacked)
+                else:
+                    raise NotImplementedError(hack)
+            info['type'] = results['type_name']
+
     def visit_func_def(self, o: FuncDef, is_abstract: bool = False,
                        is_overload: bool = False) -> None:
+
+        DEBUG = 0
+        if DEBUG:
+            print('o.name = {!r}'.format(o.name))
+
         import ubelt as ub
-        if (self.is_private_name(o.name, o.fullname)
-                or self.is_not_in_all(o.name)
-                or (self.is_recorded_name(o.name) and not is_overload)):
-            self.clear_decorators()
-            return
-        if not self._indent and self._state not in (EMPTY, FUNC) and not o.is_awaitable_coroutine:
-            self.add('\n')
-        if not self.is_top_level():
-            self_inits = find_self_initializers(o)
-            for init, value in self_inits:
-                if init in self.method_names:
-                    # Can't have both an attribute and a method/property with the same name.
-                    continue
-                init_code = self.get_init(init, value)
-                if init_code:
-                    self.add(init_code)
-        # dump decorators, just before "def ..."
-        for s in self._decorators:
-            self.add(s)
-        self.clear_decorators()
-        self.add("%s%sdef %s(" % (self._indent, 'async ' if o.is_coroutine else '', o.name))
-        self.record_name(o.name)
-        # import ubelt as ub
-        # if o.name == 'dzip':
-        #     import xdev
-        #     xdev.embed()
-
-        def _hack_for_info(info):
-            type_name = info['type']
-            if type_name is not None:
-                results = hacked_typing_info(type_name)
-                for typing_arg in results['typing_imports']:
-                    self.add_typing_import(typing_arg)
-                for line in results['import_lines']:
-                    self.add_import_line(line)
-                for hack in results['hacks']:
-                    if hack == 'sliceable':
-                        hacked = ub.codeblock(
-                            '''
-                            from typing import Any
-                            from typing_extensions import Protocol
-
-                            class Sliceable(Protocol):
-                                def __getitem__(self: 'Sliceable', key: Any) -> Any:
-                                    ...
-                            ''') + '\n'
-
-                        self.add_import_line(hacked)
-                    else:
-                        raise NotImplementedError(hack)
-                info['type'] = results['type_name']
-
         name_to_parsed_docstr_info = {}
         return_parsed_docstr_info = None
         fullname = o.name
         if getattr(self, '_IN_CLASS', None) is not None:
             fullname = self._IN_CLASS + '.' + o.name
-
-        curr = ub.import_module_from_name(self.module)
-
-        DEBUG = 0
-
+        parent_mod = ub.import_module_from_name(self.module)
         if DEBUG:
-            curr = sys.modules.get(self.module)
-            print('o.name = {!r}'.format(o.name))
             print('fullname = {!r}'.format(fullname))
+        curr = parent_mod
         for part in fullname.split('.'):
-            # print('part = {!r}'.format(part))
-            # print('curr = {!r}'.format(curr))
             curr = getattr(curr, part, None)
-        # print('curr = {!r}'.format(curr))
         real_func = curr
-        # print('real_func = {!r}'.format(real_func))
-        # if o.name == 'dict_union':
-        #     import xdev
-        #     xdev.embed()
         force_yield = False
         if real_func is not None and real_func.__doc__ is not None:
             from mypy import fastparse
@@ -660,13 +630,13 @@ class ExtendedStubGenerator(StubGenerator):
                     # print(f'lines={lines}')
                     for retdict in docscrape_google.parse_google_retblock(lines):
                         # print(f'retdict={retdict}')
-                        _hack_for_info(retdict)
+                        self._hack_for_info(retdict)
                         return_parsed_docstr_info = (key, retdict['type'])
                     if return_parsed_docstr_info is None:
                         print('Warning: return block for {} might be malformed'.format(real_func))
                 if key == 'Yields':
                     for retdict in docscrape_google.parse_google_retblock(lines):
-                        _hack_for_info(retdict)
+                        self._hack_for_info(retdict)
                         return_parsed_docstr_info = (key, retdict['type'])
                         force_yield = True
                     if return_parsed_docstr_info is None:
@@ -677,10 +647,9 @@ class ExtendedStubGenerator(StubGenerator):
                     # print('lines = {!r}'.format(lines))
                     parsed_args = list(docscrape_google.parse_google_argblock(lines))
                     for info in parsed_args:
-                        _hack_for_info(info)
+                        self._hack_for_info(info)
                         name = info['name'].replace('*', '')
                         name_to_parsed_docstr_info[name] = info
-
             parsed_rets = list(docscrape_google.parse_google_returns(real_func.__doc__))
             ret_infos = []
             for info in parsed_rets:
@@ -690,6 +659,59 @@ class ExtendedStubGenerator(StubGenerator):
                     ret_infos.append(got)
                 except Exception:
                     pass
+
+        if (self.is_private_name(o.name, o.fullname)
+                or self.is_not_in_all(o.name)
+                or (self.is_recorded_name(o.name) and not is_overload)):
+            self.clear_decorators()
+            return
+        if not self._indent and self._state not in (EMPTY, FUNC) and not o.is_awaitable_coroutine:
+            self.add('\n')
+        if not self.is_top_level():
+            # This handles class-level attributes.
+            # We assume we already parsed out the Attributes section
+            # when we visited the class, so now we have to use that info here.
+            self_inits = find_self_initializers(o)
+
+            self_inits_lut = dict(self_inits)
+            # The docstring is the single source of truth, respect it.
+            psudo_inits = []
+            for name, info in self._docstring_class_attr_infos.items():
+                if name in self_inits_lut:
+                    psudo_inits.append((name, self_inits_lut[name]))
+                else:
+                    psudo_inits.append((name, None))
+            psudo_inits.extend(list(ub.dict_diff(self_inits_lut, self._docstring_class_attr_infos).items()))
+
+            for init, value in psudo_inits:
+                if init in self.method_names:
+                    # Can't have both an attribute and a method/property with the same name.
+                    continue
+
+                # Use the init docstring to get a hint for the type
+                annotation = None
+                # The class attributes should override the init signature
+                if init in self._docstring_class_attr_infos:
+                    typename = self._docstring_class_attr_infos[init]['type']
+                    annotation = fastparse.parse_type_string(typename, 'Any', 0, 0)
+                elif init in name_to_parsed_docstr_info:
+                    typename = name_to_parsed_docstr_info[init]['type']
+                    annotation = fastparse.parse_type_string(typename, 'Any', 0, 0)
+                    # import xdev
+                    # xdev.embed()
+                init_code = self.get_init(init, value, annotation=annotation)
+                if init_code:
+                    self.add(init_code)
+        # dump decorators, just before "def ..."
+        for s in self._decorators:
+            self.add(s)
+        self.clear_decorators()
+        self.add("%s%sdef %s(" % (self._indent, 'async ' if o.is_coroutine else '', o.name))
+        self.record_name(o.name)
+        # import ubelt as ub
+        # if o.name == 'dzip':
+        #     import xdev
+        #     xdev.embed()
 
         # print('o = {!r}'.format(o))
         # print('o.arguments = {!r}'.format(o.arguments))
@@ -835,9 +857,30 @@ class ExtendedStubGenerator(StubGenerator):
         self._state = FUNC
 
     def visit_class_def(self, o) -> None:
+        # from mypy.stubgen import (
+        #     find_method_names, NameExpr, MemberExpr, AliasPrinter, EMPTY_CLASS,
+        #     CLASS)
         self._IN_CLASS = o.name
-        # print('o.name = {!r}'.format(o.name))
+
+        # Register the class attribute information that we found here
+        # We will need to use it in the init method parsing
+        self._docstring_class_attr_infos = {}
+        parent_mod = ub.import_module_from_name(self.module)
+        real_class = getattr(parent_mod, o.name, None)
+        if real_class is not None and real_class.__doc__ is not None:
+            from xdoctest.docstr import docscrape_google
+            blocks = docscrape_google.split_google_docblocks(real_class.__doc__)
+            for key, block in blocks:
+                lines = block[0]
+                if key == 'Attributes':
+                    lines = '\n'.join([line.lstrip('*') for line in lines.split('\n')])
+                    parsed_args = list(docscrape_google.parse_google_argblock(lines))
+                    for info in parsed_args:
+                        self._hack_for_info(info)
+                        name = info['name'].replace('*', '')
+                        self._docstring_class_attr_infos[name] = info
         ret = super().visit_class_def(o)
+        self._docstring_class_attr_infos = None
         self._IN_CLASS = None
         return ret
 
