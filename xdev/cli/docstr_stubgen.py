@@ -383,6 +383,7 @@ def common_module_names():
         'kwarray',
 
         'xdoctest',
+        'xdoctest.doctest_part',
 
         'scipy', 'sklearn', 'matplotlib', 'seaborn', 'attrs',
 
@@ -406,7 +407,7 @@ def common_module_names():
         'isodate', 'psutil', 'pyarrow', 'chardet', 'sqlalchemy', 'tomli',
         'decorator', 'werkzeug', 'msrest', 'aiohttp', 'grpcio', 'multidict',
         'scipy', 'py', 'yarl', 'pluggy', 'filelock', 'pillow', 'soupsieve',
-        'aiobotocore', 'jsonschema', 'lxml', 'pytest', 'beautifulsoup4',
+        'aiobotocore', 'jsonschema', 'lxml', 'pytest', '_pytest', 'beautifulsoup4',
         'tqdm', 'greenlet', 'platformdirs', 'fsspec', 'pyopenssl', 'tabulate',
         's3fs', 'flask', 'toml', 'asn1crypto', 'future', 'frozenlist',
         'pyrsistent', 'aiosignal', 'pygments', 'pynacl', 'itsdangerous',
@@ -459,6 +460,10 @@ def common_unreferenced():
             'Any',
             'IO',
         ],
+
+        'collections': [
+            'OrderedDict', 'defaultdict'
+        ]
     }
 
     import nptyping
@@ -597,6 +602,7 @@ class ExtendedStubGenerator(StubGenerator):
     def visit_func_def(self, o: FuncDef, is_abstract: bool = False,
                        is_overload: bool = False) -> None:
 
+        from mypy import fastparse
         DEBUG = 0
         if DEBUG:
             print('o.name = {!r}'.format(o.name))
@@ -616,7 +622,6 @@ class ExtendedStubGenerator(StubGenerator):
         real_func = curr
         force_yield = False
         if real_func is not None and real_func.__doc__ is not None:
-            from mypy import fastparse
             from xdoctest.docstr import docscrape_google
             parsed_args = None
             # parsed_ret = None
@@ -675,15 +680,16 @@ class ExtendedStubGenerator(StubGenerator):
 
             self_inits_lut = dict(self_inits)
             # The docstring is the single source of truth, respect it.
-            psudo_inits = []
+            pseudo_inits = []
             for name, info in self._docstring_class_attr_infos.items():
                 if name in self_inits_lut:
-                    psudo_inits.append((name, self_inits_lut[name]))
+                    pseudo_inits.append((name, self_inits_lut[name]))
                 else:
-                    psudo_inits.append((name, None))
-            psudo_inits.extend(list(ub.dict_diff(self_inits_lut, self._docstring_class_attr_infos).items()))
+                    pseudo_inits.append((name, None))
+            # Maybe we shouldnt do this if there is an Attributes section?
+            pseudo_inits.extend(list(ub.dict_diff(self_inits_lut, self._docstring_class_attr_infos).items()))
 
-            for init, value in psudo_inits:
+            for init, value in pseudo_inits:
                 if init in self.method_names:
                     # Can't have both an attribute and a method/property with the same name.
                     continue
@@ -731,7 +737,6 @@ class ExtendedStubGenerator(StubGenerator):
                         doc_type_str = doc_type_str.split(', default')[0]
                         # annotated_type = doc_type_str
                         # import mypy.types as mypy_types
-                        from mypy import fastparse
                         # globals_ = {**mypy_types.__dict__}
                         try:
                             # # got = mypy_types.deserialize_type(doc_type_str)
