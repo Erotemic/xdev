@@ -133,6 +133,37 @@ class SedCLI(scfg.Config):
 
 
 @_register
+class FormatQuotesCLI(scfg.Config):
+    name = 'format_quotes'
+    description = 'Use single quotes for code and double quotes for docs'
+    default = {
+        'path': scfg.Value('', position=1, help=ub.paragraph(
+            '''
+            ''')),
+        'diff': scfg.Value(True, help=ub.paragraph(
+            '''
+            The pattern to replace with.
+            ''')),
+        'write': scfg.Value(False, short_alias=['-w'], help=ub.paragraph(
+            '''
+            The directory to recursively search or a file pattern to match.
+            '''
+        )),
+        'verbose': scfg.Value(3, help=ub.paragraph(
+            '''
+            '''
+        )),
+        'recursive': scfg.Value(True),
+    }
+
+    @classmethod
+    def main(cls, cmdline=False, **kwargs):
+        from xdev import format_quotes
+        config = cls(cmdline=cmdline, data=kwargs)
+        format_quotes.format_quotes(**config)
+
+
+@_register
 class FindCLI(scfg.Config):
     name = 'find'
     description = 'Find files based on names'
