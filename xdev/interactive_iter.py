@@ -15,6 +15,40 @@ class InteractiveIter(object):
 
     iterable should be a list, not a generator. sorry
 
+    CommandLine:
+        xdoctest -m xdev.interactive_iter InteractiveIter:0 --interact
+        xdoctest -m xdev.interactive_iter InteractiveIter:1 --interact
+
+    Example:
+        >>> # xdoctest: +REQUIRES(--interact)
+        >>> from xdev.interactive_iter import *  # NOQA
+        >>> iterable = [1, 2, 3]
+        >>> enabled = True
+        >>> startx = 0
+        >>> default_action = 'next'
+        >>> custom_actions = []
+        >>> wraparound = False
+        >>> display_item = True
+        >>> verbose = True
+        >>> iiter = InteractiveIter(iterable, enabled, startx, default_action, custom_actions, wraparound, display_item, verbose)
+        >>> for _ in iiter:
+        >>>     pass
+
+    Example:
+        >>> # xdoctest: +REQUIRES(--interact)
+        >>> # Interactive matplotlib stuff
+        >>> from xdev.interactive_iter import *  # NOQA
+        >>> import kwimage
+        >>> import kwplot
+        >>> plt = kwplot.autoplt(verbose=3, force='Qt5Agg')
+        >>> plt.ion()
+        >>> keys = list(kwimage.grab_test_image.keys())
+        >>> iterable = [kwimage.grab_test_image(key) for key in keys]
+        >>> iiter = InteractiveIter(iterable)
+        >>> for img in iiter:
+        >>>     kwplot.imshow(img)
+        >>>     InteractiveIter.draw()
+
     """
     def __init__(iiter, iterable=None, enabled=True, startx=0,
                  default_action='next', custom_actions=[], wraparound=False,
@@ -29,35 +63,6 @@ class InteractiveIter(object):
             wraparound (bool): (default = False)
             display_item (bool): (default = True)
             verbose (bool):  verbosity flag(default = True)
-
-        Example:
-            >>> # DISABLE_DOCTEST
-            >>> from xdev.interactive_iter import *  # NOQA
-            >>> iterable = [1, 2, 3]
-            >>> enabled = True
-            >>> startx = 0
-            >>> default_action = 'next'
-            >>> custom_actions = []
-            >>> wraparound = False
-            >>> display_item = True
-            >>> verbose = True
-            >>> iiter = InteractiveIter(iterable, enabled, startx, default_action, custom_actions, wraparound, display_item, verbose)
-            >>> for _ in iiter:
-            >>>     pass
-
-        Example:
-            >>> # DISABLE_DOCTEST
-            >>> # Interactive matplotlib stuff
-            >>> from xdev.interactive_iter import *  # NOQA
-            >>> import kwimage
-            >>> import kwplot
-            >>> kwplot.autompl()
-            >>> keys = list(kwimage.grab_test_image.keys())
-            >>> iterable = [kwimage.grab_test_image(key) for key in keys]
-            >>> iiter = InteractiveIter(iterable)
-            >>> for img in iiter:
-            >>>     kwplot.imshow(img)
-            >>>     InteractiveIter.draw()
         """
         iiter.wraparound = wraparound
         iiter.enabled = enabled
@@ -107,13 +112,15 @@ class InteractiveIter(object):
         if not iiter.enabled:
             for item in ub.ProgIter(iiter.iterable, desc='nointeract: ', freq=1, adjust=False):
                 yield item
-            raise StopIteration()
+            return
+            # raise StopIteration()
         assert isinstance(iiter.iterable, INDEXABLE_TYPES), 'input is not iterable'
         iiter.num_items = len(iiter.iterable)
         if iiter.verbose:
             print('[IITER] Begin interactive iteration: %r items\n' % (iiter.num_items))
         if iiter.num_items == 0:
-            raise StopIteration
+            return
+            # raise StopIteration
         # TODO: replace with ub.ProgIter
         # mark_, end_ = util_progress.log_progress(length=iiter.num_items,
         #                                          lbl='interaction: ', freq=1)
@@ -171,12 +178,18 @@ class InteractiveIter(object):
                 if iiter.display_item:
                     print('[IITER] current item=%r' % (item,))
             ans = iiter.prompt()
-            action = iiter.handle_ans(ans)
+            try:
+                action = iiter.handle_ans(ans)
+            except StopIteration:
+                return
             REFRESH_ON_BAD_INPUT = False
             if not REFRESH_ON_BAD_INPUT:
                 while action is False:
                     ans = iiter.prompt()
-                    action = iiter.handle_ans(ans)
+                    try:
+                        action = iiter.handle_ans(ans)
+                    except StopIteration:
+                        return
             if action == 'IPython':
                 embeding.embed(n=1)
 

@@ -14,6 +14,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed:
 * Added type stubs
 
+### Fixed:
+* StopIteration issue in InteractiveIter
+
 
 ## Version 0.3.1 - Released 2022-03-26
 
