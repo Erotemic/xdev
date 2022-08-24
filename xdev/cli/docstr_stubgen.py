@@ -371,6 +371,7 @@ def common_module_names():
             print(f'{pkg_name!r},')
     """
     names = stdlib_names().copy()
+    names = list(names)
     # https://github.com/hugovk/top-pypi-packages
     names.extend([
         'numpy', 'torch', 'pandas', 'h5py', 'networkx', 'torch.nn',
@@ -466,8 +467,11 @@ def common_unreferenced():
         ]
     }
 
-    import nptyping
-    modname_to_refs['nptyping'] = ['NDArray', 'Shape', 'DType'] + list(set(nptyping.typing_.dtype_per_name.keys()) - {'Number'})
+    try:
+        import nptyping
+        modname_to_refs['nptyping'] = ['NDArray', 'Shape', 'DType'] + list(set(nptyping.typing_.dtype_per_name.keys()) - {'Number'})
+    except ModuleNotFoundError:
+        pass
 
     unref = [
         {'name': 'PathLike', 'modname': 'os'},

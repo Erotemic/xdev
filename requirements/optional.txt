@@ -5,3 +5,6 @@ line_profiler>=3.4.0     ; python_version >= '3.7'    # Python 3.7+
 line_profiler>=3.4.0     ; python_version < '3.7' and python_version >= '3.6'    # Python 3.6
 line_profiler>=3.0.0,<=3.3.1 ; python_version < '3.6' and python_version >= '3.5'    # Python 3.5
 line_profiler>=3.0.0,<=3.1.0 ; python_version < '3.5' and python_version >= '2.7'    # Python 2.7
+
+yapf  #> 0.32.0
+autoflake  #>1.4

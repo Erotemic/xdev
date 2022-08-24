@@ -1,7 +1,18 @@
 import re
 
 
-class _AbstractRegexBuilder:
+class RegexBuilder:
+    """
+    Notes:
+        The way to have multiple negative look aheads/behinds is to change them together SO12689046
+
+
+    References:
+        .. [SO12689046] https://stackoverflow.com/questions/12689046/multiple-negative-lookbehind-assertions-in-python-regex
+    """
+
+    def __init__(self):
+        raise Exception('Use coerce instead')
 
     def lookahead(self, pat, positive=True):
         """
@@ -42,8 +53,19 @@ class _AbstractRegexBuilder:
     def oneof(self, *paterns):
         return self.group('|'.join(paterns))
 
+    @classmethod
+    def coerce(cls, backend='python'):
+        if backend == 'python':
+            cls = PythonRegexBuilder
+        elif backend == 'vim':
+            cls = VimRegexBuilder
+        else:
+            raise KeyError(backend)
+        self = cls()
+        return self
 
-class VimRegexBuilder(_AbstractRegexBuilder):
+
+class VimRegexBuilder(RegexBuilder):
     def __init__(self):
         self.constructs = {}
         self.constructs['positive_lookahead'] = r'\({pat}\)\@='
@@ -55,7 +77,7 @@ class VimRegexBuilder(_AbstractRegexBuilder):
         self.constructs['nongreedy_kleene_star'] = r'\{-}'
 
 
-class PythonRegexBuilder(_AbstractRegexBuilder):
+class PythonRegexBuilder(RegexBuilder):
     r"""
     Contains helper methods to construct a regex
 
@@ -73,6 +95,23 @@ class PythonRegexBuilder(_AbstractRegexBuilder):
         v321
         >>> print(pat.search('fdsfdsv321fdsfsd'))
         None
+
+    Example:
+        >>> # Test multiple negative lookbehind
+        >>> b = PythonRegexBuilder()
+        >>> suffix = 'foo'
+        >>> neg_prefix1 = b.lookbehind('abc', positive=0)
+        >>> neg_prefix2 = b.lookbehind('efg', positive=0)
+        >>> pat1 = re.compile(neg_prefix1 + suffix)
+        >>> pat2 = re.compile(neg_prefix2 + suffix)
+        >>> patB = re.compile(neg_prefix1 + neg_prefix2 + suffix)
+        >>> cases = ['abcfoo', 'efgfoo', 'hijfoo', 'foo']
+        >>> print([bool(pat1.search(c)) for c in cases])
+        >>> print([bool(pat2.search(c)) for c in cases])
+        >>> print([bool(patB.search(c)) for c in cases])
+        [False, True, True, True]
+        [True, False, True, True]
+        [False, False, True, True]
     """
     def __init__(self):
         self.constructs = {}

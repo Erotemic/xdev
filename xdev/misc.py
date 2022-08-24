@@ -283,7 +283,7 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
     return text
 
 
-def tree_repr(cwd=None, max_files=0):
+def tree_repr(cwd=None, max_files=0, dirblocklist=None):
     """
     Filesystem tree representation
 
@@ -311,7 +311,17 @@ def tree_repr(cwd=None, max_files=0):
     import networkx as nx
     tree = nx.OrderedDiGraph()
 
+    from xdev.patterns import MultiPattern
+    if dirblocklist is not None:
+        dirblocklist = MultiPattern.coerce(dirblocklist, hint='glob')
+
+    # TODO: rectify with "find"
     for root, dnames, fnames in os.walk(cwd):
+
+        if dirblocklist is not None:
+            dnames[:] = [
+                dname for dname in dnames if not dirblocklist.match(dname)]
+
         dnames[:] = sorted(dnames)
         tree.add_node(root)
 
@@ -324,7 +334,7 @@ def tree_repr(cwd=None, max_files=0):
 
         tree.nodes[root]['label'] = label
 
-        if len(fnames) < max_files:
+        if max_files is None or len(fnames) < max_files:
             for fname in fnames:
                 fpath = join(root, fname)
                 tree.add_edge(root, fpath)
