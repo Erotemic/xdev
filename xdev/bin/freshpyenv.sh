@@ -25,7 +25,7 @@ OPTIONS
 EXAMPLES
     ~/code/xdev/xdev/bin/freshpyenv.sh images
     ~/code/xdev/xdev/bin/freshpyenv.sh --help
-    ~/code/xdev/xdev/bin/freshpyenv.sh --image python:3.8
+    ~/code/xdev/xdev/bin/freshpyenv.sh --image python:3.10
 
 AUTHOR
      Jon Crall <erotemic@gmail.com.com>

@@ -6,7 +6,7 @@ Porting from ~/local/rob/rob/rob_nav.py / ubelt
 from __future__ import absolute_import, division, print_function, unicode_literals
 import os
 import ubelt as ub
-from os.path import relpath, split, join, basename, abspath
+from os.path import relpath, split, join, abspath
 from xdev.patterns import Pattern, RE_Pattern  # NOQA
 from xdev.patterns import MultiPattern
 

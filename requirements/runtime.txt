@@ -6,7 +6,7 @@ pygments >= 2.4.2
 IPython >= 5.8.0
 parse >= 1.12.1
 pyflakes 
-scriptconfig >= 0.5.8
+scriptconfig >= 0.6.5
 
 # python ~/local/tools/supported_python_versions_pip.py line_profiler
 

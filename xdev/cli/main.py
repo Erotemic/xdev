@@ -120,6 +120,9 @@ class SedCLI(scfg.Config):
     def main(cls, cmdline=False, **kwargs):
         from xdev import search_replace
         config = cls(cmdline=cmdline, data=kwargs)
+        if config['verbose'] > 2:
+            print('config = {}'.format(ub.repr2(dict(config), nl=1, sort=0)))
+
         if config['dry'] in {'ask', 'auto'}:
             from rich.prompt import Confirm
             config['dry'] = True
@@ -237,7 +240,7 @@ class ModalCLI(object):
             return 1
 
         try:
-            ret = sub_main(cmdline=True, **kw)
+            ret = sub_main(cmdline=False, **kw)
         except Exception as ex:
             print('ERROR ex = {!r}'.format(ex))
             raise
