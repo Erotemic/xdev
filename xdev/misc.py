@@ -343,4 +343,5 @@ def tree_repr(cwd=None, max_files=0, dirblocklist=None):
             dpath = join(root, dname)
             tree.add_edge(root, dpath)
 
-    print(nx.forest_str(tree))
+    from xdev.util_networkx import write_network_text
+    write_network_text(tree)

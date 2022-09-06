@@ -79,7 +79,8 @@ inside_docker_setup(){
     cd "$HOME"/repo
 
     # Make a virtualenv
-    export PYVER=$(python -c "import sys; print('{}{}'.format(*sys.version_info[0:2]))")
+    PYVER=$(python -c "import sys; print('{}{}'.format(*sys.version_info[0:2]))")
+    export PYVER
     pip install virtualenv
     virtualenv "venv$PYVER"
 

@@ -191,7 +191,7 @@ if __name__ == '__main__':
         author='Jon Crall',
         author_email='erotemic@gmail.com',
         url='https://github.com/Erotemic/xdev',
-        description='Developer tools',
+        description='An excellent developer tool for excellent developers',
         long_description=parse_description(),
         long_description_content_type='text/x-rst',
         install_requires=parse_requirements('requirements/runtime.txt'),
@@ -205,6 +205,9 @@ if __name__ == '__main__':
                 'xdev = xdev.__main__:main',
             ],
         },
+        scripts=[
+            'xdev/bin/freshpyenv.sh',
+        ],
         license='Apache 2',
         packages=['xdev', 'xdev.cli'],
         python_requires='>=3.6',

@@ -9,11 +9,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added: 
 * experimental `xdev doctypes`
+* experimental `freshpyenv.sh` script
 
 
 ### Changed:
 * Added type stubs
 * Modified signature of `find` and `tree_repr`
+* xcookie module structure
 
 ### Fixed:
 * StopIteration issue in InteractiveIter
