@@ -283,7 +283,9 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
     return text
 
 
-def tree_repr(cwd=None, max_files=0, dirblocklist=None):
+def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
+              return_text=False, return_tree=False, pathstyle='name',
+              with_type=False, colors=not ub.NO_COLOR):
     """
     Filesystem tree representation
 
@@ -295,6 +297,10 @@ def tree_repr(cwd=None, max_files=0, dirblocklist=None):
     Args:
         cwd : directory to print
         max_files : maximum files to print before supressing a directory
+        pathstyle (str): can be rel, name, or abs
+        return_tree (bool): if True return the tree
+        return_text (bool): if True return the text
+        colors (bool): if True use rich
 
     SeeAlso:
         xdev.tree - generator
@@ -304,7 +310,7 @@ def tree_repr(cwd=None, max_files=0, dirblocklist=None):
         >>> xdev.tree_repr()
     """
     import os
-    from os.path import join, relpath
+    from os.path import join, relpath, basename
     if cwd is None:
         cwd = os.getcwd()
 
@@ -314,6 +320,61 @@ def tree_repr(cwd=None, max_files=0, dirblocklist=None):
     from xdev.patterns import MultiPattern
     if dirblocklist is not None:
         dirblocklist = MultiPattern.coerce(dirblocklist, hint='glob')
+
+    def _make_label(p):
+        if pathstyle == 'rel':
+            pathrep = relpath(p, cwd)
+        elif pathstyle == 'name':
+            pathrep = basename(p)
+        elif pathstyle == 'abs':
+            pathrep = p
+        else:
+            KeyError(pathstyle)
+
+        types = []
+        islink = os.path.islink(p)
+        isdir = os.path.isdir(p)
+        isfile = os.path.isfile(p)
+        isbroken = False
+        scolor = ''
+        tcolor = ''
+        L_scolor = ''
+        L_tcolor = ''
+        if islink:
+            if colors:
+                L_scolor = '[cyan]'
+                L_tcolor = '[/cyan]'
+            types.append('L')
+            if not isfile and not isdir:
+                isbroken = True
+                if isbroken:
+                    if colors:
+                        L_scolor = '[red]'
+                        L_tcolor = '[/red]'
+                types.append('B')
+
+        if isfile:
+            if colors:
+                scolor = '[reset]'
+                tcolor = '[/reset]'
+            types.append('F')
+        if isdir:
+            if colors:
+                scolor = '[blue]'
+                tcolor = '[/blue]'
+            types.append('D')
+
+        if islink:
+            target = os.readlink(p)
+            pathrep = L_scolor + pathrep + L_tcolor + ' -> ' + scolor + target + tcolor
+        else:
+            pathrep = scolor + pathrep + tcolor
+
+        if with_type:
+            typelabel = ''.join(types)
+            return f'({typelabel}) ' + pathrep
+        else:
+            return pathrep
 
     # TODO: rectify with "find"
     for root, dnames, fnames in os.walk(cwd):
@@ -325,23 +386,54 @@ def tree_repr(cwd=None, max_files=0, dirblocklist=None):
         dnames[:] = sorted(dnames)
         tree.add_node(root)
 
+        too_many_files = max_files is not None and len(fnames) >= max_files
+
+        if show_nfiles == 'auto':
+            show_nfiles_ = too_many_files
+        else:
+            show_nfiles_ = show_nfiles
+
         num_files = len(fnames)
-        prefix = '[ {} ]'.format(num_files)
+        if show_nfiles_:
+            prefix = '[ {} ] '.format(num_files)
+        else:
+            prefix = ''
 
-        pathrep = relpath(root, cwd)
-
-        label = '{} {}'.format(prefix, pathrep)
+        label = '{}{}'.format(prefix, _make_label(root))
 
         tree.nodes[root]['label'] = label
 
-        if max_files is None or len(fnames) < max_files:
+        if not too_many_files:
             for fname in fnames:
                 fpath = join(root, fname)
+                tree.add_node(fpath)
+                tree.nodes[fpath]['label'] = _make_label(fpath)
                 tree.add_edge(root, fpath)
 
         for dname in dnames:
             dpath = join(root, dname)
+            tree.add_node(dpath)
+            tree.nodes[dpath]['label'] = _make_label(dpath)
             tree.add_edge(root, dpath)
 
     from xdev.util_networkx import write_network_text
-    write_network_text(tree)
+    import io
+    file = io.StringIO()
+    write_network_text(tree, file)
+    file.seek(0)
+    text = file.read()
+
+    info = {}
+
+    if return_text:
+        info['text'] = text
+    else:
+        if colors:
+            from rich import print as rprint
+            rprint(text)
+        else:
+            print(text)
+
+    if return_tree:
+        info['tree'] = tree
+    return info
