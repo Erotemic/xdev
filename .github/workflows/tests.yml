@@ -277,6 +277,7 @@ jobs:
     - name: Sign and Publish
       env:
         TWINE_REPOSITORY_URL: https://test.pypi.org/legacy/
+        TWINE_USERNAME: ${{ secrets.TEST_TWINE_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.TEST_TWINE_PASSWORD }}
         CI_SECRET: ${{ secrets.CI_SECRET }}
       run: |-
@@ -294,8 +295,7 @@ jobs:
         $GPG_EXECUTABLE --list-keys
         VERSION=$(python -c "import setup; print(setup.VERSION)")
         pip install twine
-        pip install six pyopenssl ndg-httpsclient pyasn1 -U --user
-        pip install requests[security] twine --user
+        pip install urllib3 requests[security] twine
         GPG_KEYID=$(cat dev/public_gpg_key)
         echo "GPG_KEYID = '$GPG_KEYID'"
         DO_GPG=True GPG_KEYID=$GPG_KEYID TWINE_REPOSITORY_URL=${TWINE_REPOSITORY_URL} TWINE_PASSWORD=$TWINE_PASSWORD TWINE_USERNAME=$TWINE_USERNAME GPG_EXECUTABLE=$GPG_EXECUTABLE DO_UPLOAD=True DO_TAG=False ./publish.sh
@@ -320,6 +320,7 @@ jobs:
     - name: Sign and Publish
       env:
         TWINE_REPOSITORY_URL: https://upload.pypi.org/legacy/
+        TWINE_USERNAME: ${{ secrets.TWINE_USERNAME }}
         TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
         CI_SECRET: ${{ secrets.CI_SECRET }}
       run: |-
@@ -337,8 +338,7 @@ jobs:
         $GPG_EXECUTABLE --list-keys
         VERSION=$(python -c "import setup; print(setup.VERSION)")
         pip install twine
-        pip install six pyopenssl ndg-httpsclient pyasn1 -U --user
-        pip install requests[security] twine --user
+        pip install urllib3 requests[security] twine
         GPG_KEYID=$(cat dev/public_gpg_key)
         echo "GPG_KEYID = '$GPG_KEYID'"
         DO_GPG=True GPG_KEYID=$GPG_KEYID TWINE_REPOSITORY_URL=${TWINE_REPOSITORY_URL} TWINE_PASSWORD=$TWINE_PASSWORD TWINE_USERNAME=$TWINE_USERNAME GPG_EXECUTABLE=$GPG_EXECUTABLE DO_UPLOAD=True DO_TAG=False ./publish.sh
