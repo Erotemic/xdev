@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# PYTHON_ARGCOMPLETE_OK
 import scriptconfig as scfg
 import argparse
 import ubelt as ub
@@ -72,10 +73,12 @@ class DocstrStubgenCLI(scfg.Config):
         modpath = docstr_stubgen.modpath_coerce(modname_or_path)
         modpath = ub.Path(modpath)
         generated = docstr_stubgen.generate_typed_stubs(modpath)
+
         for fpath, text in generated.items():
             fpath = ub.Path(fpath)
             print(f'Write fpath={fpath}')
             fpath.write_text(text)
+
         # Generate a py.typed file to mark the package as typed
         if modpath.is_dir():
             pytyped_fpath = (modpath / 'py.typed')
@@ -117,6 +120,9 @@ class SedCLI(scfg.Config):
     def main(cls, cmdline=False, **kwargs):
         from xdev import search_replace
         config = cls(cmdline=cmdline, data=kwargs)
+        if config['verbose'] > 2:
+            print('config = {}'.format(ub.repr2(dict(config), nl=1, sort=0)))
+
         if config['dry'] in {'ask', 'auto'}:
             from rich.prompt import Confirm
             config['dry'] = True
@@ -127,6 +133,37 @@ class SedCLI(scfg.Config):
                 search_replace.sed(**config)
         else:
             search_replace.sed(**config)
+
+
+@_register
+class FormatQuotesCLI(scfg.Config):
+    name = 'format_quotes'
+    description = 'Use single quotes for code and double quotes for docs'
+    default = {
+        'path': scfg.Value('', position=1, help=ub.paragraph(
+            '''
+            ''')),
+        'diff': scfg.Value(True, help=ub.paragraph(
+            '''
+            The pattern to replace with.
+            ''')),
+        'write': scfg.Value(False, short_alias=['-w'], help=ub.paragraph(
+            '''
+            The directory to recursively search or a file pattern to match.
+            '''
+        )),
+        'verbose': scfg.Value(3, help=ub.paragraph(
+            '''
+            '''
+        )),
+        'recursive': scfg.Value(True),
+    }
+
+    @classmethod
+    def main(cls, cmdline=False, **kwargs):
+        from xdev import format_quotes
+        config = cls(cmdline=cmdline, data=kwargs)
+        format_quotes.format_quotes(**config)
 
 
 @_register
@@ -203,7 +240,7 @@ class ModalCLI(object):
             return 1
 
         try:
-            ret = sub_main(cmdline=True, **kw)
+            ret = sub_main(cmdline=False, **kw)
         except Exception as ex:
             print('ERROR ex = {!r}'.format(ex))
             raise

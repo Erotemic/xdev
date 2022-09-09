@@ -6,8 +6,9 @@ Porting from ~/local/rob/rob/rob_nav.py / ubelt
 from __future__ import absolute_import, division, print_function, unicode_literals
 import os
 import ubelt as ub
-from os.path import relpath, split, join, basename, abspath
+from os.path import relpath, split, join, abspath
 from xdev.patterns import Pattern, RE_Pattern  # NOQA
+from xdev.patterns import MultiPattern
 
 # try:
 #     from packaging.version import parse as parse_version
@@ -81,20 +82,8 @@ def grep(regexpr, dpath=None, include=None, exclude=None, recursive=True,
     return grep_results
 
 
-def _coerce_multipattern(pattern):
-    if pattern is None:
-        pattern_ = None
-    else:
-        if not ub.iterable(pattern):
-            pattern_ = [pattern]
-        else:
-            pattern_ = pattern
-        pattern_ = [Pattern.coerce(pat, hint='glob') for pat in pattern_]
-    return pattern_
-
-
-def find(pattern=None, dpath=None, include=None, exclude=None, type=None,
-         recursive=True, followlinks=False):
+def find(pattern=None, dpath=None, include=None, exclude=None, dirblocklist=None,
+         type=None, recursive=True, followlinks=False):
     """
     Find all paths in a root subject to a search criterion
 
@@ -105,13 +94,22 @@ def find(pattern=None, dpath=None, include=None, exclude=None, type=None,
         dpath (str):
             The root direcotry to search. Default to cwd.
 
-        include (str | List[str]):
+        include (str | List[str] | MultiPattern):
             Pattern or list of patterns. If specified, search only files whose
             base name matches this pattern. By default the pattern is GLOB.
+            This only applies to the final name. Directories that do not match
+            this name will still be traversed.
 
-        exclude (str | List[str]):
+        exclude (str | List[str] | MultiPattern):
             Pattern or list of patterns. Skip any file with a name suffix that
-            matches the pattern. By default the pattern is GLOB.
+            matches the pattern. By default the pattern is GLOB. This ONLY
+            applies to the final name. Directories that match an exclude
+            pattern will still be traversed.  Use ``dirblocklist`` to specify
+            patterns to exclude intermediate directories from traversal.
+
+        dirblocklist (str | List[str] | MultiPattern):
+            Any directory name matching this pattern will be removed from
+            traversal.
 
         type (str | List[str]):
             A list of 1 character codes indicating what types of file can be
@@ -166,26 +164,28 @@ def find(pattern=None, dpath=None, include=None, exclude=None, type=None,
         dpath = os.getcwd()
 
     # Define helper for checking inclusion / exclusion
-    include_ = _coerce_multipattern(include)
-    exclude_ = _coerce_multipattern(exclude)
+    include = None if include is None else MultiPattern.coerce(include, hint='glob')
+    exclude = None if exclude is None else MultiPattern.coerce(exclude, hint='glob')
+    dirblocklist = None if dirblocklist is None else MultiPattern.coerce(dirblocklist, hint='glob')
     main_pattern = Pattern.coerce(pattern, hint='glob')
 
     def is_included(name):
         if not main_pattern.match(name):
             return False
 
-        if exclude_ is not None:
-            if any(pat.match(name) for pat in exclude_):
-                return False
+        if exclude is not None and exclude.match(name):
+            return False
 
-        if include_ is not None:
-            if any(pat.match(name) for pat in include_):
-                return True
-            else:
-                return False
-        return True
+        if include is None or include.match(name):
+            return True
+
+        return False
 
     for root, dnames, fnames in os.walk(dpath, followlinks=followlinks):
+
+        if dirblocklist is not None:
+            dnames[:] = [
+                dname for dname in dnames if not dirblocklist.match(dname)]
 
         if with_files:
             for fname in fnames:
@@ -222,6 +222,8 @@ def sedfile(fpath, regexpr, repl, dry=False, verbose=1):
     mode_text = ['(real-run)', '(dry-run)'][dry]
 
     pattern = Pattern.coerce(regexpr, hint='regex')
+    # print(f'regexpr={regexpr}')
+    # print(f'pattern={pattern!r}')
 
     path, name = split(fpath)
     new_file_lines = []
@@ -293,18 +295,23 @@ class GrepResult(ub.NiceRepr):
         self.found_lines.append(line)
         self.found_lxs.append(lx)
 
-    def format_text(self):
+    def format_text(self, color=True):
         summary = []
         app = summary.append
-        fname = basename(self.fpath)
+        fname = ub.Path(self.fpath).name
         ndigits = str(len(str(self.max_line)))
 
         fmt_str = '{} : {:' + ndigits + 'd} |{}'
         ret = 'Found {} line(s) in {!r}: '.format(len(self), self.fpath)
         app('----------------------')
+        color = 'red'
         app(ret)
         for (lx, line) in zip(self.found_lxs, self.found_lines):
             line = line.replace('\n', '')
+            if color and self.pattern:
+                found = self.pattern.search(line)
+                s, t = found.span()
+                line = line[:s] + ub.color_text(line[s:t], color) + line[t:]
             app(fmt_str.format(fname, lx, line))
 
         return '\n'.join(summary)
@@ -343,6 +350,38 @@ def grepfile(fpath, regexpr, verbose=1):
                 if len(grep_result):
                     print(grep_result.format_text())
 
+    return grep_result
+
+
+def greptext(text, regexpr, fpath=None, verbose=1):
+    r"""
+    Exceute grep on text
+
+    TODO: get context
+    """
+    from xdev.patterns import Pattern
+    # from xdev.search_replace import GrepResult
+    grep_result = None
+    pattern = Pattern.coerce(regexpr, hint='regex')
+    fpath = '<text>'
+    try:
+        lines = text.splitlines()
+    except UnicodeDecodeError:
+        print("UNABLE TO READ fpath={}".format(fpath))
+    else:
+        grep_result = GrepResult(fpath, pattern)
+        grep_result.max_line = len(lines)
+
+        # Search each line for the desired pattern
+        for lx, line in enumerate(lines):
+            match_object = pattern.search(line)
+            if match_object:
+                grep_result.append(lx, line)
+
+        # Print the results (if any)
+        if verbose:
+            if len(grep_result):
+                print(grep_result.format_text())
     return grep_result
 
 
