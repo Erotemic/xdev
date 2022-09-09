@@ -37,6 +37,11 @@ fi
 if [[ "${FRESHPYENV_TRACE+x}" != "" ]]; then
 	set -x
 fi
+__devdoc__='
+For a "developer install" hack it like this:
+
+python -c "import xdev, ubelt; ubelt.symlink((ubelt.Path(xdev.__file__).parent / \"bin/freshpyenv.sh\"), ubelt.Path(ubelt.find_exe(\"freshpyenv.sh\")).delete(), verbose=1)"
+'
 
 
 # print this script's usage message to stderr
@@ -114,13 +119,21 @@ pip install -e .[tests]
 
 
 list_available_images(){
+    echo "Listing generally known images"
+    echo "
+    * pypy
+    * python:3.10
+    "
+
     echo "Listing known images in local gitlab-ci.yml"
     cat .gitlab-ci.yml | yq -r 'with_entries(select(.key | startswith(".image")))'
 }
 
 
+
+
 start_docker(){
-    SCRIPT_DPATH=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+    SCRIPT_DPATH=$( cd -- "$( dirname -- "$(realpath -- "${BASH_SOURCE[0]}")" )" &> /dev/null && pwd )
     if [[ "$IMAGE_NAME" == "__default__" ]]; then
         IMAGE_NAME=$(cat .gitlab-ci.yml | yq -r '.".image_python3_10"')
     fi
