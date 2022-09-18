@@ -83,11 +83,19 @@ inside_docker_setup(){
 
     cd "$HOME"/repo
 
+    # If we are on manylinux, we should give the user the ability to choose the
+    # python version.
+    if [ -f /opt/python/cp311-cp311/bin/python ]; then
+        PYEXE=/opt/python/cp311-cp311/bin/python
+    else
+        PYEXE=python
+    fi
+
     # Make a virtualenv
-    PYVER=$(python -c "import sys; print('{}{}'.format(*sys.version_info[0:2]))")
+    PYVER=$("$PYEXE" -c "import sys; print('{}{}'.format(*sys.version_info[0:2]))")
     export PYVER
-    pip install virtualenv
-    virtualenv "venv$PYVER"
+    "$PYEXE" -m pip install virtualenv
+    "$PYEXE" -m virtualenv "venv$PYVER"
 
     set +x
 
@@ -104,16 +112,16 @@ Fresh development environment has been setup.
 You can now run some variant to install your repo.
 
 # FULL STRICT VARIANT
-pip install -e .[all-strict,headless-strict]
+pip install -e .[all-strict,headless-strict] -v
 
 # FULL LOOSE VARIANT
-pip install -e .[all,headless]
+pip install -e .[all,headless] -v
 
 # MINIMAL STRICT VARIANT
-pip install -e .[runtime-strict,tests-strict]
+pip install -e .[runtime-strict,tests-strict] -v
 
 # MINIMAL LOOSE VARIANT
-pip install -e .[tests]
+pip install -e .[tests] -v
 "
 }
 
@@ -123,6 +131,7 @@ list_available_images(){
     echo "
     * pypy
     * python:3.10
+    * quay.io/pypa/manylinux2014_x86_64
     "
 
     echo "Listing known images in local gitlab-ci.yml"
