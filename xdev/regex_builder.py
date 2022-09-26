@@ -64,6 +64,10 @@ class RegexBuilder:
         self = cls()
         return self
 
+    @property
+    def nongreedy(self):
+        return self.constructs['nongreedy_kleene_star']
+
 
 class VimRegexBuilder(RegexBuilder):
     def __init__(self):
