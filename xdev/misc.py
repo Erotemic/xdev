@@ -111,6 +111,19 @@ def byte_str(num, unit='auto', precision=2):
 def set_overlaps(set1, set2, s1='s1', s2='s2'):
     """
     return info about set overlaps
+
+    Notes:
+        This function needs a rename. Possible candidates brainstorm:
+            * set_analysis
+            * set_binary_analysis
+            * set_binary_describe
+            * set_relationships
+            * describe_sets
+            * describe_relations
+            * describe_set_relations
+            * sets_summary
+            * sumarize_sets
+            * sumerset
     """
     set1 = set(set1)
     set2 = set(set2)
