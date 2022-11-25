@@ -68,6 +68,40 @@ class RegexBuilder:
     def nongreedy(self):
         return self.constructs['nongreedy_kleene_star']
 
+    @property
+    def number(self):
+        """
+        Can match a generic floating point number
+
+        References:
+            https://www.regular-expressions.info/floatingpoint.html
+
+        Example:
+            >>> from xdev.regex_builder import *  # NOQA
+            >>> b = PythonRegexBuilder()
+            >>> pat = re.compile('^' + b.number + '$')
+            >>> assert pat.match('3.4')
+            >>> assert pat.match('3.4e-1')
+            >>> assert pat.match('3.4')
+            >>> assert pat.match('3.4e+1')
+            >>> assert not pat.match('3.4a+1')
+
+            >>> b = PythonRegexBuilder()
+            >>> num_part = b.named_field(b.number, name='number')
+            >>> space_part = b.named_field(' *', name='spaces')
+            >>> unit_part = b.named_field('.*', name='unit')
+            >>> pat = re.compile('^' + num_part + space_part + unit_part + '$')
+            >>> pat.match('3.4').groupdict()
+            >>> pat.match('3.1415 foobars').groupdict()
+            >>> pat.match('3.1415foobars').groupdict()
+            >>> pat.match('+3.1415e9foobars').groupdict()
+        """
+        exponent_part = '[eE][-+]?[0-9]+'
+        decimal_part = r'[-+]?[0-9]*\.?[0-9]+'
+        exponent_group = self.constructs['group'].format(pat=exponent_part)
+        number_pat = decimal_part + exponent_group + '?'
+        return number_pat
+
 
 class VimRegexBuilder(RegexBuilder):
     def __init__(self):
