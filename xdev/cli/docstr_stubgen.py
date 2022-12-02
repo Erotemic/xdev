@@ -273,13 +273,13 @@ def generate_typed_stubs(modpath):
                 # Hack for kwcoco
                 'ObjT',
             }
-            for type_var_name in set(gen.import_tracker.required_names) & set(known_one_letter_types):
+            for type_var_name in sorted(set(gen.import_tracker.required_names) & set(known_one_letter_types)):
                 gen.add_typing_import('TypeVar')
                 # gen.add_import_line('from typing import {}\n'.format('TypeVar'))
                 gen._output = ['{} = TypeVar("{}")\n'.format(type_var_name, type_var_name)] + gen._output
 
             custom_types = {'Hasher', 'Sliceable'}
-            for type_var_name in set(gen.import_tracker.required_names) & set(custom_types):
+            for type_var_name in sorted(set(gen.import_tracker.required_names) & set(custom_types)):
                 gen.add_typing_import('TypeVar')
                 # gen.add_import_line('from typing import {}\n'.format('TypeVar'))
                 gen._output = ['{} = TypeVar("{}")\n'.format(type_var_name, type_var_name)] + gen._output
@@ -320,10 +320,20 @@ def postprocess_hacks(text, mod):
     # text = text.replace('odict = OrderedDict', '')
     # text = text.replace('ddict = defaultdict', '')
 
+    if mod.path.endswith('util_dict.py'):
+        # hack for util_dict
+        gen.add_import_line('import sys\n')
+
     if mod.path.endswith('util_path.py'):
         # hack for forward reference
         text = text.replace(' -> Path:', " -> 'Path':")
         text = text.replace('class Path(_PathBase)', "class Path")
+
+    # Ubelt hack
+    if 'DictBase' in text:
+        # Hack for util_dict
+        text = text.replace('DictBase = OrderedDict\n', '')
+        text = text.replace('DictBase = dict\n', 'DictBase = OrderedDict if sys.version_info[0:2] <= (3, 6) else dict')
 
     # Format the PYI file nicely
     text = autoflake.fix_code(text, remove_unused_variables=True,
@@ -474,6 +484,8 @@ def common_unreferenced():
         pass
 
     unref = [
+        {'name': 'datetime', 'modname': 'datetime'},
+        {'name': 'io', 'modname': 'io'},
         {'name': 'PathLike', 'modname': 'os'},
         {'name': 'ModuleType', 'modname': 'types'},
         {'name': 'FrameType', 'modname': 'types'},
@@ -515,6 +527,28 @@ def hacked_typing_info(type_name):
         if typing_arg in type_name:
             add_typing_import(typing_arg)
             add_import_line('from typing import {}\n'.format(typing_arg))
+
+    if 'Float32' in type_name:
+        add_import_line('from nptyping import {}\n'.format('Float32'))
+
+    if 'Int64' in type_name:
+        add_import_line('from nptyping import {}\n'.format('Int64'))
+
+    if 'Shape' in type_name:
+        add_import_line('from nptyping import {}\n'.format('Shape'))
+
+    if 'UInt8' in type_name:
+        add_import_line('from nptyping import {}\n'.format('UInt8'))
+
+    if 'Bool' in type_name:
+        add_import_line('from nptyping import {}\n'.format('Bool'))
+
+    if 'Integer' in type_name:
+        add_import_line('from nptyping import {}\n'.format('Integer'))
+
+    if 'skimage.transform.AffineTransform' == type_name:
+        add_import_line('import skimage.transform\n')
+
 
     common_modnames = common_module_names()
     common_aliases = common_module_aliases()
@@ -703,10 +737,18 @@ class ExtendedStubGenerator(StubGenerator):
                 # The class attributes should override the init signature
                 if init in self._docstring_class_attr_infos:
                     typename = self._docstring_class_attr_infos[init]['type']
-                    annotation = fastparse.parse_type_string(typename, 'Any', 0, 0)
+                    try:
+                        annotation = fastparse.parse_type_string(typename, 'Any', 0, 0)
+                    except Exception:
+                        print(f'FAILED ON typename={typename} for {init}')
+                        annotation = None
                 elif init in name_to_parsed_docstr_info:
                     typename = name_to_parsed_docstr_info[init]['type']
-                    annotation = fastparse.parse_type_string(typename, 'Any', 0, 0)
+                    try:
+                        annotation = fastparse.parse_type_string(typename, 'Any', 0, 0)
+                    except Exception:
+                        print(f'FAILED ON typename={typename} for {init}')
+                        annotation = None
                     # import xdev
                     # xdev.embed()
                 init_code = self.get_init(init, value, annotation=annotation)
@@ -875,6 +917,14 @@ class ExtendedStubGenerator(StubGenerator):
         # We will need to use it in the init method parsing
         self._docstring_class_attr_infos = {}
         parent_mod = ub.import_module_from_name(self.module)
+
+        # Classes we will not make stubs for. TODO: generalize.
+        blocklist = {
+            '_RationalNDArray',
+        }
+        if o.name in blocklist:
+            return
+
         real_class = getattr(parent_mod, o.name, None)
         if real_class is not None and real_class.__doc__ is not None:
             from xdoctest.docstr import docscrape_google

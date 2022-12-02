@@ -97,6 +97,29 @@ class Pattern(PatternBase, ub.NiceRepr):
     def __nice__(self):
         return '{}, {}'.format(self.pattern, self.backend)
 
+    def to_regex(self):
+        """
+        Returns an equivalent pattern with the regular expression backend
+
+        Example:
+            >>> globpat = Pattern.coerce('foo*', 'glob')
+            >>> strictpat = Pattern.coerce('foo*', 'strict')
+            >>> repat1 = strictpat.to_regex()
+            >>> repat2 = globpat.to_regex()
+            >>> print(f'repat1={repat1}')
+            >>> print(f'repat2={repat2}')
+        """
+        if self.backend == 'regex':
+            regex_pattern = self.pattern
+        elif self.backend == 'glob':
+            regex_pattern = fnmatch.translate(self.pattern)
+        elif self.backend == 'strict':
+            regex_pattern = re.escape(self.pattern)
+        else:
+            raise AssertionError
+        new = self.__class__(regex_pattern, 'regex')
+        return new
+
     @classmethod
     def from_regex(cls, data, flags=0, multiline=False, dotall=False,
                    ignorecase=False):
