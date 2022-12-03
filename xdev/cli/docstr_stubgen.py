@@ -328,14 +328,18 @@ def postprocess_hacks(text, mod):
     # text = text.replace('ddict = defaultdict', '')
 
     # FIXME: does ubelt still need this?
-    # if mod.path.endswith('util_dict.py'):
-    #     # hack for util_dict
-    #     gen.add_import_line('import sys\n')
+    if mod.path.endswith('util_dict.py'):
+        # hack for util_dict
+        text = 'import sys\n' + text
 
     if mod.path.endswith('util_path.py'):
         # hack for forward reference
         text = text.replace(' -> Path:', " -> 'Path':")
         text = text.replace('class Path(_PathBase)', "class Path")
+
+    # Not sure why this happens
+    text = text.replace('from io import io\n', '')
+    text = text.replace('from datetime import datetime\n', '')
 
     # Ubelt hack
     if 'DictBase' in text:
