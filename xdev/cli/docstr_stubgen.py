@@ -44,6 +44,7 @@ try:
         # TupleExpr, ListExpr, ComparisonExpr, CallExpr, IndexExpr, EllipsisExpr,
         # ClassDef, MypyFile, Decorator, AssignmentStmt, TypeInfo,
         # IfStmt, ImportAll, ImportFrom, Import,
+        IS_ABSTRACT,
         FuncDef,
         # FuncBase, Block,
         # Statement, OverloadedFuncDef, ARG_POS,
@@ -79,10 +80,15 @@ import ubelt as ub
 
 
 def _hack_away_compiled_mypy():
+    """
+    Worked with: mypy-0.970+dev.ddbea6988c0913c70ed16cd2fda6064e301b4b63
+    """
     # This doesn't seem to work. The only thing that has worked so far is a
     # custom checkout and developer install. Not sure why that is the case.
     modpath = ub.Path(ub.modname_to_modpath('mypy'))
+    print(f'modpath={modpath}')
     compiled_modules = list(modpath.glob('*.so'))
+    print(f'compiled_modules={compiled_modules}')
     for p in compiled_modules:
         p.delete()
 
@@ -252,11 +258,12 @@ def generate_typed_stubs(modpath):
         files.append(target)
         with stubgen.generate_guarded(mod.module, target, options.ignore_errors, options.verbose):
             stubgen.generate_stub_from_ast(mod, target, options.parse_only,
-                                           options.pyversion,
+                                           # options.pyversion,
                                            options.include_private,
                                            options.export_less)
 
-            gen = ExtendedStubGenerator(mod.runtime_all, pyversion=options.pyversion,
+            gen = ExtendedStubGenerator(mod.runtime_all,
+                                        # pyversion=options.pyversion,
                                         include_private=options.include_private,
                                         analyzed=not options.parse_only,
                                         export_less=options.export_less)
@@ -320,9 +327,10 @@ def postprocess_hacks(text, mod):
     # text = text.replace('odict = OrderedDict', '')
     # text = text.replace('ddict = defaultdict', '')
 
-    if mod.path.endswith('util_dict.py'):
-        # hack for util_dict
-        gen.add_import_line('import sys\n')
+    # FIXME: does ubelt still need this?
+    # if mod.path.endswith('util_dict.py'):
+    #     # hack for util_dict
+    #     gen.add_import_line('import sys\n')
 
     if mod.path.endswith('util_path.py'):
         # hack for forward reference
@@ -548,7 +556,6 @@ def hacked_typing_info(type_name):
 
     if 'skimage.transform.AffineTransform' == type_name:
         add_import_line('import skimage.transform\n')
-
 
     common_modnames = common_module_names()
     common_aliases = common_module_aliases()
@@ -858,7 +865,7 @@ class ExtendedStubGenerator(StubGenerator):
                 retname = None  # implicit Any
             else:
                 retname = self.print_annotation(o.unanalyzed_type.ret_type)
-        elif isinstance(o, FuncDef) and (o.is_abstract or o.name in METHODS_WITH_RETURN_VALUE):
+        elif o.abstract_status == IS_ABSTRACT or o.name in METHODS_WITH_RETURN_VALUE:
             # Always assume abstract methods return Any unless explicitly annotated. Also
             # some dunder methods should not have a None return type.
             retname = None  # implicit Any
