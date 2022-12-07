@@ -188,6 +188,25 @@ class FindCLI(scfg.Config):
             print(found)
 
 
+@_register
+class TreeCLI(scfg.Config):
+    name = 'tree'
+    description = 'List a directory like a tree'
+
+    default = {
+        'cwd': scfg.Value('.', position=1),
+        'max_files': scfg.Value(100),
+        'colors': scfg.Value(not ub.NO_COLOR, isflag=True),
+        'dirblocklist': scfg.Value(None)
+    }
+
+    @classmethod
+    def main(cls, cmdline=False, **kwargs):
+        import xdev
+        config = cls(cmdline=cmdline, data=kwargs)
+        print(xdev.tree_repr(**config))
+
+
 class ModalCLI(object):
     """
     Contains multiple scriptconfig.Config items with corresponding `main`
