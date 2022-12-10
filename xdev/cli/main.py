@@ -207,6 +207,41 @@ class TreeCLI(scfg.Config):
         print(xdev.tree_repr(**config))
 
 
+# @_register
+# class PintCLI(scfg.Config):
+#     """
+#     Converts one type of unit to another via the pint library.
+
+#     Notes:
+#         See the pint-convert too that comes pre-installed with pint.
+
+#     Example Usage
+#     -------------
+#     xdev pint "100000000 bytes" "megabyte"
+
+#     """
+#     __command__ = 'pint'
+#     description = 'Converts one type of unit to another via the pint library.'
+#     # input_expr = scfg.Value(None, position=1)
+#     # output_expr = scfg.Value(None, position=2)
+#     default = {
+#         'input_expr': scfg.Value(None, position=1),
+#         'output_unit': scfg.Value(None, position=2),
+#     }
+
+#     @classmethod
+#     def main(cls, cmdline=False, **kwargs):
+#         import pint
+#         ureg = pint.UnitRegistry()
+#         args = cls(cmdline=cmdline, data=kwargs)
+#         input = ureg.parse_expression(args['input_expr'])
+#         output_unit = args['output_unit']
+#         if output_unit is None:
+#             output_unit = input.unit
+#         output = input.to(output_unit)
+#         print(output.magnitude)
+
+
 class ModalCLI(object):
     """
     Contains multiple scriptconfig.Config items with corresponding `main`
@@ -229,7 +264,8 @@ class ModalCLI(object):
 
         subparsers = parser.add_subparsers(help='specify a command to run')
         for cli_cls in self.sub_clis:
-            cmdname = cli_cls.name
+            cmdname = getattr(cli_cls, '__command__', getattr(cli_cls, 'name', None))
+            # cmdname = cli_cls.name
             subconfig = cli_cls()
             parserkw = {}
             aliases = getattr(cli_cls, 'aliases', [])
@@ -245,7 +281,12 @@ class ModalCLI(object):
     def run(self):
         parser = self.build_parser()
 
-        ns = parser.parse_known_args()[0]
+        import os
+        WATCH_LOOSE_CLI = os.environ.get('XDEV_LOOSE_CLI', '')
+        if WATCH_LOOSE_CLI:
+            ns = parser.parse_known_args()[0]
+        else:
+            ns = parser.parse_args()
         kw = ns.__dict__
 
         if kw.pop('version'):
