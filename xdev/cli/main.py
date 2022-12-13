@@ -207,39 +207,49 @@ class TreeCLI(scfg.Config):
         print(xdev.tree_repr(**config))
 
 
-# @_register
-# class PintCLI(scfg.Config):
-#     """
-#     Converts one type of unit to another via the pint library.
+@_register
+class PintCLI(scfg.Config):
+    """
+    Converts one type of unit to another via the pint library.
 
-#     Notes:
-#         See the pint-convert too that comes pre-installed with pint.
+    Notes:
 
-#     Example Usage
-#     -------------
-#     xdev pint "100000000 bytes" "megabyte"
+    See Also
+    --------
+    The pint-convert tool comes pre-installed with pint but isn't as useful for
+    in-bash computation unless you munge the output. The idea here is that when
+    something like GDAL wants an environ in bytes, we can specify it in
+    megabytes.
 
-#     """
-#     __command__ = 'pint'
-#     description = 'Converts one type of unit to another via the pint library.'
-#     # input_expr = scfg.Value(None, position=1)
-#     # output_expr = scfg.Value(None, position=2)
-#     default = {
-#         'input_expr': scfg.Value(None, position=1),
-#         'output_unit': scfg.Value(None, position=2),
-#     }
+    Example Usage
+    -------------
+    xdev pint "10 megabytes" "bytes" --precision=0
 
-#     @classmethod
-#     def main(cls, cmdline=False, **kwargs):
-#         import pint
-#         ureg = pint.UnitRegistry()
-#         args = cls(cmdline=cmdline, data=kwargs)
-#         input = ureg.parse_expression(args['input_expr'])
-#         output_unit = args['output_unit']
-#         if output_unit is None:
-#             output_unit = input.unit
-#         output = input.to(output_unit)
-#         print(output.magnitude)
+    """
+    __command__ = 'pint'
+    description = 'Converts one type of unit to another via the pint library.'
+    # input_expr = scfg.Value(None, position=1)
+    # output_expr = scfg.Value(None, position=2)
+    default = {
+        'input_expr': scfg.Value(None, position=1),
+        'output_unit': scfg.Value(None, position=2),
+        'precision': scfg.Value(0, type=int),
+    }
+
+    @classmethod
+    def main(cls, cmdline=False, **kwargs):
+        import pint
+        ureg = pint.UnitRegistry()
+        args = cls(cmdline=cmdline, data=kwargs)
+        input = ureg.parse_expression(args['input_expr'])
+        output_unit = args['output_unit']
+        if output_unit is None:
+            output_unit = input.unit
+        output = input.to(output_unit)
+        if args['precision'] == 0:
+            print(int(output.magnitude))
+        else:
+            print(output.magnitude)
 
 
 class ModalCLI(object):

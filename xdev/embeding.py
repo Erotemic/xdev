@@ -15,6 +15,7 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
     import IPython
     import xdev  # NOQA
     import xdev as xd  # NOQA
+    import os
 
     if parent_globals is None:
         parent_globals = get_parent_frame(n=n).f_globals
@@ -31,17 +32,20 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
     print(util.bubbletext('EMBEDDING'))
     print('================')
     print('[util] embedding')
-    try:
-        if remove_pyqt_hook:
-            try:
-                import guitool
-                guitool.remove_pyqt_input_hook()
-            except (ImportError, ValueError, AttributeError) as ex:
-                print('ex = {!r}'.format(ex))
-                pass
-            # make qt not loop forever (I had qflag loop forever with this off)
-    except ImportError as ex:
-        print(ex)
+
+    if os.environ.get('XDEV_USE_GUITOOL', ''):
+        # I don't think this is needed anymore
+        try:
+            if remove_pyqt_hook:
+                try:
+                    import guitool
+                    guitool.remove_pyqt_input_hook()
+                except (ImportError, ValueError, AttributeError) as ex:
+                    print('ex = {!r}'.format(ex))
+                    pass
+                # make qt not loop forever (I had qflag loop forever with this off)
+        except ImportError as ex:
+            print(ex)
 
     if 1:
         # Disable common annoyance loggers
@@ -56,9 +60,9 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
     #IPython.embed(**config_dict)
     print('[util]  Get stack location with: ')
     print('[util] get_parent_frame(n=8).f_code.co_name')
-    print('[util] set EXIT_NOW or qqq to True(ish) to hard exit on unembed')
+    print('[util] set EXIT_NOW or qqq to True(thy) to hard exit on unembed')
     #print('set iup to True to draw plottool stuff')
-    print('[util] call %pylab qt4 to get plottool stuff working')
+    # print('[util] call %pylab qt4 to get plottool stuff working')
     once = True
     # Allow user to set iup and redo the loop
     while once or vars().get('iup', False):
@@ -140,7 +144,7 @@ class EmbedOnException(object):
             # Hack to bring back names that we clobber
             if '__self' in __trace_ns:
                 __self = __trace_ns['__self']
-            locals().update(__trace_ns)  # I don't think this does anythign
+            locals().update(__trace_ns)  # I don't think this does anything
             embed()
 
 
