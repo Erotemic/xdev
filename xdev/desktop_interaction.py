@@ -131,7 +131,8 @@ def startfile(fpath, verbose=True):
     if not exists(fpath):
         raise Exception('Cannot start nonexistant file: {!r}'.format(fpath))
     if not ub.WIN32:
-        fpath = pipes.quote(fpath)
+        import shlex
+        fpath = shlex.quote(fpath)
     if ub.LINUX:
         info = ub.cmd(('xdg-open', fpath), detach=True, verbose=verbose)
     elif ub.DARWIN:

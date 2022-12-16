@@ -17,14 +17,36 @@ __all__ = [
 IS_PROFILING = os.environ.get('XDEV_PROFILE', '').lower() in {'1', 'on', 'true', 'yes'}
 IS_PROFILING = IS_PROFILING or '--profile' in sys.argv
 
+
+class DummyProfiler:
+    """
+    A profiler that does nothing.
+    """
+
+    def __call__(self, func):
+        return func
+
+    def add_module(self, mod=None):
+        ...
+
 if IS_PROFILING:
     import line_profiler
-    profile = line_profiler.LineProfiler()
+
+    class ExtendedLineProfiler(line_profiler.LineProfiler):
+
+        def add_module(self, mod=None):
+            if mod is None:
+                # Get the calling module
+                from xdoctest.dynamic_analysis import get_parent_frame
+                parent_frame = get_parent_frame()
+                name = parent_frame.f_globals['__name__']
+                mod = sys.modules[name]
+            print(f'Add module {mod=}')
+            return super().add_module(mod)
+
+    profile = ExtendedLineProfiler()
 else:
-    def __dummy_profile__(func):
-        """ dummy profiling func. does nothing """
-        return func
-    profile = __dummy_profile__
+    profile = DummyProfiler()
 
 
 @atexit.register
