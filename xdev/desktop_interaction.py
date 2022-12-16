@@ -5,7 +5,6 @@ from os.path import normpath
 from os.path import exists
 from os.path import sys
 from six import types
-import pipes
 import os
 import six
 import ubelt as ub
