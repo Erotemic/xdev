@@ -29,6 +29,9 @@ class DummyProfiler:
     def add_module(self, mod=None):
         ...
 
+    def print_report(self):
+        print('Profiling was not enabled')
+
 if IS_PROFILING:
     import line_profiler
 
@@ -43,6 +46,11 @@ if IS_PROFILING:
                 mod = sys.modules[name]
             print(f'Add module {mod=}')
             return super().add_module(mod)
+
+        def print_report(self):
+            parser = KernprofParser(self)
+            parser.print_report()
+            parser.dump_text()
 
     profile = ExtendedLineProfiler()
 else:

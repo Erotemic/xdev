@@ -9,10 +9,15 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
           remove_pyqt_hook=True, n=0):
     """
     Starts interactive session. Similar to keyboard command in matlab.
-    Wrapper around IPython.embed
+    Wrapper around IPython.embed.
 
+    Note:
+        Contains helper logic to allow the developer to more easilly exit the
+        program if embed is called in a loop. Specifically if you want to quit
+        and not embed again, then set qqq=1 before exiting the embed session.
     """
-    import IPython
+    from xdev._ipython_ext import embed2
+    # import IPython
     import xdev  # NOQA
     import xdev as xd  # NOQA
     import os
@@ -31,7 +36,7 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
     print('================')
     print(util.bubbletext('EMBEDDING'))
     print('================')
-    print('[util] embedding')
+    print('[xdev.embed] embedding')
 
     if os.environ.get('XDEV_USE_GUITOOL', ''):
         # I don't think this is needed anymore
@@ -58,9 +63,10 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
     #if exec_lines is not None:
     #    config_dict['exec_lines'] = exec_lines
     #IPython.embed(**config_dict)
-    print('[util]  Get stack location with: ')
-    print('[util] get_parent_frame(n=8).f_code.co_name')
-    print('[util] set EXIT_NOW or qqq to True(thy) to hard exit on unembed')
+    # print('[xdev.embed]  Get stack location with: ')
+    # print('[xdev.embed] get_parent_frame(n=8).f_code.co_name')
+    print('[xdev.embed] use xdev.fix_embed_globals() to address https://github.com/ipython/ipython/issues/62')
+    print('[xdev.embed] set EXIT_NOW or qqq=1 to hard exit on unembed')
     #print('set iup to True to draw plottool stuff')
     # print('[util] call %pylab qt4 to get plottool stuff working')
     once = True
@@ -98,7 +104,8 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         parent_ns.update(parent_locals)
         locals().update(parent_ns)
         try:
-            IPython.embed()
+            embed2()
+            # IPython.embed()
         except RuntimeError as ex:
             print('ex = {!r}'.format(ex))
             print('Failed to open ipython')
@@ -115,6 +122,23 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         if vars().get('EXIT_NOW', False) or vars().get('qqq', False):
             print('[xdev.embed] EXIT_NOW specified')
             sys.exit(1)
+
+
+def embed_if_requested(n=0):
+    """
+    Calls xdev.embed conditionally based on the environment.
+
+    Useful in cases where you want to leave the embed call around, but you dont
+    want it to trigger in normal circumstances.
+
+    Specifically, embed is only called if the environment variable XDEV_EMBED
+    exists or if --xdev-embed is in sys.argv.
+    """
+    import os
+    import ubelt as ub
+    import xdev
+    if os.environ.get('XDEV_EMBED', '') or ub.argflag('--xdev-embed'):
+        xdev.embed(n=n + 1)
 
 
 class EmbedOnException(object):
@@ -152,6 +176,9 @@ def fix_embed_globals():
     """
     HACK adds current locals() to globals().
     Can be dangerous.
+
+    References:
+        https://github.com/ipython/ipython/issues/62
 
     Solves the following issue:
 
