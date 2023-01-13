@@ -2,9 +2,12 @@ from os import PathLike
 from typing import Dict
 from typing import Union
 from types import ModuleType
+from _typeshed import Incomplete
 from mypy.nodes import FuncDef
 from mypy.stubgen import StubGenerator
 from typing import Dict
+
+StubStub: Incomplete
 
 
 def generate_typed_stubs(modpath: PathLike) -> Dict[PathLike, str]:

@@ -44,7 +44,6 @@ if IS_PROFILING:
                 parent_frame = get_parent_frame()
                 name = parent_frame.f_globals['__name__']
                 mod = sys.modules[name]
-            print(f'Add module {mod=}')
             return super().add_module(mod)
 
         def print_report(self):

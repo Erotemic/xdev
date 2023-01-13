@@ -1,11 +1,15 @@
-from typing import Any
+from _typeshed import Incomplete
 
 
-def embed(parent_locals: Any | None = ...,
-          parent_globals: Any | None = ...,
-          exec_lines: Any | None = ...,
+def embed(parent_locals: Incomplete | None = ...,
+          parent_globals: Incomplete | None = ...,
+          exec_lines: Incomplete | None = ...,
           remove_pyqt_hook: bool = ...,
           n: int = ...) -> None:
+    ...
+
+
+def embed_if_requested(n: int = ...) -> None:
     ...
 
 
@@ -28,4 +32,4 @@ def fix_embed_globals() -> None:
     ...
 
 
-embed_on_exception_context: Any
+embed_on_exception_context: Incomplete

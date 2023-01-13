@@ -1,7 +1,9 @@
 import ubelt as ub
-from typing import Any
+import ubelt as ub
+from _typeshed import Incomplete
+from collections.abc import Generator
 
-RE_Pattern: Any
+RE_Pattern: Incomplete
 
 
 class PatternBase:
@@ -16,14 +18,21 @@ class PatternBase:
         ...
 
 
+def our_extended_regex_compile() -> None:
+    ...
+
+
 class Pattern(PatternBase, ub.NiceRepr):
-    pattern: Any
-    backend: Any
+    pattern: Incomplete
+    backend: Incomplete
 
     def __init__(self, pattern, backend) -> None:
         ...
 
     def __nice__(self):
+        ...
+
+    def to_regex(self):
         ...
 
     @classmethod
@@ -56,13 +65,15 @@ class Pattern(PatternBase, ub.NiceRepr):
     def coerce(cls, data, hint: str = ...):
         ...
 
-    def paths(self, cwd: Any | None = ..., recursive: bool = ...) -> None:
+    def paths(self,
+              cwd: Incomplete | None = ...,
+              recursive: bool = ...) -> Generator[ub.Path, None, None]:
         ...
 
 
 class MultiPattern(PatternBase, ub.NiceRepr):
-    predicate: Any
-    patterns: Any
+    predicate: Incomplete
+    patterns: Incomplete
 
     def __init__(self, patterns, predicate) -> None:
         ...
@@ -73,7 +84,9 @@ class MultiPattern(PatternBase, ub.NiceRepr):
     def match(self, text):
         ...
 
-    def paths(self, cwd: Any | None = ..., recursive: bool = ...) -> None:
+    def paths(self,
+              cwd: Incomplete | None = ...,
+              recursive: bool = ...) -> None:
         ...
 
     @classmethod

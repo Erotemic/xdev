@@ -1,5 +1,7 @@
 import numpy
 from typing import Any
+from _typeshed import Incomplete
+from typing import Any
 
 
 def quantum_random(pure: bool = False) -> numpy.uint32:
@@ -26,5 +28,13 @@ def difftext(text1: str,
     ...
 
 
-def tree_repr(cwd: Any | None = ..., max_files: int = ...) -> None:
+def tree_repr(cwd: Incomplete | None = ...,
+              max_files: int = ...,
+              dirblocklist: Incomplete | None = ...,
+              show_nfiles: str = ...,
+              return_text: bool = False,
+              return_tree: bool = False,
+              pathstyle: str = 'name',
+              with_type: bool = ...,
+              colors: bool = ...):
     ...

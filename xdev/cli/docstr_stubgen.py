@@ -6,13 +6,14 @@ This is a work in progress, but ultimately the goal is to be able to express
 concise typing information in docstrings and then explicitly expose that to
 Python.
 
-
 Requirements:
     pip install mypy autoflake yapf
 
 CommandLine:
     # Run script to parse google-style docstrings and write pyi files
-    python ~/code/ubelt/dev/gen_typed_stubs.py
+
+    xdev doctypes --module=xdev
+    python ~/code/xdev/xdev/cli/docstr_stubgen.py
 
     See:
     ~/code/mypy/mypy/stubgen.py
@@ -77,6 +78,9 @@ from typing import (List, Dict, Optional)
 #     report_missing, fail_missing, remove_misplaced_type_comments, common_dir_prefix
 # )
 import ubelt as ub
+
+
+Stub = ...  # hack for mypy. Not sure why it is generated in the first place.
 
 
 def _hack_away_compiled_mypy():

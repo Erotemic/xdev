@@ -88,30 +88,30 @@ def find(pattern=None, dpath=None, include=None, exclude=None, dirblocklist=None
     Find all paths in a root subject to a search criterion
 
     Args:
-        pattern (str):
+        pattern (str | None):
             The glob pattern the path name must match to be returned
 
-        dpath (str):
+        dpath (str | None):
             The root direcotry to search. Default to cwd.
 
-        include (str | List[str] | MultiPattern):
+        include (str | List[str] | MultiPattern | None):
             Pattern or list of patterns. If specified, search only files whose
             base name matches this pattern. By default the pattern is GLOB.
             This only applies to the final name. Directories that do not match
             this name will still be traversed.
 
-        exclude (str | List[str] | MultiPattern):
+        exclude (str | List[str] | MultiPattern | None):
             Pattern or list of patterns. Skip any file with a name suffix that
             matches the pattern. By default the pattern is GLOB. This ONLY
             applies to the final name. Directories that match an exclude
             pattern will still be traversed.  Use ``dirblocklist`` to specify
             patterns to exclude intermediate directories from traversal.
 
-        dirblocklist (str | List[str] | MultiPattern):
+        dirblocklist (str | List[str] | MultiPattern | None):
             Any directory name matching this pattern will be removed from
             traversal.
 
-        type (str | List[str]):
+        type (str | List[str] | None):
             A list of 1 character codes indicating what types of file can be
             returned. Currently we only allow either "f" for file or "d" for
             directory. Symbolic links are not currently distinguished. In the

@@ -67,7 +67,7 @@ def view_directory(dpath=None, verbose=False):
     windows explorer, mac open, and linux nautlius.
 
     Args:
-        dpath (PathLike): directory name
+        dpath (PathLike | None): directory name
         verbose (bool): verbosity
     """
     if dpath is None:
