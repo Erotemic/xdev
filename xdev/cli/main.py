@@ -252,6 +252,37 @@ class PintCLI(scfg.Config):
             print(output.magnitude)
 
 
+@_register
+class ModpathCLI(scfg.Config):
+    """
+    Prints the path corresponding to a Python module
+
+    Example Usage
+    -------------
+    # Simply ask where a module is stored
+    xdev modpath xdev
+    xdev modpath numpy
+
+    # Use this feature in scripts for developement to avoid referencing
+    # machine-specific paths.
+    MODPATH=$(xdev modpath ubelt)
+    echo "MODPATH = $MODPATH"
+    """
+    __command__ = 'modpath'
+    description = 'Prints the path corresponding to a Python module'
+    # input_expr = scfg.Value(None, position=1)
+    # output_expr = scfg.Value(None, position=2)
+    default = {
+        'modname': scfg.Value(None, position=1),
+    }
+
+    @classmethod
+    def main(cls, cmdline=False, **kwargs):
+        args = cls(cmdline=cmdline, data=kwargs)
+        modpath = ub.modname_to_modpath(args['modname'])
+        print(modpath)
+
+
 class ModalCLI(object):
     """
     Contains multiple scriptconfig.Config items with corresponding `main`
