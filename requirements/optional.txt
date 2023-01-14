@@ -1,10 +1,16 @@
-Levenshtein
-fire
+Levenshtein>=0.16.0    ; python_version < '4.0'  and python_version >= '3.11'    # Python 3.11+
+Levenshtein>=0.16.0    ; python_version < '3.11' and python_version >= '3.10'    # Python 3.10
+Levenshtein>=0.12.0    ; python_version < '3.10' and python_version >= '3.9'     # Python 3.9
+Levenshtein>=0.12.0    ; python_version < '3.9'  and python_version >= '3.8'     # Python 3.8
+Levenshtein>=0.12.0    ; python_version < '3.8'  and python_version >= '3.7'     # Python 3.7
+Levenshtein>=0.12.0    ; python_version < '3.7'  and python_version >= '3.6'     # Python 3.6
+
+fire >= 0.4.0
 
 line_profiler>=3.4.0     ; python_version >= '3.7'    # Python 3.7+
 line_profiler>=3.4.0     ; python_version < '3.7' and python_version >= '3.6'    # Python 3.6
 line_profiler>=3.0.0,<=3.3.1 ; python_version < '3.6' and python_version >= '3.5'    # Python 3.5
 line_profiler>=3.0.0,<=3.1.0 ; python_version < '3.5' and python_version >= '2.7'    # Python 2.7
 
-yapf  #> 0.32.0
-autoflake  #>1.4
+yapf  >= 0.16.3
+autoflake >= 1.5.0
