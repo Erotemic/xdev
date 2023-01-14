@@ -110,7 +110,16 @@ def byte_str(num, unit='auto', precision=2):
 
 def set_overlaps(set1, set2, s1='s1', s2='s2'):
     """
-    return info about set overlaps
+    Return sizes about set overlaps
+
+    Args:
+        set1 (Iterable):
+        set2 (Iterable):
+        s1 (str): name for set1
+        s2 (str): name for set2
+
+    Returns:
+        Dict[str, int]: sizes of sets intersections unions and differences
 
     Notes:
         This function needs a rename. Possible candidates brainstorm:
@@ -305,11 +314,9 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
     Like the unix util tree, but allow writing numbers of files per directory
     when given -d option
 
-    cwd = '/data/public/Aerial/US_ALASKA_MML_SEALION'
-
     Args:
-        cwd : directory to print
-        max_files : maximum files to print before supressing a directory
+        cwd (None | str | PathLike) : directory to print
+        max_files (int | None) : maximum files to print before supressing a directory
         pathstyle (str): can be rel, name, or abs
         return_tree (bool): if True return the tree
         return_text (bool): if True return the text

@@ -187,7 +187,7 @@ def tree(path):
     Like os.walk but yields a flat list of file and directory paths
 
     Args:
-        path (str | os.PathLike)
+        path (str | os.PathLike): path to traverse
 
     Yields:
         str: path

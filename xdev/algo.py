@@ -17,6 +17,9 @@ def edit_distance(string1, string2):
     Requirements:
         pip install python-Levenshtein
 
+    Returns:
+        float | List[float] | List[List[float]]
+
     Example:
         >>> # xdoctest: +REQUIRES(module:Levenshtein)
         >>> string1 = 'hello world'

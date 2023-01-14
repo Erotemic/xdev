@@ -3,8 +3,10 @@ from typing import List
 import numbers
 
 
-def edit_distance(string1: Union[str, List[str]], string2: Union[str,
-                                                                 List[str]]):
+def edit_distance(
+        string1: Union[str, List[str]],
+        string2: Union[str,
+                       List[str]]) -> float | List[float] | List[List[float]]:
     ...
 
 

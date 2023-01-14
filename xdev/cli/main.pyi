@@ -9,30 +9,18 @@ class RawDescriptionDefaultsHelpFormatter(
     ...
 
 
-class CodeblockCLI(scfg.Config):
-    name: str
-    description: str
-    default: Incomplete
-
-    @classmethod
-    def main(cls, cmdline: bool = ..., **kwargs) -> None:
-        ...
-
-
 class InfoCLI(scfg.Config):
-    name: str
-    description: str
-    default: Incomplete
+    __command__: str
+    __default__: Incomplete
 
     @classmethod
     def main(cls, cmdline: bool = ..., **kwargs) -> None:
         ...
 
 
-class DocstrStubgenCLI(scfg.Config):
-    name: str
-    description: str
-    default: Incomplete
+class CodeblockCLI(scfg.Config):
+    __command__: str
+    __default__: Incomplete
 
     @classmethod
     def main(cls, cmdline: bool = ..., **kwargs) -> None:
@@ -40,19 +28,8 @@ class DocstrStubgenCLI(scfg.Config):
 
 
 class SedCLI(scfg.Config):
-    name: str
-    description: str
-    default: Incomplete
-
-    @classmethod
-    def main(cls, cmdline: bool = ..., **kwargs) -> None:
-        ...
-
-
-class FormatQuotesCLI(scfg.Config):
-    name: str
-    description: str
-    default: Incomplete
+    __command__: str
+    __default__: Incomplete
 
     @classmethod
     def main(cls, cmdline: bool = ..., **kwargs) -> None:
@@ -60,9 +37,8 @@ class FormatQuotesCLI(scfg.Config):
 
 
 class FindCLI(scfg.Config):
-    name: str
-    description: str
-    default: Incomplete
+    __command__: str
+    __default__: Incomplete
 
     @classmethod
     def main(cls, cmdline: bool = ..., **kwargs) -> None:
@@ -70,9 +46,8 @@ class FindCLI(scfg.Config):
 
 
 class TreeCLI(scfg.Config):
-    name: str
-    description: str
-    default: Incomplete
+    __command__: str
+    __default__: Incomplete
 
     @classmethod
     def main(cls, cmdline: bool = ..., **kwargs) -> None:
@@ -81,18 +56,56 @@ class TreeCLI(scfg.Config):
 
 class PintCLI(scfg.Config):
     __command__: str
-    description: str
-    default: Incomplete
+    __alias__: Incomplete
+    __default__: Incomplete
 
     @classmethod
     def main(cls, cmdline: bool = ..., **kwargs) -> None:
         ...
 
 
-class ModpathCLI(scfg.Config):
+class PyfileCLI(scfg.Config):
     __command__: str
-    description: str
-    default: Incomplete
+    __alias__: Incomplete
+    __default__: Incomplete
+
+    @classmethod
+    def main(cls, cmdline: bool = ..., **kwargs) -> None:
+        ...
+
+
+class PyVersionCLI(scfg.Config):
+    __command__: str
+    __alias__: Incomplete
+    __default__: Incomplete
+
+    @classmethod
+    def main(cls, cmdline: bool = ..., **kwargs):
+        ...
+
+
+class FormatQuotesCLI(scfg.Config):
+    __command__: str
+    __default__: Incomplete
+
+    @classmethod
+    def main(cls, cmdline: bool = ..., **kwargs) -> None:
+        ...
+
+
+class FreshPyenvCLI(scfg.Config):
+    __command__: str
+    __default__: Incomplete
+
+    @classmethod
+    def main(cls, cmdline: bool = ..., **kwargs) -> None:
+        ...
+
+
+class DocstrStubgenCLI(scfg.Config):
+    __command__: str
+    __alias__: Incomplete
+    __default__: Incomplete
 
     @classmethod
     def main(cls, cmdline: bool = ..., **kwargs) -> None:

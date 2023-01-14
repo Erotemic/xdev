@@ -1,5 +1,9 @@
 import numpy
+from typing import Iterable
+from typing import Dict
 from typing import Any
+from typing import Union
+from os import PathLike
 from _typeshed import Incomplete
 from typing import Any
 
@@ -12,7 +16,10 @@ def byte_str(num: int, unit: str = 'auto', precision: int = 2) -> str:
     ...
 
 
-def set_overlaps(set1, set2, s1: str = ..., s2: str = ...):
+def set_overlaps(set1: Iterable,
+                 set2: Iterable,
+                 s1: str = 's1',
+                 s2: str = 's2') -> Dict[str, int]:
     ...
 
 
@@ -28,13 +35,14 @@ def difftext(text1: str,
     ...
 
 
-def tree_repr(cwd: Incomplete | None = ...,
-              max_files: int = ...,
+def tree_repr(cwd: Union[None, str, PathLike] = None,
+              max_files: Union[int, None] = 100,
               dirblocklist: Incomplete | None = ...,
               show_nfiles: str = ...,
               return_text: bool = False,
               return_tree: bool = False,
               pathstyle: str = 'name',
+              max_depth: Incomplete | None = ...,
               with_type: bool = ...,
               colors: bool = ...):
     ...
