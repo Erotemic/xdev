@@ -5,7 +5,7 @@ We are currently working on porting this changelog to the specifications in
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Version 1.0.1 - Unreleased
+## Version 1.1.0 - Released 2023-01-13 
 
 ### Added
 * `tree` CLI
