@@ -17,6 +17,13 @@ author_email = "erotemic@gmail.com"
 description = "An excellent developer tool for excellent developers"
 license = "Apache 2"
 dev_status = "beta"
+scripts = [
+    "xdev/bin/freshpyenv.sh",
+]
+[tool.xcookie.entry_points]
+console_scripts = [
+    "xdev = xdev.__main__:main",
+]
 
 [tool.pytest.ini_options]
 addopts = "-p no:doctest --xdoctest --xdoctest-style=google --ignore-glob=setup.py --ignore-glob=dev"
