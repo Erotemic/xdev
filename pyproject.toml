@@ -17,6 +17,7 @@ author_email = "erotemic@gmail.com"
 description = "An excellent developer tool for excellent developers"
 license = "Apache 2"
 dev_status = "beta"
+ci_pypy_versions = []
 scripts = [
     "xdev/bin/freshpyenv.sh",
 ]
