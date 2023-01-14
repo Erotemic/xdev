@@ -1005,5 +1005,5 @@ if __name__ == '__main__':
     CommandLine:
         python -m xdev.cli.gen_typed_stubs
     """
-    from xdev.cli.main import DocstrStubgenCLI
+    from xdev.cli.docstr_stubgen import DocstrStubgenCLI
     DocstrStubgenCLI.main()

@@ -152,7 +152,7 @@ def test_object_pickleability(obj):
 
     import pickle
     serialized = pickle.dumps(obj)
-    recon = pickle.loads(serialized)
+    recon = pickle.loads(serialized)  # NOQA
 
     data = obj.__dict__
     prefix = []
@@ -165,7 +165,7 @@ def test_object_pickleability(obj):
         import pickle
         dumped = pickle.dumps(value)
         try:
-            recon = pickle.loads(dumped)
+            recon = pickle.loads(dumped)  # NOQA
         except Exception:
             return True
         else:
@@ -181,7 +181,6 @@ def test_object_pickleability(obj):
             walker.send(False)
 
     found = []
-
 
     keyfn = type
 

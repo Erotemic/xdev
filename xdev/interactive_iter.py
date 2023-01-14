@@ -1,3 +1,7 @@
+"""
+A simple way to interactively control the iteratin of a loop. Useful for
+viewing multiple things sequentially.
+"""
 import ubelt as ub
 import numpy as np
 from . import embeding

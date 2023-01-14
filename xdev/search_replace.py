@@ -92,7 +92,7 @@ def find(pattern=None, dpath=None, include=None, exclude=None, dirblocklist=None
             The glob pattern the path name must match to be returned
 
         dpath (str | None):
-            The root direcotry to search. Default to cwd.
+            The root directory to search. Default to cwd.
 
         include (str | List[str] | MultiPattern | None):
             Pattern or list of patterns. If specified, search only files whose
@@ -161,7 +161,7 @@ def find(pattern=None, dpath=None, include=None, exclude=None, dirblocklist=None
             with_files = True
 
     if dpath is None:
-        dpath = os.getcwd()
+        dpath = '.'  # os.getcwd()
 
     # Define helper for checking inclusion / exclusion
     include = None if include is None else MultiPattern.coerce(include, hint='glob')

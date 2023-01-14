@@ -1,3 +1,6 @@
+"""
+Helpers to build cross-flavor regular expressions.
+"""
 import re
 
 

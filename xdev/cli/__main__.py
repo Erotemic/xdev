@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 # PYTHON_ARGCOMPLETE_OK
+"""
+Note:
+    The reason the logic is in xdev.cli.main instead of this file is because
+    this file always have the name __main__ and we want to be able to import
+    the various CLI constructs as packages in some instances.
+"""
 from xdev.cli.main import main
 
 

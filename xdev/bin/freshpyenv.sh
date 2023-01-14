@@ -7,7 +7,15 @@ SYNOPSIS
      freshpyenv [COMMAND] [-i IMAGE_NAME] [-h]
 
 DESCRIPTION
-    Create a fresh environment to test a Python package
+    Create a fresh environment in a docker container to test a Python package.
+
+    This script assumes your current working directory is a Python repository.
+    This directory is mounted on the docker image as '/io', and then a local
+    copy in the container is cloned giving you a fresh copy that can be easily
+    updated by creating a commit on your local machine (which is exposed in the
+    '/io' mount on the docker container) and then pulling inside the docker
+    repo. Additionally, your local pip cache is mounted so rerunning a setup
+    does not incur multiple downloads.
 
 OPTIONS
      COMMAND:
@@ -28,7 +36,7 @@ EXAMPLES
     ~/code/xdev/xdev/bin/freshpyenv.sh --image python:3.10
 
 AUTHOR
-     Jon Crall <erotemic@gmail.com.com>
+     Jon Crall <erotemic@gmail.com>
 "
 if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
 	# Running as a script
@@ -109,7 +117,8 @@ inside_docker_setup(){
     echo "
 Fresh development environment has been setup. 
 
-You can now run some variant to install your repo.
+You can now run some variant to install your repo. For example typical
+xcookie-style repos can be installed via.
 
 # FULL STRICT VARIANT
 pip install -e .[all-strict,headless-strict] -v
@@ -131,20 +140,29 @@ list_available_images(){
     echo "
     * pypy
     * python:3.10
+    * python:3.11
+    * $(python -c "import sys; print(f'python:{sys.version_info.major}.{sys.version_info.minor}')")
     * quay.io/pypa/manylinux2014_x86_64
     "
 
-    echo "Listing known images in local gitlab-ci.yml"
-    cat .gitlab-ci.yml | yq -r 'with_entries(select(.key | startswith(".image")))'
+    # TODO: is there a more intelligent way to get an appropriate docker image
+    # for a python package in general?
+
+    if [ -f ".gitlab-ci.yml" ]; then
+        echo "Listing known images in local gitlab-ci.yml"
+        # fixme doesn't quite work
+        cat .gitlab-ci.yml | yq -r 'with_entries(select(.key | startswith(".image")))'
+    fi
 }
-
-
 
 
 start_docker(){
     SCRIPT_DPATH=$( cd -- "$( dirname -- "$(realpath -- "${BASH_SOURCE[0]}")" )" &> /dev/null && pwd )
     if [[ "$IMAGE_NAME" == "__default__" ]]; then
-        IMAGE_NAME=$(cat .gitlab-ci.yml | yq -r '.".image_python3_10"')
+        IMAGE_NAME=$(python -c "import sys; print(f'python:{sys.version_info.major}.{sys.version_info.minor}')")
+        #echo "Unable to detect a default image. Use --image to specify an image to start from"
+        #return 1
+        #IMAGE_NAME=$(cat .gitlab-ci.yml | yq -r '.".image_python3_10"')
     fi
     docker run \
         --volume "$PWD":/io:ro \
@@ -198,7 +216,7 @@ freshpyenv_main(){
     echo " * IMAGE_NAME = $IMAGE_NAME"
 
     if [[ "$COMMAND" == "start" ]]; then
-        start_docker
+        start_docker || exit 2
     elif [[ "$COMMAND" == "images" ]]; then
         list_available_images
     else

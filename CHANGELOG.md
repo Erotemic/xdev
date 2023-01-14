@@ -5,6 +5,19 @@ We are currently working on porting this changelog to the specifications in
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## Version 1.2.0 - Unreleased
+
+### Added
+* `pyversion` cli
+* `pyfile` cli
+* `max_depth` to `xdev.tree_repr` and corresponding CLI.
+
+
+### Changed
+* More / cleaner docs in CLI tools.
+* Expose `freshpyenv.sh` as an xdev CLI program.
+
+
 ## Version 1.1.0 - Released 2023-01-13 
 
 ### Added

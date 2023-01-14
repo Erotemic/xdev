@@ -298,7 +298,7 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
 
 def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
               return_text=False, return_tree=False, pathstyle='name',
-              with_type=False, colors=not ub.NO_COLOR):
+              max_depth=None, with_type=False, colors=not ub.NO_COLOR):
     """
     Filesystem tree representation
 
@@ -313,6 +313,7 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
         pathstyle (str): can be rel, name, or abs
         return_tree (bool): if True return the tree
         return_text (bool): if True return the text
+        maxdepth (int | None): maximum depth to descend
         colors (bool): if True use rich
 
     SeeAlso:
@@ -370,6 +371,9 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
             if colors:
                 scolor = '[reset]'
                 tcolor = '[/reset]'
+                if os.access(p, os.X_OK):
+                    scolor = '[green]'
+                    tcolor = '[/green]'
             types.append('F')
         if isdir:
             if colors:
@@ -390,7 +394,13 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
             return pathrep
 
     # TODO: rectify with "find"
+    start_depth = str(cwd).count(os.path.sep)
     for root, dnames, fnames in os.walk(cwd):
+        curr_depth = str(root).count(os.path.sep)
+
+        if max_depth is not None:
+            if (curr_depth - start_depth):
+                del dnames[:]
 
         if dirblocklist is not None:
             dnames[:] = [
