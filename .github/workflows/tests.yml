@@ -190,18 +190,6 @@ jobs:
           os: windows-latest
           install-extras: tests,optional
           arch: auto
-        - python-version: pypy-3.7
-          os: ubuntu-latest
-          install-extras: tests,optional
-          arch: auto
-        - python-version: pypy-3.7
-          os: macOS-latest
-          install-extras: tests,optional
-          arch: auto
-        - python-version: pypy-3.7
-          os: windows-latest
-          install-extras: tests,optional
-          arch: auto
     steps:
     - name: Checkout source
       uses: actions/checkout@v3
