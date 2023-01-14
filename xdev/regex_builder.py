@@ -6,10 +6,18 @@ class RegexBuilder:
     Notes:
         The way to have multiple negative look aheads/behinds is to change them together SO12689046
 
-
     References:
         .. [SO12689046] https://stackoverflow.com/questions/12689046/multiple-negative-lookbehind-assertions-in-python-regex
     """
+    common_patterns = [
+        {'key': 'word',      'pattern': r'\w', 'docs': r'An alphanumeric word'},
+        {'key': 'non-word',  'pattern': r'\W', 'docs': r'Anything not a word'},
+        {'key': 'space',     'pattern': r'\s', 'docs': r'Any space character including: " " "\t", "\n", "\r"'},
+        {'key': 'non-space', 'pattern': r'\S', 'docs': r'Any non-space character'},
+        {'key': 'digit',     'pattern': r'\d', 'docs': r'any number 0-9'},
+        {'key': 'digit',     'pattern': r'\D', 'docs': r'any non-digit'},
+        {'key': 'zero_or_more', 'pattern': r'*', 'docs': r'zero or more of the pattern to the left', 'alias': ['kleene_star']},
+    ]
 
     def __init__(self):
         raise Exception('Use coerce instead')
@@ -17,6 +25,8 @@ class RegexBuilder:
     def lookahead(self, pat, positive=True):
         """
         A lookahead pattern that can be positive or negative
+
+        looklook
         """
         if positive:
             return self.constructs['positive_lookahead'].format(pat=pat)
@@ -41,7 +51,7 @@ class RegexBuilder:
     def bref_field(self, name):
         return self.constructs['backref_field'].format(name=name)
 
-    def escape(pat):
+    def escape(self, pat):
         return re.escape(pat)
 
     def optional(self, pat):
@@ -65,8 +75,12 @@ class RegexBuilder:
         return self
 
     @property
+    def whitespace(self):
+        return self.special['space'] + '*'
+
+    @property
     def nongreedy(self):
-        return self.constructs['nongreedy_kleene_star']
+        return self.special['nongreedy_kleene_star']
 
     @property
     def number(self):
@@ -104,6 +118,13 @@ class RegexBuilder:
 
 
 class VimRegexBuilder(RegexBuilder):
+    """
+    https://dev.to/iggredible/learning-vim-regex-26ep
+    """
+
+    vim_patterns = [
+        {'key': 'nongreedy_zero_or_more', 'pattern': r'\{-}', 'docs': r'non-greedily matches zero or more of the pattern to the left', 'alias': ['nongreedy_kleene_star']},
+    ]
     def __init__(self):
         self.constructs = {}
         self.constructs['positive_lookahead'] = r'\({pat}\)\@='
@@ -112,7 +133,10 @@ class VimRegexBuilder(RegexBuilder):
         self.constructs['negative_lookbehind'] = r'\({pat}\)\@<!'
         self.constructs['word'] = r'\<{pat}\>'
         self.constructs['group'] = r'\({pat}\)'
-        self.constructs['nongreedy_kleene_star'] = r'\{-}'
+
+        self.special = {}
+        for item in self.common_patterns + self.vim_patterns:
+            self.special[item['key']] = item['pattern']
 
 
 class PythonRegexBuilder(RegexBuilder):
@@ -150,7 +174,18 @@ class PythonRegexBuilder(RegexBuilder):
         [False, True, True, True]
         [True, False, True, True]
         [False, False, True, True]
+
+    References:
+        https://www.dataquest.io/blog/regex-cheatsheet/
     """
+
+    python_patterns = [
+        {'key': 'nongreedy_zero_or_more', 'pattern': r'*?', 'docs': r'non-greedily matches zero or more of the pattern to the left', 'alias': ['nongreedy_kleene_star']},
+        {'key': 'boundary', 'pattern': r'\b', 'docs': r'The boundary at the start or end of a word'},
+        {'key': 'non-boundary', 'pattern': r'\B'},
+        {'key': 'left-expr', 'pattern': r'\A'},
+        {'key': 'right-expr', 'pattern': r'\Z'},
+    ]
     def __init__(self):
         self.constructs = {}
         self.constructs['positive_lookahead'] = r'(?={pat})'
@@ -161,4 +196,7 @@ class PythonRegexBuilder(RegexBuilder):
         self.constructs['group'] = r'({pat})'
         self.constructs['named_field'] = r'(?P<{name}>{pat})'
         self.constructs['backref_field'] = r'\g<{name}>'
-        self.constructs['nongreedy_kleene_star'] = r'*?'
+
+        self.special = {}
+        for item in self.common_patterns + self.python_patterns:
+            self.special[item['key']] = item['pattern']

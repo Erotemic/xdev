@@ -70,7 +70,7 @@ def sidecar_glob(main_pat, sidecar_ext, main_key='main', sidecar_key=None,
             glob pattern for the main non-sidecar file
 
     Yields:
-        Dict[str, Path | None]
+        Dict[str, ub.Path | None]
 
     Notes:
         A sidecar file is defined by the sidecar extension. We usually use this

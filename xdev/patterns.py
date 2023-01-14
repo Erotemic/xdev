@@ -213,7 +213,7 @@ class Pattern(PatternBase, ub.NiceRepr):
         Find paths in the filesystem that match this pattern
 
         Yields:
-            ubelt.Path
+            ub.Path
         """
         if self.backend == 'glob':
             import glob

@@ -2,17 +2,34 @@ from typing import Callable
 from typing import Tuple
 from typing import List
 from typing import Union
-from typing import Any
+import line_profiler
+from _typeshed import Incomplete
 
-IS_PROFILING: Any
-profile: Any
-
-
-def __dummy_profile__(func):
-    ...
+IS_PROFILING: Incomplete
 
 
-profile = __dummy_profile__
+class DummyProfiler:
+
+    def __call__(self, func):
+        ...
+
+    def add_module(self, mod: Incomplete | None = ...) -> None:
+        ...
+
+    def print_report(self) -> None:
+        ...
+
+
+class ExtendedLineProfiler(line_profiler.LineProfiler):
+
+    def add_module(self, mod: Incomplete | None = ...):
+        ...
+
+    def print_report(self) -> None:
+        ...
+
+
+profile: Incomplete
 
 
 def profile_now(func: Callable) -> Callable:
@@ -20,7 +37,7 @@ def profile_now(func: Callable) -> Callable:
 
 
 class KernprofParser:
-    profile: Any
+    profile: Incomplete
 
     def __init__(self, profile) -> None:
         ...
@@ -62,7 +79,9 @@ class KernprofParser:
     def fix_rawprofile_blocks(self, profile_block_list):
         ...
 
-    def clean_lprof_file(self, input_fname, output_fname: Any | None = ...):
+    def clean_lprof_file(self,
+                         input_fname,
+                         output_fname: Incomplete | None = ...):
         ...
 
 

@@ -1,6 +1,6 @@
-from typing import Any
+from _typeshed import Incomplete
 
-INDEXABLE_TYPES: Any
+INDEXABLE_TYPES: Incomplete
 
 
 class InteractiveIter:
@@ -32,7 +32,7 @@ class InteractiveIter:
     def wait_for_input(iiter):
         ...
 
-    def __call__(iiter, iterable: Any | None = ...) -> None:
+    def __call__(iiter, iterable: Incomplete | None = ...) -> None:
         ...
 
     @classmethod

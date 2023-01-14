@@ -1,7 +1,8 @@
+from _typeshed import Incomplete
 from collections.abc import Generator
 from typing import Any
 
-get_func_kwargs: Any
+get_func_kwargs: Incomplete
 
 
 def get_stack_frame(N: int = 0, strict: bool = True):

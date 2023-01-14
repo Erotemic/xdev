@@ -5,7 +5,6 @@ from os.path import normpath
 from os.path import exists
 from os.path import sys
 from six import types
-import pipes
 import os
 import six
 import ubelt as ub
@@ -68,7 +67,7 @@ def view_directory(dpath=None, verbose=False):
     windows explorer, mac open, and linux nautlius.
 
     Args:
-        dpath (PathLike): directory name
+        dpath (PathLike | None): directory name
         verbose (bool): verbosity
     """
     if dpath is None:
@@ -131,7 +130,8 @@ def startfile(fpath, verbose=True):
     if not exists(fpath):
         raise Exception('Cannot start nonexistant file: {!r}'.format(fpath))
     if not ub.WIN32:
-        fpath = pipes.quote(fpath)
+        import shlex
+        fpath = shlex.quote(fpath)
     if ub.LINUX:
         info = ub.cmd(('xdg-open', fpath), detach=True, verbose=verbose)
     elif ub.DARWIN:

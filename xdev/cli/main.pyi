@@ -1,6 +1,6 @@
 import argparse
 import scriptconfig as scfg
-from typing import Any
+from _typeshed import Incomplete
 
 
 class RawDescriptionDefaultsHelpFormatter(
@@ -12,7 +12,7 @@ class RawDescriptionDefaultsHelpFormatter(
 class CodeblockCLI(scfg.Config):
     name: str
     description: str
-    default: Any
+    default: Incomplete
 
     @classmethod
     def main(cls, cmdline: bool = ..., **kwargs) -> None:
@@ -22,7 +22,7 @@ class CodeblockCLI(scfg.Config):
 class InfoCLI(scfg.Config):
     name: str
     description: str
-    default: Any
+    default: Incomplete
 
     @classmethod
     def main(cls, cmdline: bool = ..., **kwargs) -> None:
@@ -32,7 +32,7 @@ class InfoCLI(scfg.Config):
 class DocstrStubgenCLI(scfg.Config):
     name: str
     description: str
-    default: Any
+    default: Incomplete
 
     @classmethod
     def main(cls, cmdline: bool = ..., **kwargs) -> None:
@@ -42,7 +42,17 @@ class DocstrStubgenCLI(scfg.Config):
 class SedCLI(scfg.Config):
     name: str
     description: str
-    default: Any
+    default: Incomplete
+
+    @classmethod
+    def main(cls, cmdline: bool = ..., **kwargs) -> None:
+        ...
+
+
+class FormatQuotesCLI(scfg.Config):
+    name: str
+    description: str
+    default: Incomplete
 
     @classmethod
     def main(cls, cmdline: bool = ..., **kwargs) -> None:
@@ -52,7 +62,37 @@ class SedCLI(scfg.Config):
 class FindCLI(scfg.Config):
     name: str
     description: str
-    default: Any
+    default: Incomplete
+
+    @classmethod
+    def main(cls, cmdline: bool = ..., **kwargs) -> None:
+        ...
+
+
+class TreeCLI(scfg.Config):
+    name: str
+    description: str
+    default: Incomplete
+
+    @classmethod
+    def main(cls, cmdline: bool = ..., **kwargs) -> None:
+        ...
+
+
+class PintCLI(scfg.Config):
+    __command__: str
+    description: str
+    default: Incomplete
+
+    @classmethod
+    def main(cls, cmdline: bool = ..., **kwargs) -> None:
+        ...
+
+
+class ModpathCLI(scfg.Config):
+    __command__: str
+    description: str
+    default: Incomplete
 
     @classmethod
     def main(cls, cmdline: bool = ..., **kwargs) -> None:
@@ -60,14 +100,14 @@ class FindCLI(scfg.Config):
 
 
 class ModalCLI:
-    description: Any
-    sub_clis: Any
-    version: Any
+    description: Incomplete
+    sub_clis: Incomplete
+    version: Incomplete
 
     def __init__(self,
                  description: str = ...,
                  sub_clis=...,
-                 version: Any | None = ...) -> None:
+                 version: Incomplete | None = ...) -> None:
         ...
 
     def build_parser(self):

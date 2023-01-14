@@ -1,7 +1,11 @@
-from typing import Any
+from _typeshed import Incomplete
 
 
-class _AbstractRegexBuilder:
+class RegexBuilder:
+    common_patterns: Incomplete
+
+    def __init__(self) -> None:
+        ...
 
     def lookahead(self, pat, positive: bool = ...):
         ...
@@ -9,13 +13,13 @@ class _AbstractRegexBuilder:
     def lookbehind(self, pat, positive: bool = ...):
         ...
 
-    def named_field(self, pat, name: Any | None = ...):
+    def named_field(self, pat, name: Incomplete | None = ...):
         ...
 
     def bref_field(self, name):
         ...
 
-    def escape(pat):
+    def escape(self, pat):
         ...
 
     def optional(self, pat):
@@ -27,16 +31,36 @@ class _AbstractRegexBuilder:
     def oneof(self, *paterns):
         ...
 
+    @classmethod
+    def coerce(cls, backend: str = ...):
+        ...
 
-class VimRegexBuilder(_AbstractRegexBuilder):
-    constructs: Any
+    @property
+    def whitespace(self):
+        ...
+
+    @property
+    def nongreedy(self):
+        ...
+
+    @property
+    def number(self):
+        ...
+
+
+class VimRegexBuilder(RegexBuilder):
+    vim_patterns: Incomplete
+    constructs: Incomplete
+    special: Incomplete
 
     def __init__(self) -> None:
         ...
 
 
-class PythonRegexBuilder(_AbstractRegexBuilder):
-    constructs: Any
+class PythonRegexBuilder(RegexBuilder):
+    python_patterns: Incomplete
+    constructs: Incomplete
+    special: Incomplete
 
     def __init__(self) -> None:
         ...
