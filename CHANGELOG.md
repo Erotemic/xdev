@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 * `pyversion` cli
 * `pyfile` cli
 * `max_depth` to `xdev.tree_repr` and corresponding CLI.
+* Added initial experimental port of the `available_package_versions` script
 
 
 ### Changed

@@ -15,6 +15,7 @@ import argparse
 import ubelt as ub
 import os
 import sys
+from xdev.cli import available_package_versions
 
 
 class RawDescriptionDefaultsHelpFormatter(
@@ -449,6 +450,18 @@ class DocstrStubgenCLI(scfg.Config):
             pytyped_fpath = (modpath / 'py.typed')
             print(f'touch pytyped_fpath={pytyped_fpath}')
             pytyped_fpath.touch()
+
+
+@_register
+class AvailablePackageCLI(scfg.Config):
+    __command__ = 'available_package_versions'
+    __alias__ = ['availpkg']
+    __default__ = available_package_versions.AvailablePackageConfig.__default__
+    __doc__ = available_package_versions.AvailablePackageConfig.__doc__
+
+    @classmethod
+    def main(cls, cmdline=False, **kwargs):
+        available_package_versions.main(cmdline=cmdline, **kwargs)
 
 
 class ModalCLI(object):
