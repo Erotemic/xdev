@@ -24,6 +24,8 @@ class AvailablePackageConfig(scfg.DataConfig):
     available versions of a python package that meet some critera
     """
     package_name = scfg.Value(None, position=1, help='the pypi package name')
+    request_min = scfg.Value(None, help='request a minimum version')
+    refresh = scfg.Value(False, isflag=1, help='if True refresh the cache')
 
 
 def main(cmdline=1, **kwargs):
@@ -231,7 +233,7 @@ def parse_wheel_name(fname):
     return None
 
 
-def grab_pypi_items(package_name):
+def grab_pypi_items(package_name, refresh=False):
     """
     Get all the information about a package from pypi
 
@@ -444,7 +446,7 @@ def summarize_package_availability(package_name):
         rich.print(piv.to_string())
 
 
-def minimum_cross_python_versions(package_name, request_min=None):
+def minimum_cross_python_versions(package_name, request_min=None, refresh=False):
     """
     package_name = 'scipy'
     request_min = None
@@ -458,7 +460,7 @@ def minimum_cross_python_versions(package_name, request_min=None):
     if request_min is not None:
         request_min = Version(request_min)
 
-    table = grab_pypi_items(package_name)
+    table = grab_pypi_items(package_name, refresh=refresh)
     table = table[~table['yanked']]
 
     ignore_cols = ['digests', 'downloads', 'comment_text', 'md5_digest',

@@ -300,8 +300,11 @@ def generate_typed_stubs(modpath):
             user_header = None
             for d in mod.ast.defs:
                 if isinstance(d, mypy.nodes.AssignmentStmt):
-                    if len(d.lvalues) == 1 and d.lvalues[0].name == '__docstubs__':
-                        user_header = d.rvalue.value
+                    try:
+                        if len(d.lvalues) == 1 and d.lvalues[0].name == '__docstubs__':
+                            user_header = d.rvalue.value
+                    except AttributeError:
+                        ...
 
             if user_header is not None:
                 gen._output = [user_header] + gen._output
@@ -542,6 +545,12 @@ def hacked_typing_info(type_name):
         # into the type if given in the docstring
         type_name = type_name.replace('callable', 'Callable')
 
+    import re
+    type_name = re.sub(r'\bor\b', '|', type_name)
+
+    if type_name == '?':
+        type_name = 'Any'
+
     if '|' in type_name:
         add_typing_import('Union')
         add_import_line('from typing import {}\n'.format('Union'))
@@ -671,6 +680,7 @@ class ExtendedStubGenerator(StubGenerator):
             print('o.name = {!r}'.format(o.name))
 
         import ubelt as ub
+        # Parse extra information out of the docstring
         name_to_parsed_docstr_info = {}
         return_parsed_docstr_info = None
         fullname = o.name
@@ -790,13 +800,42 @@ class ExtendedStubGenerator(StubGenerator):
         self.clear_decorators()
         self.add("%s%sdef %s(" % (self._indent, 'async ' if o.is_coroutine else '', o.name))
         self.record_name(o.name)
-        # import ubelt as ub
-        # if o.name == 'dzip':
-        #     import xdev
-        #     xdev.embed()
 
-        # print('o = {!r}'.format(o))
-        # print('o.arguments = {!r}'.format(o.arguments))
+        DEVELOPER_DEBUGGING = 0
+        if DEVELOPER_DEBUGGING:
+            # Set this to the name function we are going to debug
+            function_to_debug = 'show_chipmatch2'
+            print(f'o.name={o.name}')
+            if o.name == function_to_debug:
+                print('o = {!r}'.format(o))
+                print('o.arguments = {!r}'.format(o.arguments))
+                import xdev
+                xdev.embed()
+
+        # ------------------------------------------
+        # Enrich doctypes with inferable information
+        # ------------------------------------------
+        # Do a quick initial pass to check to compare the parsed docstr types
+        # to default values if they exist. If the default value is something
+        # like None, but the existing type annotation isn't marked as optional
+        # we can insert that for the user.
+        name_to_argument = {arg_.variable.name: arg_ for arg_ in o.arguments}
+        check_names = set(name_to_argument) & set(name_to_parsed_docstr_info)
+        for name in check_names:
+            arg_ = name_to_argument[name]
+            if arg_.initializer is not None:
+                # TODO: find a better way of checking if the default value
+                # matches the type of the given doctype and extend the
+                # doctype if needbe. For now we are hacking it to
+                # handle None specificaly.
+                if hasattr(arg_.initializer, 'name') and arg_.initializer.name == 'None':
+                    info = name_to_parsed_docstr_info[name]
+                    doctype_str = info['type'].replace(' ', '')
+                    if all(n not in doctype_str for n in {'None', 'Optional'}):
+                        info['type'] = info['type'] + ' | None'
+                        self.add_typing_import('Union')
+        # ------------------------------------------
+
         args: List[str] = []
         for i, arg_ in enumerate(o.arguments):
             var = arg_.variable
@@ -815,10 +854,6 @@ class ExtendedStubGenerator(StubGenerator):
                         # import mypy.types as mypy_types
                         # globals_ = {**mypy_types.__dict__}
                         try:
-                            # # got = mypy_types.deserialize_type(doc_type_str)
-                            # got = eval(doc_type_str, globals_)
-                            # got = mypy_types.get_proper_type(got)
-                            # got = mypy_types.Iterable
                             got = fastparse.parse_type_string(doc_type_str, 'Any', 0, 0)
                         except Exception as ex:
                             print('ex = {!r}'.format(ex))
