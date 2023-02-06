@@ -1,3 +1,6 @@
+"""
+Ideally this will be accepted into networkx eventually.
+"""
 import sys
 from collections import defaultdict
 import networkx as nx

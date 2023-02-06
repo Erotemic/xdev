@@ -295,11 +295,21 @@ def generate_typed_stubs(modpath):
                 # gen.add_import_line('from typing import {}\n'.format('TypeVar'))
                 gen._output = ['{} = TypeVar("{}")\n'.format(type_var_name, type_var_name)] + gen._output
 
+            # Check for a special user header variable we pull in verbatim
+            import mypy
+            user_header = None
+            for d in mod.ast.defs:
+                if isinstance(d, mypy.nodes.AssignmentStmt):
+                    if len(d.lvalues) == 1 and d.lvalues[0].name == '__docstubs__':
+                        user_header = d.rvalue.value
+
+            if user_header is not None:
+                gen._output = [user_header] + gen._output
+
             # Hack for specific module
-            # if mod.path.endswith('util_path.py'):
-            #     gen.add_typing_import('TypeVar')
-            #     # hack for variable inheritence
-            #     gen._output = ['import pathlib\nimport os\n', "_PathBase = pathlib.WindowsPath if os.name == 'nt' else pathlib.PosixPath\n"] + gen._output
+            # if mod.path.endswith('coco_objects1d.py'):
+            #     import xdev
+            #     xdev.embed()
 
             text = ''.join(gen.output())
             text = postprocess_hacks(text, mod)
@@ -734,13 +744,18 @@ class ExtendedStubGenerator(StubGenerator):
             self_inits_lut = dict(self_inits)
             # The docstring is the single source of truth, respect it.
             pseudo_inits = []
-            for name, info in self._docstring_class_attr_infos.items():
+            if self._docstring_class_attr_infos is None:
+                _docstring_class_attr_infos = {}
+            else:
+                _docstring_class_attr_infos = self._docstring_class_attr_infos
+
+            for name, info in _docstring_class_attr_infos.items():
                 if name in self_inits_lut:
                     pseudo_inits.append((name, self_inits_lut[name]))
                 else:
                     pseudo_inits.append((name, None))
             # Maybe we shouldnt do this if there is an Attributes section?
-            pseudo_inits.extend(list(ub.dict_diff(self_inits_lut, self._docstring_class_attr_infos).items()))
+            pseudo_inits.extend(list(ub.dict_diff(self_inits_lut, _docstring_class_attr_infos).items()))
 
             for init, value in pseudo_inits:
                 if init in self.method_names:
@@ -750,8 +765,8 @@ class ExtendedStubGenerator(StubGenerator):
                 # Use the init docstring to get a hint for the type
                 annotation = None
                 # The class attributes should override the init signature
-                if init in self._docstring_class_attr_infos:
-                    typename = self._docstring_class_attr_infos[init]['type']
+                if init in _docstring_class_attr_infos:
+                    typename = _docstring_class_attr_infos[init]['type']
                     try:
                         annotation = fastparse.parse_type_string(typename, 'Any', 0, 0)
                     except Exception:
@@ -1005,5 +1020,5 @@ if __name__ == '__main__':
     CommandLine:
         python -m xdev.cli.gen_typed_stubs
     """
-    from xdev.cli.main import DocstrStubgenCLI
+    from xdev.cli.docstr_stubgen import DocstrStubgenCLI
     DocstrStubgenCLI.main()

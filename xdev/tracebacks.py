@@ -1,5 +1,11 @@
 
 def make_warnings_print_tracebacks():
+    """
+    Makes warnings show tracebacks when displayed.
+
+    Applies a monkeypatch to warnings.formatwarning that includes a traceback
+    in the displayed warning message.
+    """
     import warnings
     import traceback
     _orig_formatwarning = warnings.formatwarning

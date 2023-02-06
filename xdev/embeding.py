@@ -1,3 +1,6 @@
+"""
+Minor quality of life improvements over IPython.embed
+"""
 import sys
 from functools import partial
 from xdoctest.dynamic_analysis import get_parent_frame, get_stack_frame

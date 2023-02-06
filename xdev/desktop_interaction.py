@@ -23,7 +23,8 @@ def editfile(fpath, verbose=True):
         fpath (PathLike): a file path or python module / function
         verbose (int): verbosity
 
-    DisableExample:
+    Example:
+        >>> # xdoctest: +SKIP
         >>> # This test interacts with a GUI frontend, not sure how to test.
         >>> import xdev
         >>> ub.editfile(xdev.misc.__file__)
@@ -116,7 +117,8 @@ def startfile(fpath, verbose=True):
     References:
         http://stackoverflow.com/questions/2692873/quote-posix
 
-    DisableExample:
+    Example:
+        >>> # xdoctest: +SKIP
         >>> # This test interacts with a GUI frontend, not sure how to test.
         >>> import ubelt as ub
         >>> base = ub.ensure_app_cache_dir('ubelt')

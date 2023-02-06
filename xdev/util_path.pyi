@@ -2,6 +2,8 @@ from typing import Union
 from os import PathLike
 from typing import Dict
 import ubelt as ub
+import os
+import os
 from _typeshed import Incomplete
 from collections.abc import Generator
 
@@ -30,5 +32,5 @@ def sidecar_glob(
     ...
 
 
-def tree(path) -> Generator[str, None, None]:
+def tree(path: Union[str, os.PathLike]) -> Generator[str, None, None]:
     ...

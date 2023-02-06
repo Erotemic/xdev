@@ -1,3 +1,7 @@
+"""
+Candidate for deprecation. (I haven't used this in ages; not sure if it still
+works)
+"""
 import types
 import ubelt as ub
 from os.path import sys
@@ -79,7 +83,7 @@ def reload_class(self, verbose=True, reload_module=True):
             self._initialize_self()
         elif verbose > 1:
             print('[class] ' + classname + ' does not have an _initialize_self function')
-    except Exception as ex:
+    except Exception:
         raise
 
 

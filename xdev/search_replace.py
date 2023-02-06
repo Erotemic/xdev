@@ -16,10 +16,66 @@ from xdev.patterns import MultiPattern
 #     from distutils.version import LooseVersion as parse_version
 
 
+class GrepResult(ub.NiceRepr):
+    """
+    Manage and format results from grep
+    """
+    def __init__(self, fpath, pattern=None):
+        self.pattern = pattern
+        self.fpath = fpath
+        self.found_lxs = []
+        self.found_lines = []
+        self.max_line = 100
+
+    def __nice__(self):
+        return '{} in {}'.format(len(self), self.fpath)
+
+    def __iter__(self):
+        return iter(self.found_lines)
+
+    def __len__(self):
+        return len(self.found_lines)
+
+    def append(self, lx, line):
+        self.found_lines.append(line)
+        self.found_lxs.append(lx)
+
+    def format_text(self, color=True):
+        summary = []
+        app = summary.append
+        fname = ub.Path(self.fpath).name
+        ndigits = str(len(str(self.max_line)))
+
+        fmt_str = '{} : {:' + ndigits + 'd} |{}'
+        ret = 'Found {} line(s) in {!r}: '.format(len(self), self.fpath)
+        app('----------------------')
+        color = 'red'
+        app(ret)
+        for (lx, line) in zip(self.found_lxs, self.found_lines):
+            line = line.replace('\n', '')
+            if color and self.pattern:
+                found = self.pattern.search(line)
+                s, t = found.span()
+                line = line[:s] + ub.color_text(line[s:t], color) + line[t:]
+            app(fmt_str.format(fname, lx, line))
+
+        return '\n'.join(summary)
+
+
 def sed(regexpr, repl, dpath=None, include=None, exclude=None, recursive=True,
         dry=False, verbose=1):
     r"""
     Execute a sed on multiple files.
+
+    Args:
+        regexpr (str | Pattern): pattern to find
+        repl (str): the text to replace the found pattern with
+        dpath (str | None): passed to :func:`find`.
+        include (str | List[str] | MultiPattern | None): passed to :func:`find`.
+        exclude (str | List[str] | MultiPattern | None): passed to :func:`find`.
+        recursive (bool): passed to :func:`find`.
+        dry (bool): if True does not apply edits
+        verbose (int): verbosity level
 
     Example:
         >>> from xdev.search_replace import *  # NOQA
@@ -57,6 +113,17 @@ def grep(regexpr, dpath=None, include=None, exclude=None, recursive=True,
     r"""
     Execute a grep on multiple files.
 
+    Args:
+        regexpr (str | Pattern): pattern to find
+        dpath (str | None): passed to :func:`find`.
+        include (str | List[str] | MultiPattern | None): passed to :func:`find`.
+        exclude (str | List[str] | MultiPattern | None): passed to :func:`find`.
+        recursive (bool): passed to :func:`find`.
+        verbose (int): verbosity level
+
+    Returns:
+        List[GrepResult]:
+
     Example:
         >>> from xdev.search_replace import *  # NOQA
         >>> from xdev.search_replace import _create_test_filesystem
@@ -88,11 +155,11 @@ def find(pattern=None, dpath=None, include=None, exclude=None, dirblocklist=None
     Find all paths in a root subject to a search criterion
 
     Args:
-        pattern (str | None):
+        pattern (str | Pattern | None):
             The glob pattern the path name must match to be returned
 
-        dpath (str | None):
-            The root direcotry to search. Default to cwd.
+        dpath (str | Pattern | None):
+            The root directory to search. Default to cwd.
 
         include (str | List[str] | MultiPattern | None):
             Pattern or list of patterns. If specified, search only files whose
@@ -161,7 +228,7 @@ def find(pattern=None, dpath=None, include=None, exclude=None, dirblocklist=None
             with_files = True
 
     if dpath is None:
-        dpath = os.getcwd()
+        dpath = '.'  # os.getcwd()
 
     # Define helper for checking inclusion / exclusion
     include = None if include is None else MultiPattern.coerce(include, hint='glob')
@@ -204,6 +271,16 @@ def find(pattern=None, dpath=None, include=None, exclude=None, dirblocklist=None
 def sedfile(fpath, regexpr, repl, dry=False, verbose=1):
     r"""
     Execute a search and replace on a particular file
+
+    Args:
+        fpath (str | PathLike): file to search / replace on
+        regexpr (str | Pattern): pattern to find
+        repl (str): the text to replace the found pattern with
+        dry (bool): if True does not apply edits
+        verbose (int): verbosity level
+
+    Returns:
+        List[Tuple[str, str]]: changed lines
 
     TODO:
         - [ ] Store "SedResult" class, with lazy execution
@@ -271,55 +348,17 @@ def sedfile(fpath, regexpr, repl, dry=False, verbose=1):
     return []
 
 
-class GrepResult(ub.NiceRepr):
-    """
-    Manage and format results from grep
-    """
-    def __init__(self, fpath, pattern=None):
-        self.pattern = pattern
-        self.fpath = fpath
-        self.found_lxs = []
-        self.found_lines = []
-        self.max_line = 100
-
-    def __nice__(self):
-        return '{} in {}'.format(len(self), self.fpath)
-
-    def __iter__(self):
-        return iter(self.found_lines)
-
-    def __len__(self):
-        return len(self.found_lines)
-
-    def append(self, lx, line):
-        self.found_lines.append(line)
-        self.found_lxs.append(lx)
-
-    def format_text(self, color=True):
-        summary = []
-        app = summary.append
-        fname = ub.Path(self.fpath).name
-        ndigits = str(len(str(self.max_line)))
-
-        fmt_str = '{} : {:' + ndigits + 'd} |{}'
-        ret = 'Found {} line(s) in {!r}: '.format(len(self), self.fpath)
-        app('----------------------')
-        color = 'red'
-        app(ret)
-        for (lx, line) in zip(self.found_lxs, self.found_lines):
-            line = line.replace('\n', '')
-            if color and self.pattern:
-                found = self.pattern.search(line)
-                s, t = found.span()
-                line = line[:s] + ub.color_text(line[s:t], color) + line[t:]
-            app(fmt_str.format(fname, lx, line))
-
-        return '\n'.join(summary)
-
-
 def grepfile(fpath, regexpr, verbose=1):
     r"""
     Exceute grep on a single file
+
+    Args:
+        fpath (str | PathLike): file to search
+        regexpr (str | Pattern): pattern to find
+        verbose (int): verbosity level
+
+    Returns:
+        None | GrepResult
 
     Example:
         >>> from xdev.search_replace import *  # NOQA
@@ -357,7 +396,13 @@ def greptext(text, regexpr, fpath=None, verbose=1):
     r"""
     Exceute grep on text
 
-    TODO: get context
+    Args:
+        text (str): text to search
+        regexpr (str | Pattern): pattern to find
+        verbose (int): verbosity level
+
+    Returns:
+        None | GrepResult
     """
     from xdev.patterns import Pattern
     # from xdev.search_replace import GrepResult
