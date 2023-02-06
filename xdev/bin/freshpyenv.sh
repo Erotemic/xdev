@@ -118,19 +118,27 @@ inside_docker_setup(){
 Fresh development environment has been setup. 
 
 You can now run some variant to install your repo. For example typical
-xcookie-style repos can be installed via.
+xcookie-style repos can be installed via. E.g.
 
 # FULL STRICT VARIANT
-pip install -e .[all-strict,headless-strict] -v
+pip install -e .[all-strict] -v
 
 # FULL LOOSE VARIANT
-pip install -e .[all,headless] -v
+pip install -e .[all] -v
 
 # MINIMAL STRICT VARIANT
 pip install -e .[runtime-strict,tests-strict] -v
 
 # MINIMAL LOOSE VARIANT
 pip install -e .[tests] -v
+
+
+# OR
+
+pip install pip build -U
+python -m build --wheel
+pip install <PKG>[runtime-strict,tests-strict,optional-strict,headless-strict]==<VER> -f dist
+pip install ibeis[runtime-strict,tests-strict,optional-strict,headless-strict]==2.3.1 -f dist
 "
 }
 

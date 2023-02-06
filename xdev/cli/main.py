@@ -528,6 +528,18 @@ class ModalCLI(object):
     def run(self):
         parser = self.build_parser()
 
+        try:
+            import argcomplete
+            # Need to run: "$(register-python-argcomplete xdev)"
+            # or activate-global-python-argcomplete --dest=-
+            # activate-global-python-argcomplete --dest ~/.bash_completion.d
+            # To enable this.
+        except ImportError:
+            argcomplete = None
+
+        if argcomplete is not None:
+            argcomplete.autocomplete(parser)
+
         XDEV_LOOSE_CLI = os.environ.get('XDEV_LOOSE_CLI', '')
         if XDEV_LOOSE_CLI:
             ns = parser.parse_known_args()[0]

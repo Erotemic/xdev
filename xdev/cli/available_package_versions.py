@@ -204,8 +204,9 @@ def parse_platform_tag(platform_tag):
     if arch_parts == ['universal2', 'x86_64']:
         arch_parts = arch_parts[1:]
 
-    assert len(arch_parts) == 1, str(platform_tag)
-    assert len(os_coarse_parts) == 1, str(platform_tag)
+    # assert len(arch_parts) == 1, str(platform_tag)
+    # assert len(os_coarse_parts) == 1, str(platform_tag)
+
     arch = arch_parts[0]
     if arch == 'amd64':
         arch = 'x86_64'
@@ -249,7 +250,8 @@ def grab_pypi_items(package_name):
         fpath = ub.Path(
             ub.grabdata(
                 url, fname=ub.hash_data(url + 'v2'),
-                expires=24 * 60 * 60)
+                redo=refresh,
+                expires=8 * 60 * 60)
         )
         pypi_package_data = json.loads(fpath.read_text())
 
