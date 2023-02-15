@@ -4,8 +4,16 @@ We are currently working on porting this changelog to the specifications in
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Version 1.2.0 - Unreleased
 
-## Version 1.1.1 - Unreleased
+### Added
+* `before_embed` callback to EmbedOnException
+
+### Changed
+* Switched to scriptconfig ModalCLI
+
+
+## Version 1.1.1 - Released 2023-02-06 
 
 ### Added
 * `pyversion` cli

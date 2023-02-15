@@ -11,32 +11,21 @@ have a ``main`` classmethod, which is the logic invoked when the subcommand is
 called.
 """
 import scriptconfig as scfg
-import argparse
 import ubelt as ub
 import os
 import sys
+from scriptconfig.modal import ModalCLI
 from xdev.cli import available_package_versions
 
+modal = ModalCLI(description=ub.codeblock(
+    '''
+    The XDEV CLI
 
-class RawDescriptionDefaultsHelpFormatter(
-        argparse.RawDescriptionHelpFormatter,
-        argparse.ArgumentDefaultsHelpFormatter):
-    pass
-
-
-_SUB_CLIS = []
+    A collection of excellent developer tools for excellent developers.
+    '''))
 
 
-# Note: the order or registration is how it will appear in the CLI help
-def _register(cli_cls):
-    # Hack for older scriptconfig
-    if not hasattr(cli_cls, 'default'):
-        cli_cls.default = cli_cls.__default__
-    _SUB_CLIS.append(cli_cls)
-    return cli_cls
-
-
-@_register
+@modal
 class InfoCLI(scfg.Config):
     """
     Info about xdev
@@ -52,7 +41,7 @@ class InfoCLI(scfg.Config):
         print('xdev.__file__ = {!r}'.format(xdev.__file__))
 
 
-@_register
+@modal
 class CodeblockCLI(scfg.Config):
     """
     Remove indentation from text
@@ -68,7 +57,7 @@ class CodeblockCLI(scfg.Config):
         print(ub.codeblock(config['text']))
 
 
-@_register
+@modal
 class SedCLI(scfg.Config):
     """
     Search and replace text in files
@@ -119,7 +108,7 @@ class SedCLI(scfg.Config):
             search_replace.sed(**config)
 
 
-@_register
+@modal
 class FindCLI(scfg.Config):
     """
     Find matching files or paths in a directory.
@@ -159,7 +148,7 @@ class FindCLI(scfg.Config):
             print(found)
 
 
-@_register
+@modal
 class TreeCLI(scfg.Config):
     """
     List a directory like a tree
@@ -191,7 +180,7 @@ class TreeCLI(scfg.Config):
         # print()
 
 
-@_register
+@modal
 class PintCLI(scfg.Config):
     """
     Converts one type of unit to another via the pint library.
@@ -234,7 +223,7 @@ class PintCLI(scfg.Config):
             print(output.magnitude)
 
 
-@_register
+@modal
 class PyfileCLI(scfg.Config):
     """
     Prints the path corresponding to a Python module.
@@ -273,7 +262,7 @@ class PyfileCLI(scfg.Config):
         print(modpath)
 
 
-@_register
+@modal
 class PyVersionCLI(scfg.Config):
     """
     Detect and print the version of a Python module or package.
@@ -350,7 +339,7 @@ class PyVersionCLI(scfg.Config):
             raise Exception(f'No version was found for {modname}')
 
 
-@_register
+@modal
 class FormatQuotesCLI(scfg.Config):
     """
     Use single quotes for code and double quotes for docs.
@@ -386,7 +375,7 @@ class FormatQuotesCLI(scfg.Config):
         format_quotes.format_quotes(**config)
 
 
-@_register
+@modal
 class FreshPyenvCLI(scfg.Config):
     """
     Create a fresh environment in a docker container to test a Python package.
@@ -407,7 +396,7 @@ class FreshPyenvCLI(scfg.Config):
         ub.cmd(f'freshpyenv.sh --image={config["image"]}', system=True)
 
 
-@_register
+@modal
 class DocstrStubgenCLI(scfg.Config):
     """
     Generate Typed Stubs from Docstrings (experimental)
@@ -452,7 +441,7 @@ class DocstrStubgenCLI(scfg.Config):
             pytyped_fpath.touch()
 
 
-@_register
+@modal
 class AvailablePackageCLI(scfg.Config):
     __command__ = 'available_package_versions'
     __alias__ = ['availpkg']
@@ -464,124 +453,11 @@ class AvailablePackageCLI(scfg.Config):
         available_package_versions.main(cmdline=cmdline, **kwargs)
 
 
-class ModalCLI(object):
-    """
-    Contains multiple scriptconfig.Config items with corresponding `main`
-    functions.
-    """
-    def __init__(self, description='', sub_clis=[], version=None):
-        self.description = description
-        self.sub_clis = sub_clis
-        self.version = version
-
-    def _build_subcmd_infos(self):
-        cmdinfo_list = []
-        for cli_cls in self.sub_clis:
-            cmdname = getattr(cli_cls, '__command__', None)
-            subconfig = cli_cls()
-            parserkw = {}
-            __alias__ = getattr(cli_cls, '__alias__', [])
-            if __alias__:
-                parserkw['aliases']  = __alias__
-            parserkw.update(subconfig._parserkw())
-            parserkw['help'] = parserkw['description'].split('\n')[0]
-            cmdinfo_list.append({
-                'cmdname': cmdname,
-                'parserkw': parserkw,
-                'main_func': cli_cls.main,
-                'subconfig': subconfig,
-            })
-        return cmdinfo_list
-
-    def build_parser(self):
-        parser = argparse.ArgumentParser(
-            description=self.description,
-            formatter_class=RawDescriptionDefaultsHelpFormatter,
-        )
-
-        if self.version is not None:
-            parser.add_argument('--version', action='store_true',
-                                help='show version number and exit')
-
-        # Prepare information to be added to the subparser before it is created
-        cmdinfo_list = self._build_subcmd_infos()
-
-        # Build a list of primary command names to display as the valid options
-        # for subparsers. This avoids cluttering the screen with all aliases
-        # which happens by default.
-        command_choices = [d['cmdname'] for d in cmdinfo_list]
-        metavar = '{' + ','.join(command_choices) + '}'
-
-        # The subparser is what enables the modal CLI. It will redirect a
-        # command to a chosen subparser.
-        subparser_group = parser.add_subparsers(
-            title='commands', help='specify a command to run', metavar=metavar)
-
-        for cmdinfo in cmdinfo_list:
-            # Add a new command to subparser_group
-            subparser = subparser_group.add_parser(
-                cmdinfo['cmdname'], **cmdinfo['parserkw'])
-            subparser = cmdinfo['subconfig'].argparse(subparser)
-            subparser.set_defaults(main=cmdinfo['main_func'])
-        return parser
-
-    def run(self):
-        parser = self.build_parser()
-
-        try:
-            import argcomplete
-            # Need to run: "$(register-python-argcomplete xdev)"
-            # or activate-global-python-argcomplete --dest=-
-            # activate-global-python-argcomplete --dest ~/.bash_completion.d
-            # To enable this.
-        except ImportError:
-            argcomplete = None
-
-        if argcomplete is not None:
-            argcomplete.autocomplete(parser)
-
-        XDEV_LOOSE_CLI = os.environ.get('XDEV_LOOSE_CLI', '')
-        if XDEV_LOOSE_CLI:
-            ns = parser.parse_known_args()[0]
-        else:
-            ns = parser.parse_args()
-        kw = ns.__dict__
-
-        if kw.pop('version'):
-            print(self.version)
-            return 0
-
-        sub_main = kw.pop('main', None)
-        if sub_main is None:
-            parser.print_help()
-            raise ValueError('no command given')
-            return 1
-
-        try:
-            ret = sub_main(cmdline=False, **kw)
-        except Exception as ex:
-            print('ERROR ex = {!r}'.format(ex))
-            raise
-            return 1
-        else:
-            if ret is None:
-                ret = 0
-            return ret
-
-
 def main():
     import xdev
-    modal_cli = ModalCLI(
-        description=ub.codeblock(
-            '''
-            The XDEV CLI
-
-            A collection of excellent developer tools for excellent developers.
-            '''),
-        version=xdev.__version__,
-        sub_clis=_SUB_CLIS,
-    )
-    modal_cli.run()
+    modal.version = xdev.__version__
+    XDEV_LOOSE_CLI = os.environ.get('XDEV_LOOSE_CLI', '')
+    modal.run(strict=not XDEV_LOOSE_CLI)
 
 
 if __name__ == '__main__':

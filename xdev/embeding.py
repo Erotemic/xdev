@@ -148,18 +148,22 @@ class EmbedOnException(object):
     """
     Context manager which embeds in ipython if an exception is thrown
     """
-    def __init__(self):
-        pass
+    def __init__(self, before_embed=None):
+        self.before_embed = before_embed
 
     def __enter__(self):
         return self
 
-    def __call__(self):
+    def __call__(self, before_embed=None):
+        # This is quirky behavior, but probably fine
+        self.before_embed = before_embed
         return self
 
     def __exit__(__self, __type, __value, __trace):
         if __trace is not None:
             print('!!! EMBED ON EXCEPTION !!!')
+            if __self.before_embed is not None:
+                __self.before_embed()
             print('[util_dbg] %r in context manager!: %s ' % (__type, str(__value)))
             import traceback
             traceback.print_exception(__type, __value, __trace)

@@ -13,7 +13,7 @@ class RegexBuilder:
         .. [SO12689046] https://stackoverflow.com/questions/12689046/multiple-negative-lookbehind-assertions-in-python-regex
     """
     common_patterns = [
-        {'key': 'word',      'pattern': r'\w', 'docs': r'An alphanumeric word'},
+        {'key': 'word',      'pattern': r'\w', 'docs': r'An alphanumeric word, i.e. [a-zA-Z0-9_] (also matches unicode characters in Python)'},
         {'key': 'non-word',  'pattern': r'\W', 'docs': r'Anything not a word'},
         {'key': 'space',     'pattern': r'\s', 'docs': r'Any space character including: " " "\t", "\n", "\r"'},
         {'key': 'non-space', 'pattern': r'\S', 'docs': r'Any non-space character'},
@@ -23,7 +23,7 @@ class RegexBuilder:
     ]
 
     def __init__(self):
-        raise Exception('Use coerce instead')
+        raise Exception('Use ``RegexBuilder.coerce(backend=...)`` instead')
 
     def lookahead(self, pat, positive=True):
         """
@@ -76,6 +76,25 @@ class RegexBuilder:
             raise KeyError(backend)
         self = cls()
         return self
+
+    @property
+    def identifier(self):
+        """
+        A word, except it must start with a letter or underscore (not a number)
+
+        Example:
+            >>> from xdev.regex_builder import *  # NOQA
+            >>> b = PythonRegexBuilder()
+            >>> assert re.match(b.identifier, 'hello')
+            >>> assert re.match(b.identifier, 'h_ello')
+            >>> assert re.match(b.identifier, 'h_1e8llo')
+            >>> assert not re.match(b.identifier, '1hello')
+        """
+        return '[A-Za-z_][A-Za-z_0-9]*'
+
+    @property
+    def word(self):
+        return self.special['word']
 
     @property
     def whitespace(self):
@@ -180,6 +199,7 @@ class PythonRegexBuilder(RegexBuilder):
 
     References:
         https://www.dataquest.io/blog/regex-cheatsheet/
+        https://docs.python.org/3/library/re.html#regular-expression-syntax
     """
 
     python_patterns = [
