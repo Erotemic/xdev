@@ -403,7 +403,10 @@ def summarize_package_availability(package_name):
             counts = counts.sort_values('abi_tag')
             # counts.sort_values('abi_tag', key=vec_sorter)
             # counts = counts.sort_values('abi_tag')
-            piv = counts.pivot(['pkg_version'], ['abi_tag', 'os'], 'count')
+            piv = counts.pivot(
+                index=['pkg_version'],
+                columns=['abi_tag', 'os'],
+                values='count')
         else:
             abi_blocklist = {
                 # 'cp36m',
@@ -420,24 +423,30 @@ def summarize_package_availability(package_name):
                 counts = []
             if len(counts):
                 counts = counts.sort_values('abi_tag')
-                piv = counts.pivot(['pkg_version'], ['abi_tag', 'os', 'arch'], 'count')
+                piv = counts.pivot(
+                    index=['pkg_version'],
+                    columns=['abi_tag', 'os', 'arch'],
+                    values='count')
             else:
                 counts = df.value_counts(['pkg_version', 'requires_python'], dropna=False).to_frame('count').reset_index()
-                piv = counts.pivot(['pkg_version'], ['requires_python'], 'count')
+                piv = counts.pivot(
+                    index=['pkg_version'],
+                    columns=['requires_python'],
+                    values='count')
 
         vec_ver = vectorize(Version)
         # vec_sorter(['cp310', 'cp27'])
         vec_sorter(df.abi_tag)
         try:
-            piv = piv.sort_values('os', axis=1)
+            piv = piv.sort_values('os', axis=1, dtype=str)
         except Exception:
             pass
         try:
-            piv = piv.sort_values('abi_tag', axis=1, key=vec_sorter)
+            piv = piv.sort_values('abi_tag', axis=1, key=vec_sorter, dtype=str)
         except Exception:
             pass
         try:
-            piv = piv.sort_values('pkg_version', key=vec_ver)
+            piv = piv.sort_values('pkg_version', key=vec_ver, dtype=str)
         except Exception:
             pass
         import rich
@@ -716,16 +725,17 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
             lines.append(line)
     # last
     # https://peps.python.org/pep-0508/
-    cur_pyver = python_versions[-1]
-    pkg_ver = chosen_minimum_for[cur_pyver]
-    if not pkg_ver.startswith('stdlib'):
-        # line =     f"{package_name}>={pkg_ver:<8}  ;                             python_version >= {cur_pyver!r:<6}    # Python {cur_pyver}+"
-        next_pyver = '4.0'
-        line =     f"{package_name}>={pkg_ver:<8}  ; python_version < '{next_pyver}'  and python_version >= {cur_pyver!r:<6}    # Python {cur_pyver}+"
-        lines.append(line)
-    else:
-        line = f"# {package_name}>={pkg_ver:<8} is in the stdlib for python_version < '{next_pyver}' and python_version >= '{cur_pyver}'    # Python {cur_pyver}"
-        lines.append(line)
+    if len(python_versions):
+        cur_pyver = python_versions[-1]
+        pkg_ver = chosen_minimum_for[cur_pyver]
+        if not pkg_ver.startswith('stdlib'):
+            # line =     f"{package_name}>={pkg_ver:<8}  ;                             python_version >= {cur_pyver!r:<6}    # Python {cur_pyver}+"
+            next_pyver = '4.0'
+            line =     f"{package_name}>={pkg_ver:<8}  ; python_version < '{next_pyver}'  and python_version >= {cur_pyver!r:<6}    # Python {cur_pyver}+"
+            lines.append(line)
+        else:
+            line = f"# {package_name}>={pkg_ver:<8} is in the stdlib for python_version < '{next_pyver}' and python_version >= '{cur_pyver}'    # Python {cur_pyver}"
+            lines.append(line)
     text = '\n'.join(lines[::-1])
     rich.print(text)
 
