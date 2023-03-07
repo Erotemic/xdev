@@ -42,18 +42,34 @@ class InfoCLI(scfg.Config):
 
 
 @modal
-class CodeblockCLI(scfg.Config):
+class CodeblockCLI(scfg.DataConfig):
     """
-    Remove indentation from text
+    Remove indentation from text.
+
+    Useful for writing subscripts (e.g. python -c code) in shell files without
+    having to resort to ugly indentation.
     """
     __command__ = 'codeblock'
-    __default__ = {
-        'text': scfg.Value('', position=1, help='text to dedent'),
-    }
+    __epilog__ = """
+    Example Usage
+    -------------
+
+    python -c "$(xdev codeblock "
+        import pathlib
+        print(list(pathlib.Path('.').glob('*')))
+        ")"
+    """
+    text = scfg.Value('', type=str, position=1,
+                      help='text to remove indentation from (i.e. dedent)')
 
     @classmethod
     def main(cls, cmdline=False, **kwargs):
-        config = cls(cmdline=cmdline, data=kwargs)
+        """
+        Example:
+            >>> from xdev.cli.main import *  # NOQA
+            >>> CodeblockCLI.main(cmdline=0, text='foobar')
+        """
+        config = cls.cli(cmdline=cmdline, data=kwargs)
         print(ub.codeblock(config['text']))
 
 
