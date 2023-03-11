@@ -8,6 +8,15 @@ from xdev import util
 import time
 
 
+def _stop_rich_live_contexts():
+    # Stop any rich live context.
+    if 'rich' in sys.modules:
+        import rich
+        console = rich.get_console()
+        if console._live is not None:
+            console._live.__exit__(None, None, None)
+
+
 def embed(parent_locals=None, parent_globals=None, exec_lines=None,
           remove_pyqt_hook=True, n=0):
     """
@@ -19,10 +28,8 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         program if embed is called in a loop. Specifically if you want to quit
         and not embed again, then set qqq=1 before exiting the embed session.
     """
-    from xdev._ipython_ext import embed2
-    # import IPython
-    import xdev  # NOQA
-    import xdev as xd  # NOQA
+    if 1:
+        _stop_rich_live_contexts()
     import os
 
     if parent_globals is None:
@@ -59,6 +66,11 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         # Disable common annoyance loggers
         import logging
         logging.getLogger('parso').setLevel(logging.INFO)
+
+    from xdev._ipython_ext import embed2
+    # import IPython
+    import xdev  # NOQA
+    import xdev as xd  # NOQA
 
     #from IPython.config.loader import Config
     # cfg = Config()

@@ -26,12 +26,11 @@ modal = ModalCLI(description=ub.codeblock(
 
 
 @modal
-class InfoCLI(scfg.Config):
+class InfoCLI(scfg.DataConfig):
     """
     Info about xdev
     """
     __command__ = 'info'
-    __default__ = {}
 
     @classmethod
     def main(cls, cmdline=False, **kwargs):
