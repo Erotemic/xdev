@@ -15,7 +15,7 @@ numpy>=1.19.2    ; python_version < '3.9' and python_version >= '3.8'    # Pytho
 numpy>=1.14.5    ; python_version < '3.8' and python_version >= '3.7'    # Python 3.7
 numpy>=1.12.0    ; python_version < '3.7' and python_version >= '3.6'    # Python 3.6
 
-# python ~/local/tools/supported_python_versions_pip.py line_profiler
+# xdev availpkg line_profiler
 
 # -e git://github.com/pyutils/line_profiler.git@master#egg=line_profiler
 # -e https://github.com/pyutils/line_profiler/tarball/master#egg=line_profiler

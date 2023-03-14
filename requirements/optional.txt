@@ -1,5 +1,5 @@
-# python ~/local/tools/supported_python_versions_pip.py Levenshtein
-# python ~/local/tools/supported_python_versions_pip.py rapidfuzz
+# xdev availpkg Levenshtein
+# xdev availpkg rapidfuzz
 Levenshtein>=0.20.3    ; python_version < '4.0'  and python_version >= '3.11'    # Python 3.11+
 Levenshtein>=0.18.2    ; python_version < '3.11' and python_version >= '3.10'    # Python 3.10
 Levenshtein>=0.18.0    ; python_version < '3.10' and python_version >= '3.9'     # Python 3.9
@@ -9,7 +9,7 @@ Levenshtein>=0.18.0    ; python_version < '3.7'  and python_version >= '3.6'    
 
 fire >= 0.4.0
 
-# python ~/local/tools/supported_python_versions_pip.py line_profiler
+# xdev availpkg line_profiler
 line_profiler>=4.0.0     ; python_version < '4.0'  and python_version >= '3.11'    # Python 3.11+
 line_profiler>=3.4.0     ; python_version < '3.11' and python_version >= '3.10'    # Python 3.10
 line_profiler>=3.4.0     ; python_version < '3.10' and python_version >= '3.9'     # Python 3.9
