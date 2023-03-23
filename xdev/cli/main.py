@@ -73,7 +73,7 @@ class CodeblockCLI(scfg.DataConfig):
 
 
 @modal
-class SedCLI(scfg.Config):
+class SedCLI(scfg.DataConfig):
     """
     Search and replace text in files
     """
@@ -107,7 +107,7 @@ class SedCLI(scfg.Config):
     @classmethod
     def main(cls, cmdline=False, **kwargs):
         from xdev import search_replace
-        config = cls(cmdline=cmdline, data=kwargs)
+        config = cls.cli(cmdline=cmdline, data=kwargs)
         if config['verbose'] > 2:
             print('config = {}'.format(ub.repr2(dict(config), nl=1, sort=0)))
 
@@ -124,7 +124,7 @@ class SedCLI(scfg.Config):
 
 
 @modal
-class FindCLI(scfg.Config):
+class FindCLI(scfg.DataConfig):
     """
     Find matching files or paths in a directory.
 
@@ -158,13 +158,13 @@ class FindCLI(scfg.Config):
     @classmethod
     def main(cls, cmdline=False, **kwargs):
         from xdev import search_replace
-        config = cls(cmdline=cmdline, data=kwargs)
+        config = cls.cli(cmdline=cmdline, data=kwargs)
         for found in search_replace.find(**config):
             print(found)
 
 
 @modal
-class TreeCLI(scfg.Config):
+class TreeCLI(scfg.DataConfig):
     """
     List a directory like a tree
 
@@ -190,13 +190,13 @@ class TreeCLI(scfg.Config):
     @classmethod
     def main(cls, cmdline=False, **kwargs):
         import xdev
-        config = cls(cmdline=cmdline, data=kwargs)
+        config = cls.cli(cmdline=cmdline, data=kwargs)
         xdev.tree_repr(**config)
         # print()
 
 
 @modal
-class PintCLI(scfg.Config):
+class PintCLI(scfg.DataConfig):
     """
     Converts one type of unit to another via the pint library.
 
@@ -226,7 +226,7 @@ class PintCLI(scfg.Config):
     def main(cls, cmdline=False, **kwargs):
         import pint
         ureg = pint.UnitRegistry()
-        args = cls(cmdline=cmdline, data=kwargs)
+        args = cls.cli(cmdline=cmdline, data=kwargs)
         input = ureg.parse_expression(args['input_expr'])
         output_unit = args['output_unit']
         if output_unit is None:
@@ -239,7 +239,7 @@ class PintCLI(scfg.Config):
 
 
 @modal
-class PyfileCLI(scfg.Config):
+class PyfileCLI(scfg.DataConfig):
     """
     Prints the path corresponding to a Python module.
 
@@ -272,13 +272,13 @@ class PyfileCLI(scfg.Config):
 
     @classmethod
     def main(cls, cmdline=False, **kwargs):
-        args = cls(cmdline=cmdline, data=kwargs)
+        args = cls.cli(cmdline=cmdline, data=kwargs)
         modpath = ub.modname_to_modpath(args['modname'])
         print(modpath)
 
 
 @modal
-class PyVersionCLI(scfg.Config):
+class PyVersionCLI(scfg.DataConfig):
     """
     Detect and print the version of a Python module or package.
 
@@ -320,7 +320,7 @@ class PyVersionCLI(scfg.Config):
 
     @classmethod
     def main(cls, cmdline=False, **kwargs):
-        args = cls(cmdline=cmdline, data=kwargs)
+        args = cls.cli(cmdline=cmdline, data=kwargs)
         modname = args['modname']
 
         if args['backend'] == 'auto':
@@ -355,7 +355,7 @@ class PyVersionCLI(scfg.Config):
 
 
 @modal
-class FormatQuotesCLI(scfg.Config):
+class FormatQuotesCLI(scfg.DataConfig):
     """
     Use single quotes for code and double quotes for docs.
 
@@ -386,12 +386,12 @@ class FormatQuotesCLI(scfg.Config):
     @classmethod
     def main(cls, cmdline=False, **kwargs):
         from xdev import format_quotes
-        config = cls(cmdline=cmdline, data=kwargs)
+        config = cls.cli(cmdline=cmdline, data=kwargs)
         format_quotes.format_quotes(**config)
 
 
 @modal
-class FreshPyenvCLI(scfg.Config):
+class FreshPyenvCLI(scfg.DataConfig):
     """
     Create a fresh environment in a docker container to test a Python package.
 
@@ -406,13 +406,13 @@ class FreshPyenvCLI(scfg.Config):
 
     @classmethod
     def main(cls, cmdline=False, **kwargs):
-        config = cls(cmdline=cmdline, data=kwargs)
+        config = cls.cli(cmdline=cmdline, data=kwargs)
         import ubelt as ub
         ub.cmd(f'freshpyenv.sh --image={config["image"]}', system=True)
 
 
 @modal
-class DocstrStubgenCLI(scfg.Config):
+class DocstrStubgenCLI(scfg.DataConfig):
     """
     Generate Typed Stubs from Docstrings (experimental)
 
@@ -434,7 +434,7 @@ class DocstrStubgenCLI(scfg.Config):
     @classmethod
     def main(cls, cmdline=False, **kwargs):
         from xdev.cli import docstr_stubgen
-        config = cls(cmdline=cmdline, data=kwargs)
+        config = cls.cli(cmdline=cmdline, data=kwargs)
         print(f'config={config}')
         modname_or_path = config['module']
         print(f'modname_or_path={modname_or_path}')
@@ -457,7 +457,7 @@ class DocstrStubgenCLI(scfg.Config):
 
 
 @modal
-class AvailablePackageCLI(scfg.Config):
+class AvailablePackageCLI(scfg.DataConfig):
     __command__ = 'available_package_versions'
     __alias__ = ['availpkg']
     __default__ = available_package_versions.AvailablePackageConfig.__default__
