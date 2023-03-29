@@ -102,7 +102,7 @@ class RegexBuilder:
 
     @property
     def nongreedy(self):
-        return self.special['nongreedy_kleene_star']
+        return self.special['nongreedy_zero_or_more']
 
     @property
     def number(self):
