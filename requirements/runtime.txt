@@ -1,4 +1,4 @@
-ubelt >= 1.2.0
+ubelt >= 1.2.3
 xinspect >= 0.2.0
 pyfiglet >= 0.7
 pygments >= 2.12.0
