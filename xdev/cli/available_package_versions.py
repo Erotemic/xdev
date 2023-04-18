@@ -10,6 +10,7 @@ CommandLine:
     xdev availpkg line_profiler
     xdev availpkg uritools
     xdev availpkg textual
+    xdev availpkg networkx
 """
 import scriptconfig as scfg
 import ubelt as ub
@@ -562,6 +563,8 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
                 heuristic_support = set(contemporary_pyvers) & set(declared_support)
                 max_pyver = max(heuristic_support, key=Version)
 
+            if min_pyver == 'any':
+                min_pyver = '2.7'
             if min_pyver == 'py2.py3':
                 min_pyver = '2.7'
             if min_pyver == 'py3':
@@ -635,7 +638,11 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
 
     for min_pyver, subdf in sorted(new_table.groupby('min_pyver'), key=lambda x: Version(x[0])):
         # print('--- min_pyver = {!r} --- '.format(min_pyver))
-        version_to_support = dict(list(subdf.groupby('version')))
+
+        if 'version' in subdf.columns:
+            version_to_support = dict(list(subdf.groupby('version')))
+        else:
+            version_to_support = dict(list(subdf.groupby('pkg_version')))
 
         cand_to_score = {}
         try:
@@ -646,16 +653,17 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
             maybe_ok_keys = [k for k in maybe_bad_keys if '.dev0' not in k]
             version_to_support = ub.dict_subset(version_to_support, maybe_ok_keys)
 
-        combo_values = {
-            ('linux', 'x86_64'): 101,
-            ('macosx', 'x86_64'): 5,
-            ('win', 'x86_64'): 11,
-        }
-        for cand, support in version_to_support.items():
-            has_combos = support.value_counts(['os', 'arch']).index.tolist()
-            total_have = sum(combo_values.get(k, 0) for k in has_combos)
-            score = total_have
-            cand_to_score[cand] = score
+        if 'os' in subdf.columns and 'arch' in subdf.columns:
+            combo_values = {
+                ('linux', 'x86_64'): 101,
+                ('macosx', 'x86_64'): 5,
+                ('win', 'x86_64'): 11,
+            }
+            for cand, support in version_to_support.items():
+                has_combos = support.value_counts(['os', 'arch']).index.tolist()
+                total_have = sum(combo_values.get(k, 0) for k in has_combos)
+                score = total_have
+                cand_to_score[cand] = score
 
         cand_to_score = ub.sorted_vals(cand_to_score)
         cand_to_score = ub.sorted_keys(cand_to_score, key=Version)

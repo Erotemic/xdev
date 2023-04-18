@@ -14,7 +14,8 @@ __all__ = [
     'IS_PROFILING',
 ]
 
-IS_PROFILING = os.environ.get('XDEV_PROFILE', '').lower() in {'1', 'on', 'true', 'yes'}
+_FALSY_STRINGS = {'', '0', 'off', 'false', 'no'}
+IS_PROFILING = os.environ.get('XDEV_PROFILE', '').lower() not in _FALSY_STRINGS
 IS_PROFILING = IS_PROFILING or '--profile' in sys.argv
 
 

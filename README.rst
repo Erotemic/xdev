@@ -1,7 +1,7 @@
 Xdev - Excellent Developer
 --------------------------
 
-|GithubActions| |CircleCI| |Codecov| |Pypi| |Downloads| |ReadTheDocs|
+|GithubActions| |Codecov| |Pypi| |Downloads| |ReadTheDocs|
 
 Xdev is an excellent developer tool for excellent developers.
 It contains miscellaneous and/or interactive debugging tools.
@@ -32,10 +32,10 @@ Or wherever I want whenever there is an exception.
         some_code()
 
 
-I don't feel like I need  ``ipdb``'s other features. 
+I don't feel like I need  ``ipdb``'s other features.
 
 
-I also like to 
+I also like to
 
 
 .. code:: python
@@ -50,7 +50,7 @@ I also like to
             6
         """
 
-But I know these things are a little dirty. 
+But I know these things are a little dirty.
 
 But these aren't production practices. These are development tricks and life
 hacks to make working faster.
@@ -76,10 +76,6 @@ Also see ``xinspect`` for things like ``autogen_imports``
 https://github.com/Erotemic/xinspect
 
 
-.. |CircleCI| image:: https://circleci.com/gh/Erotemic/xdev.svg?style=svg
-    :target: https://circleci.com/gh/Erotemic/xdev
-.. |Travis| image:: https://img.shields.io/travis/Erotemic/xdev/master.svg?label=Travis%20CI
-   :target: https://travis-ci.org/Erotemic/xdev?branch=master
 .. |Appveyor| image:: https://ci.appveyor.com/api/projects/status/github/Erotemic/xdev?branch=master&svg=True
    :target: https://ci.appveyor.com/project/Erotemic/xdev/branch/master
 .. |Codecov| image:: https://codecov.io/github/Erotemic/xdev/badge.svg?branch=master&service=github

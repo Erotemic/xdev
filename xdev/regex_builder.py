@@ -11,6 +11,11 @@ class RegexBuilder:
 
     References:
         .. [SO12689046] https://stackoverflow.com/questions/12689046/multiple-negative-lookbehind-assertions-in-python-regex
+
+    Example:
+        b = RegexBuilder.coerce('python')
+        import re
+        pat = re.compile('[A-Z-]+')
     """
     common_patterns = [
         {'key': 'word',      'pattern': r'\w', 'docs': r'An alphanumeric word, i.e. [a-zA-Z0-9_] (also matches unicode characters in Python)'},

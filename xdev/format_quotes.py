@@ -12,6 +12,9 @@ CommandLine:
     # See it in action
     FPATH=$(python -c "import six; print(six.__file__)")
     python -m xdev.format_quotes $FPATH --diff=True
+
+TODO:
+    * rope: https://github.com/python-rope/rope or parso
 """
 import redbaron
 import ubelt as ub
