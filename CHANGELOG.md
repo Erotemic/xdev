@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 * Switched to scriptconfig ModalCLI
 * `xdev.embed` now stops any rich live context that may running.
+* Switch default backend of format-quotes from redbaron to parso
 
 
 ## Version 1.1.1 - Released 2023-02-06 

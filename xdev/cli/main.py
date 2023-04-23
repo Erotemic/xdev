@@ -371,7 +371,7 @@ class FormatQuotesCLI(scfg.DataConfig):
             '''
             The pattern to replace with.
             ''')),
-        'write': scfg.Value(False, short_alias=['-w'], help=ub.paragraph(
+        'write': scfg.Value(False, isflag=True, short_alias=['w'], help=ub.paragraph(
             '''
             The directory to recursively search or a file pattern to match.
             '''
