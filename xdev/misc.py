@@ -467,3 +467,14 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
     if return_tree:
         info['tree'] = tree
     return info
+
+
+def textfind(text, pattern):
+    """
+    Return a colored text that highlights the pattern
+    """
+    import re
+    pat = re.compile('(' + pattern + ')')
+    parts = pat.split(text)
+    new_text = ''.join([p if idx % 2 == 0 else ub.color_text(p, 'red') for idx, p in enumerate(parts)])
+    print(new_text)

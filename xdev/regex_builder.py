@@ -30,25 +30,45 @@ class RegexBuilder:
     def __init__(self):
         raise Exception('Use ``RegexBuilder.coerce(backend=...)`` instead')
 
-    def lookahead(self, pat, positive=True):
+    def lookahead(self, pat, positive=True, mode='positive'):
         """
         A lookahead pattern that can be positive or negative
 
         looklook
         """
-        if positive:
+        if positive is not None:
+            import ubelt as ub
+            ub.schedule_deprecation(
+                'xdev', 'positive', 'arg to lookbehind',
+                migration='use mode=positive or mode=negative instead',
+                deprecate='now')
+            mode = 'positive' if positive else 'negative'
+
+        if mode == 'positive':
             return self.constructs['positive_lookahead'].format(pat=pat)
-        else:
+        elif mode == 'negative':
             return self.constructs['negative_lookahead'].format(pat=pat)
+        else:
+            raise KeyError(mode)
 
     def lookbehind(self, pat, positive=True):
         """
         A lookbehind pattern that can be positive or negative
         """
-        if positive:
+        if positive is not None:
+            import ubelt as ub
+            ub.schedule_deprecation(
+                'xdev', 'positive', 'arg to lookbehind',
+                migration='use mode=positive or mode=negative instead',
+                deprecate='now')
+            mode = 'positive' if positive else 'negative'
+
+        if mode == 'positive':
             return self.constructs['positive_lookbehind'].format(pat=pat)
-        else:
+        elif mode == 'negative':
             return self.constructs['negative_lookbehind'].format(pat=pat)
+        else:
+            raise KeyError(mode)
 
     def named_field(self, pat, name=None):
         if name is None:

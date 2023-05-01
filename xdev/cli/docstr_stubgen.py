@@ -86,6 +86,11 @@ Stub = ...  # hack for mypy. Not sure why it is generated in the first place.
 def _hack_away_compiled_mypy():
     """
     Worked with: mypy-0.970+dev.ddbea6988c0913c70ed16cd2fda6064e301b4b63
+
+    Note:
+        # Can also do
+        pip uninstall mypy
+        pip install -U mypy --no-binary :all:
     """
     # This doesn't seem to work. The only thing that has worked so far is a
     # custom checkout and developer install. Not sure why that is the case.
