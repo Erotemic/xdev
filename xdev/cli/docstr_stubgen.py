@@ -835,10 +835,11 @@ class ExtendedStubGenerator(StubGenerator):
                 # handle None specificaly.
                 if hasattr(arg_.initializer, 'name') and arg_.initializer.name == 'None':
                     info = name_to_parsed_docstr_info[name]
-                    doctype_str = info['type'].replace(' ', '')
-                    if all(n not in doctype_str for n in {'None', 'Optional'}):
-                        info['type'] = info['type'] + ' | None'
-                        self.add_typing_import('Union')
+                    if info['type'] is not None:
+                        doctype_str = info['type'].replace(' ', '')
+                        if all(n not in doctype_str for n in {'None', 'Optional'}):
+                            info['type'] = info['type'] + ' | None'
+                            self.add_typing_import('Union')
         # ------------------------------------------
 
         args: List[str] = []

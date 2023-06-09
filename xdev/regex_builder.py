@@ -185,6 +185,53 @@ class VimRegexBuilder(RegexBuilder):
         for item in self.common_patterns + self.vim_patterns:
             self.special[item['key']] = item['pattern']
 
+    def previous(self, min=None, max=None, exact=None, greedy=True):
+        r"""
+        Match the previous pattern some number of times.
+
+        Args:
+            min (int | None): minimum number of matches
+
+            max (int | None): maximum number of matches
+
+            exact (int | None):
+                Specify exact number of matches.
+                Mutex with minimum and max.
+
+            greedy (bool):
+                if True match as many as possible, otherwise match as few as
+                possible
+
+        Example:
+            >>> from xdev.regex_builder import *  # NOQA
+            >>> b = VimRegexBuilder()
+            >>> assert b.previous(exact=1) == r'\{1}'
+            >>> assert b.previous(min=1, max=3) == r'\{1,3}'
+            >>> assert b.previous(min=1, max=3, greedy=False) == '\{-1,3}'
+            >>> assert b.previous(max=3) == '\{,3}'
+            >>> assert b.previous(min=3) == '\{3,}'
+            >>> assert b.previous() == '*'
+            >>> assert b.previous(greedy=False) == '\{-}'
+        """
+        if exact is not None:
+            assert min is None and max is None
+            expr = f'\\{{{exact}}}'
+        else:
+            if min is None:
+                min = 0
+            if max == float('inf'):
+                max = None
+            if min == 0 and max is None:
+                return '*' if greedy else '\\{-}'
+            greed = '' if greedy else '-'
+            if max is None:
+                expr = f'\\{{{greed}{min},}}'
+            elif min == 0:
+                expr = f'\\{{{greed},{max}}}'
+            else:
+                expr = f'\\{{{greed}{min},{max}}}'
+        return expr
+
 
 class PythonRegexBuilder(RegexBuilder):
     r"""
@@ -248,3 +295,58 @@ class PythonRegexBuilder(RegexBuilder):
         self.special = {}
         for item in self.common_patterns + self.python_patterns:
             self.special[item['key']] = item['pattern']
+
+    def previous(self, min=None, max=None, exact=None, greedy=True):
+        """
+        Match the previous pattern some number of times.
+
+        Args:
+            min (int | None): minimum number of matches
+
+            max (int | None): maximum number of matches
+
+            exact (int | None):
+                Specify exact number of matches.
+                Mutex with minimum and max.
+
+            greedy (bool):
+                if True match as many as possible, otherwise match as few as
+                possible
+
+        Example:
+            >>> from xdev.regex_builder import *  # NOQA
+            >>> b = PythonRegexBuilder()
+            >>> assert b.previous(exact=1) == '{1}'
+            >>> assert b.previous(min=1, max=3) == '{1,3}'
+            >>> assert b.previous(min=1, max=3, greedy=False) == '{1,3}?'
+            >>> assert b.previous(max=3) == '{,3}'
+            >>> assert b.previous(min=3) == '{3,}'
+            >>> assert b.previous() == '*'
+            >>> assert b.previous(greedy=False) == '*?'
+
+        Example:
+            >>> from xdev.regex_builder import *  # NOQA
+            >>> b = PythonRegexBuilder()
+            >>> assert re.compile('a' + b.previous(exact=2) + '$').match('aa')
+            >>> assert not re.compile('a' + b.previous(exact=2) + '$').match('aaa')
+            >>> assert not re.compile('a' + b.previous(exact=2) + '$').match('a')
+        """
+        if exact is not None:
+            assert min is None and max is None
+            expr = f'{{{exact}}}'
+        else:
+            if min is None:
+                min = 0
+            if max == float('inf'):
+                max = None
+            if min == 0 and max is None:
+                return '*' if greedy else '*?'
+            if max is None:
+                expr = f'{{{min},}}'
+            elif min == 0:
+                expr = f'{{,{max}}}'
+            else:
+                expr = f'{{{min},{max}}}'
+            if not greedy:
+                expr = expr + '?'
+        return expr
