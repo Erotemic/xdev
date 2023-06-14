@@ -4,10 +4,83 @@ Functions related to interacting with data via an OS Desktop GUI.
 from os.path import normpath
 from os.path import exists
 from os.path import sys
-from six import types
+import types
 import os
-import six
+import warnings
 import ubelt as ub
+
+
+def _coerce_editable_fpath(target):
+    """
+    Rules for coercing inputs to ``editfile`` into a path.
+
+    Args:
+        target (str | PathLike | ModuleType): something coercable to a path
+
+    Returns:
+        ub.Path
+    """
+    fpath = None
+    if isinstance(target, str):
+        # String inputs are ambiguous. Ambiguous case, is this a module name or a full path?
+        if exists(target):
+            fpath = ub.Path(target)
+        else:
+            # Perhaps this is a module name we want to edit?
+            modpath = ub.modname_to_modpath(target)
+            if modpath is not None:
+                fpath = ub.Path(modpath)
+
+    elif isinstance(fpath, types.ModuleType):
+        if isinstance(fpath, types.ModuleType):
+            fpath = fpath.__file__
+        else:
+            fpath =  sys.modules[fpath.__module__].__file__
+    elif isinstance(fpath, os.PathLike):
+        fpath = ub.Path(fpath)
+    else:
+        raise TypeError(f"Unable to coerce {target} into a file path")
+
+    if fpath is None:
+        raise Exception(f"Unable to interpret {target} as a module name or file path")
+
+    # Resolve a pyc file to a py file if possible.
+    if fpath.suffix == '.pyc':
+        fpath_py = fpath.augment(ext='.py')
+        if fpath_py.exists():
+            fpath = fpath_py
+
+    return fpath
+
+
+def _find_editor():
+    """
+    Try to find an editor program.
+    """
+    editor_name = os.environ.get('VISUAL', None)
+    editor_fpath = editor_name and ub.find_exe(editor_name)
+    if editor_fpath is None:
+        if editor_name is not None:
+            warnings.warn('User specified VISUAL={editor_name}, but it does not exist.', UserWarning)
+        # Try and fallback on commonly installed editor
+        # TODO: add more editors in an opinionated order
+        editor_candidates = [
+            'gvim',
+            'code',  # visual studio code
+            'gedit',
+            'TextEdit'
+            'Notepad',
+        ]
+        for cand_name in editor_candidates:
+            cand_fpath = ub.find_exe(cand_name)
+            if cand_fpath:
+                editor_fpath = cand_fpath
+                break
+
+    if editor_fpath is None:
+        raise IOError('Unable to find an existing VISUAL editor')
+
+    return editor_fpath
 
 
 def editfile(fpath, verbose=True):
@@ -16,11 +89,17 @@ def editfile(fpath, verbose=True):
     preferred visual editor. This function is mainly useful in an interactive
     IPython session.
 
-    The visual editor is determined by the `VISUAL` environment variable.  If
+    The visual editor is determined by the ``VISUAL`` environment variable.  If
     this is not specified it defaults to gvim.
 
     Args:
-        fpath (PathLike): a file path or python module / function
+        fpath (PathLike | ModuleType | str):
+            a file path or python module / function. If the input is a string
+            it will interpret it either as a Path or a module name. Ambiguity
+            is resolved by choosing a path if the string resolves to an
+            existing path, and then checking if the string corresponds to a
+            module name.
+
         verbose (int): verbosity
 
     Example:
@@ -31,35 +110,18 @@ def editfile(fpath, verbose=True):
         >>> ub.editfile(xdev)
         >>> ub.editfile(xdev.editfile)
     """
-    if not isinstance(fpath, six.string_types):
-        if isinstance(fpath, types.ModuleType):
-            fpath = fpath.__file__
-        else:
-            fpath =  sys.modules[fpath.__module__].__file__
-        fpath_py = fpath.replace('.pyc', '.py')
-        if exists(fpath_py):
-            fpath = fpath_py
+    fpath = _coerce_editable_fpath(fpath)
 
     if verbose:
         print('[xdev] editfile("{}")'.format(fpath))
 
-    editor = os.environ.get('VISUAL', 'gvim')
-    if not ub.find_exe(editor):
-        import warnings
-        warnings.warn('Cannot find visual editor={}'.format(editor), UserWarning)
-        # Try and fallback on commonly installed editor
-        alt_candidates = [
-            'gedit',
-            'TextEdit'
-            'Notepad',
-        ]
-        for cand in alt_candidates:
-            if ub.find_exe(cand):
-                editor = cand
-
+    editor_fpath = _find_editor()
     if not exists(fpath):
         raise IOError('Cannot start nonexistant file: %r' % fpath)
-    ub.cmd([editor, fpath], fpath, detach=True)
+
+    if verbose:
+        print('[xdev] using "{}"'.format(editor_fpath))
+    ub.cmd([editor_fpath, fpath], fpath, detach=True)
 
 
 def view_directory(dpath=None, verbose=False):

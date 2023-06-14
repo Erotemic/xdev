@@ -503,7 +503,7 @@ def graph_str(graph, with_labels=True, sources=None, write=None, ascii_only=Fals
     Example
     -------
     >>> graph = nx.balanced_tree(r=2, h=3, create_using=nx.DiGraph)
-    >>> print(nx.graph_str(graph))
+    >>> print(graph_str(graph))
     ╙── 0
         ├─╼ 1
         │   ├─╼ 3
@@ -522,12 +522,12 @@ def graph_str(graph, with_labels=True, sources=None, write=None, ascii_only=Fals
 
 
     >>> graph = nx.balanced_tree(r=1, h=2, create_using=nx.Graph)
-    >>> print(nx.graph_str(graph))
+    >>> print(graph_str(graph))
     ╙── 0
         └── 1
             └── 2
 
-    >>> print(nx.graph_str(graph, ascii_only=True))
+    >>> print(graph_str(graph, ascii_only=True))
     +-- 0
         L-- 1
             L-- 2

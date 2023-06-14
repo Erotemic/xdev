@@ -93,6 +93,7 @@ def sidecar_glob(main_pat, sidecar_ext, main_key='main', sidecar_key=None,
         together.
 
     Example:
+        >>> from xdev.util_path import *  # NOQA
         >>> dpath = ub.Path.appdir('xdev/tests/sidecar_glob')
         >>> dpath.delete().ensuredir()
         >>> (dpath / 'file1').touch()
@@ -105,7 +106,7 @@ def sidecar_glob(main_pat, sidecar_ext, main_key='main', sidecar_key=None,
         >>> (dpath / 'file6').touch()
         >>> (dpath / 'file6.car').touch()
         >>> (dpath / 'file7.bike').touch()
-        >>> def _handle_resulst(results):
+        >>> def _handle_results(results):
         ...     results = list(results)
         ...     for row in results:
         ...         for k, v in row.items():
@@ -117,11 +118,13 @@ def sidecar_glob(main_pat, sidecar_ext, main_key='main', sidecar_key=None,
         >>> sidecar_key = '.car'
         >>> sidecar_ext = '.car'
         >>> main_pat = dpath / '*'
-        >>> _handle_resulst(sidecar_glob(main_pat, sidecar_ext))
-        >>> _handle_resulst(sidecar_glob(dpath / '*.ext', '.car'))
-        >>> _handle_resulst(sidecar_glob(dpath / '*.car', '.car'))
-        >>> _handle_resulst(sidecar_glob(dpath / 'file*.ext', '.car'))
-        >>> _handle_resulst(sidecar_glob(dpath / '*', '.ext'))
+        >>> _handle_results(sidecar_glob(main_pat, sidecar_ext))
+        >>> _handle_results(sidecar_glob(dpath / '*.ext', '.car'))
+        >>> import pytest
+        >>> with pytest.warns():
+        >>>     _handle_results(sidecar_glob(dpath / '*.car', '.car'))
+        >>> _handle_results(sidecar_glob(dpath / 'file*.ext', '.car'))
+        >>> _handle_results(sidecar_glob(dpath / '*', '.ext'))
     """
     from xdev import patterns as util_pattern
     import warnings

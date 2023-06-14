@@ -207,11 +207,11 @@ class VimRegexBuilder(RegexBuilder):
             >>> b = VimRegexBuilder()
             >>> assert b.previous(exact=1) == r'\{1}'
             >>> assert b.previous(min=1, max=3) == r'\{1,3}'
-            >>> assert b.previous(min=1, max=3, greedy=False) == '\{-1,3}'
-            >>> assert b.previous(max=3) == '\{,3}'
-            >>> assert b.previous(min=3) == '\{3,}'
+            >>> assert b.previous(min=1, max=3, greedy=False) == r'\{-1,3}'
+            >>> assert b.previous(max=3) == r'\{,3}'
+            >>> assert b.previous(min=3) == r'\{3,}'
             >>> assert b.previous() == '*'
-            >>> assert b.previous(greedy=False) == '\{-}'
+            >>> assert b.previous(greedy=False) == r'\{-}'
         """
         if exact is not None:
             assert min is None and max is None
@@ -297,7 +297,7 @@ class PythonRegexBuilder(RegexBuilder):
             self.special[item['key']] = item['pattern']
 
     def previous(self, min=None, max=None, exact=None, greedy=True):
-        """
+        r"""
         Match the previous pattern some number of times.
 
         Args:

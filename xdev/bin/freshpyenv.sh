@@ -115,7 +115,7 @@ inside_docker_setup(){
     #pip install pip setuptools -U
 
     echo "
-Fresh development environment has been setup. 
+Fresh development environment has been setup.
 
 You can now run some variant to install your repo. For example typical
 xcookie-style repos can be installed via. E.g.
