@@ -1,12 +1,12 @@
 from os import PathLike
-from typing import Union
+from types import ModuleType
 
 
-def editfile(fpath: PathLike, verbose: int = True) -> None:
+def editfile(fpath: PathLike | ModuleType | str, verbose: int = True) -> None:
     ...
 
 
-def view_directory(dpath: Union[PathLike, None] = None,
+def view_directory(dpath: PathLike | None = None,
                    verbose: bool = False) -> None:
     ...
 

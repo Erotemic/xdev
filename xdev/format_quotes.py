@@ -12,14 +12,22 @@ CommandLine:
     # See it in action
     FPATH=$(python -c "import six; print(six.__file__)")
     python -m xdev.format_quotes $FPATH --diff=True
+
+TODO:
+    * rope: https://github.com/python-rope/rope or parso
 """
-import redbaron
 import ubelt as ub
 import re
 import xdev
 
 
-def format_quotes_in_text(text):
+SINGLE_QUOTE = chr(39)
+DOUBLE_QUOTE = chr(34)
+TRIPLE_SINGLE_QUOTE = SINGLE_QUOTE * 3
+TRIPLE_DOUBLE_QUOTE = DOUBLE_QUOTE * 3
+
+
+def format_quotes_in_text(text, backend='parso'):
     """
     Reformat text according to formatting rules
 
@@ -28,45 +36,70 @@ def format_quotes_in_text(text):
 
     Returns:
         str: modified text
+
+    Example:
+        >>> # xdoctest: +REQUIRES(module:parso)
+        >>> from xdev.format_quotes import *  # NOQA
+        >>> text = ub.codeblock(
+        ...     f'''
+        ...     def func1():
+        ...         {TRIPLE_SINGLE_QUOTE}
+        ...         Fix this.
+        ...         {TRIPLE_SINGLE_QUOTE}
+        ...
+        ...     def func2():
+        ...         {TRIPLE_DOUBLE_QUOTE}
+        ...         Leave the doctests alone!
+        ...         {TRIPLE_DOUBLE_QUOTE}
+        ...
+        ...     string1 = "fix these"
+        ...     string2 = "don't fix these"
+        ...     string3 = {TRIPLE_SINGLE_QUOTE}this is ok{TRIPLE_SINGLE_QUOTE}
+        ...     string4 = {TRIPLE_DOUBLE_QUOTE}fix this{TRIPLE_DOUBLE_QUOTE}
+        ...
+        ...     def func3():
+        ...         inside_string1 = "fix these"
+        ...         inside_string2 = "don't fix these"
+        ...         inside_string3 = {TRIPLE_SINGLE_QUOTE}this is ok{TRIPLE_SINGLE_QUOTE}
+        ...         inside_string4 = {TRIPLE_DOUBLE_QUOTE}fix this{TRIPLE_DOUBLE_QUOTE}
+        ...     ''')
+        >>> print(text)
+        >>> fixed = format_quotes_in_text(text)
+        >>> print(fixed)
+        >>> import xdev
+        >>> fixed = format_quotes_in_text(text, backend='parso')
+        >>> print('----')
+        >>> print(xdev.difftext(text, fixed, colored=True))
+        >>> # xdoctest: +REQUIRES(module:redbaron)
+        >>> print('----')
+        >>> fixed = format_quotes_in_text(text, backend='redbaron')
+        >>> print('----')
+        >>> print(xdev.difftext(text, fixed, colored=True))
+        >>> print('----')
     """
-    # TODO: can we move to parso?
-    red = redbaron.RedBaron(text)
 
-    single_quote = chr(39)
-    double_quote = chr(34)
-    triple_single_quote = single_quote * 3
-    triple_double_quote = double_quote * 3
-
-    for found in red.find_all('string'):
-
-        value = found.value
+    def fix_string_value(value, is_docstring=False):
         info = {
             'quote_type': None,
-            'is_docstring': None,
+            'is_docstring': is_docstring,
             'is_assigned_or_passed': None,  # TODO
             'has_internal_quote': None,
         }
-        if value.startswith(triple_single_quote):
+
+        def quote_variants(quote):
+            prefixes = ['', 'r', 'f', 'rf']
+            return tuple([p + quote for p in prefixes])
+
+        if value.startswith(quote_variants(TRIPLE_SINGLE_QUOTE)):
             info['quote_type'] = 'triple_single'
-        elif value.startswith(triple_double_quote):
+        elif value.startswith(quote_variants(TRIPLE_DOUBLE_QUOTE)):
             info['quote_type'] = 'triple_double'
-        elif value.startswith(single_quote):
+        elif value.startswith(quote_variants(SINGLE_QUOTE)):
             info['quote_type'] = 'single'
-        elif value.startswith(double_quote):
+        elif value.startswith(quote_variants(DOUBLE_QUOTE)):
             info['quote_type'] = 'double'
         else:
-            raise AssertionError
-
-        if isinstance(found.parent, redbaron.RedBaron):
-            # module docstring or global string
-            info['is_docstring'] = found.parent[0] == found
-        elif found.parent.type in {'class', 'def'}:
-            info['is_docstring'] = found.parent[0] == found
-        elif isinstance(found.parent, redbaron.NodeList):
-            info['is_docstring'] = '?'
-            raise Exception
-        else:
-            info['is_docstring'] = False
+            raise AssertionError(value)
 
         if info['quote_type'].startswith('triple'):
             content = value[3:-3]
@@ -74,23 +107,78 @@ def format_quotes_in_text(text):
             content = value[1:-1]
 
         info['has_internal_quote'] = (
-            single_quote in content or double_quote in content)
+            SINGLE_QUOTE in content or DOUBLE_QUOTE in content)
 
         info['has_internal_triple_quote'] = (
-            triple_single_quote in content or triple_double_quote in content)
+            TRIPLE_SINGLE_QUOTE in content or TRIPLE_DOUBLE_QUOTE in content)
 
+        new_value = value
+
+        # print('info = {}'.format(ub.urepr(info, nl=1)))
         if info['quote_type'] == 'triple_single':
             if info['is_docstring']:
                 if not info['has_internal_triple_quote']:
-                    found.value = re.sub(
-                        triple_single_quote, triple_double_quote, value)
+                    new_value = re.sub(
+                        TRIPLE_SINGLE_QUOTE, TRIPLE_DOUBLE_QUOTE, value)
         if info['quote_type'] == 'double':
             if not info['is_docstring']:
                 if not info['has_internal_quote']:
-                    found.value = re.sub(
-                        double_quote, single_quote, value)
+                    new_value = re.sub(
+                        DOUBLE_QUOTE, SINGLE_QUOTE, value)
+        return new_value
 
-    new_text = red.dumps()
+    if backend == 'parso':
+        import parso
+        from parso.normalizer import Normalizer
+
+        class MyNormalizer(Normalizer):
+            def visit(self, node):
+                if node.type == 'string':
+
+                    try:
+                        is_docstring = node.parent.parent.parent.type in {
+                            'funcdef', 'classdef'}
+                    except Exception:
+                        is_docstring = False
+                        ...
+                    # print('----')
+                    # print('node = {}'.format(ub.urepr(node, nl=1)))
+                    # print(f'is_docstring={is_docstring}')
+                    # print(f'node.type={node.type}')
+                    # print(f'node.value={node.value}')
+                    new_value = fix_string_value(node.value, is_docstring=is_docstring)
+                    node.value = new_value
+                    # print(f'new_value={new_value}')
+                return super().visit(node)
+
+        module = parso.parse(text)
+        normalizer = MyNormalizer(None, None)
+        normalizer.walk(module)
+        new_text = module.get_code()
+    elif backend == 'redbaron':
+        # TODO: deprecate, redbaron is no longer maintained
+        import redbaron
+        red = redbaron.RedBaron(text)
+
+        for found in red.find_all('string'):
+
+            value = found.value
+            if isinstance(found.parent, redbaron.RedBaron):
+                # module docstring or global string
+                is_docstring = found.parent[0] == found
+            elif found.parent.type in {'class', 'def'}:
+                is_docstring = found.parent[0] == found
+            elif isinstance(found.parent, redbaron.NodeList):
+                is_docstring = '?'
+                raise Exception
+            else:
+                is_docstring = False
+            new_value = fix_string_value(value, is_docstring=is_docstring)
+            found.value = new_value
+        new_text = red.dumps()
+    else:
+        raise KeyError(backend)
+
     return new_text
 
 

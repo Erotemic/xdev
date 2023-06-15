@@ -1,4 +1,3 @@
-from typing import Union
 from os import PathLike
 from typing import Dict
 import ubelt as ub
@@ -23,7 +22,7 @@ class ChDir:
 
 
 def sidecar_glob(
-        main_pat: Union[str, PathLike],
+        main_pat: str | PathLike,
         sidecar_ext,
         main_key: str = ...,
         sidecar_key: Incomplete | None = ...,
@@ -32,5 +31,5 @@ def sidecar_glob(
     ...
 
 
-def tree(path: Union[str, os.PathLike]) -> Generator[str, None, None]:
+def tree(path: str | os.PathLike) -> Generator[str, None, None]:
     ...

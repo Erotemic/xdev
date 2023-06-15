@@ -229,3 +229,4 @@ def fix_embed_globals():
 
 
 embed_on_exception_context = EmbedOnException()
+embed_on_exception = embed_on_exception_context

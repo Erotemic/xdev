@@ -2,7 +2,6 @@ import numpy
 from typing import Iterable
 from typing import Dict
 from typing import Any
-from typing import Union
 from os import PathLike
 from _typeshed import Incomplete
 from typing import Any
@@ -35,8 +34,8 @@ def difftext(text1: str,
     ...
 
 
-def tree_repr(cwd: Union[None, str, PathLike] = None,
-              max_files: Union[int, None] = 100,
+def tree_repr(cwd: None | str | PathLike = None,
+              max_files: int | None = 100,
               dirblocklist: Incomplete | None = ...,
               show_nfiles: str = ...,
               return_text: bool = False,
@@ -45,4 +44,8 @@ def tree_repr(cwd: Union[None, str, PathLike] = None,
               max_depth: Incomplete | None = ...,
               with_type: bool = ...,
               colors: bool = ...):
+    ...
+
+
+def textfind(text, pattern) -> None:
     ...

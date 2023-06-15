@@ -250,4 +250,35 @@ if __name__ == "__main__":
     setupkw["scripts"] = [
         "xdev/bin/freshpyenv.sh",
     ]
+    # setupkw['package_data'] = {"xdev": ["bash_completion.d/xdev-complete", "py.typed"]}
+    # setupkw['include_package_data'] = True
+    # setupkw['data_files'] = [('bash-completion', [
+    #     'xdev/share/bash-completion/xdev-complete.sh'
+    # ])]
     setup(**setupkw)
+
+"""
+# https://github.com/kislyuk/argcomplete/blob/develop/setup.py
+
+
+mkdir -p $HOME/code/xdev/xdev/bash_completion.d
+register-python-argcomplete xdev --external-argcomplete-script xdev-complete > $HOME/code/xdev/xdev/bash_completion.d/xdev-complete
+
+# Notes on bash completion:
+# https://unix.stackexchange.com/questions/416185/where-to-install-bash-completion-scripts-for-out-of-tree-packages
+
+# https://github.com/scop/bash-completion#faq
+# Put them in the completions subdir of $BASH_COMPLETION_USER_DIR (
+#     defaults to $XDG_DATA_HOME/bash-completion or
+#     ~/.local/share/bash-completion if $XDG_DATA_HOME is not set) to have them
+# loaded automatically on demand when the respective command is being completed.
+
+
+From JFC:
+When installing within the system python, the user scheme will be used. See [1][2]
+
+I think listing you file as data file will do it.
+
+[1] https://packaging.python.org/en/latest/guides/installing-using-linux-tools/
+[2] https://pip.pypa.io/en/stable/user_guide/#user-installs
+"""

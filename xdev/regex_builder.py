@@ -11,6 +11,11 @@ class RegexBuilder:
 
     References:
         .. [SO12689046] https://stackoverflow.com/questions/12689046/multiple-negative-lookbehind-assertions-in-python-regex
+
+    Example:
+        b = RegexBuilder.coerce('python')
+        import re
+        pat = re.compile('[A-Z-]+')
     """
     common_patterns = [
         {'key': 'word',      'pattern': r'\w', 'docs': r'An alphanumeric word, i.e. [a-zA-Z0-9_] (also matches unicode characters in Python)'},
@@ -25,25 +30,45 @@ class RegexBuilder:
     def __init__(self):
         raise Exception('Use ``RegexBuilder.coerce(backend=...)`` instead')
 
-    def lookahead(self, pat, positive=True):
+    def lookahead(self, pat, positive=True, mode='positive'):
         """
         A lookahead pattern that can be positive or negative
 
         looklook
         """
-        if positive:
+        if positive is not None:
+            import ubelt as ub
+            ub.schedule_deprecation(
+                'xdev', 'positive', 'arg to lookbehind',
+                migration='use mode=positive or mode=negative instead',
+                deprecate='now')
+            mode = 'positive' if positive else 'negative'
+
+        if mode == 'positive':
             return self.constructs['positive_lookahead'].format(pat=pat)
-        else:
+        elif mode == 'negative':
             return self.constructs['negative_lookahead'].format(pat=pat)
+        else:
+            raise KeyError(mode)
 
     def lookbehind(self, pat, positive=True):
         """
         A lookbehind pattern that can be positive or negative
         """
-        if positive:
+        if positive is not None:
+            import ubelt as ub
+            ub.schedule_deprecation(
+                'xdev', 'positive', 'arg to lookbehind',
+                migration='use mode=positive or mode=negative instead',
+                deprecate='now')
+            mode = 'positive' if positive else 'negative'
+
+        if mode == 'positive':
             return self.constructs['positive_lookbehind'].format(pat=pat)
-        else:
+        elif mode == 'negative':
             return self.constructs['negative_lookbehind'].format(pat=pat)
+        else:
+            raise KeyError(mode)
 
     def named_field(self, pat, name=None):
         if name is None:
@@ -160,6 +185,53 @@ class VimRegexBuilder(RegexBuilder):
         for item in self.common_patterns + self.vim_patterns:
             self.special[item['key']] = item['pattern']
 
+    def previous(self, min=None, max=None, exact=None, greedy=True):
+        r"""
+        Match the previous pattern some number of times.
+
+        Args:
+            min (int | None): minimum number of matches
+
+            max (int | None): maximum number of matches
+
+            exact (int | None):
+                Specify exact number of matches.
+                Mutex with minimum and max.
+
+            greedy (bool):
+                if True match as many as possible, otherwise match as few as
+                possible
+
+        Example:
+            >>> from xdev.regex_builder import *  # NOQA
+            >>> b = VimRegexBuilder()
+            >>> assert b.previous(exact=1) == r'\{1}'
+            >>> assert b.previous(min=1, max=3) == r'\{1,3}'
+            >>> assert b.previous(min=1, max=3, greedy=False) == r'\{-1,3}'
+            >>> assert b.previous(max=3) == r'\{,3}'
+            >>> assert b.previous(min=3) == r'\{3,}'
+            >>> assert b.previous() == '*'
+            >>> assert b.previous(greedy=False) == r'\{-}'
+        """
+        if exact is not None:
+            assert min is None and max is None
+            expr = f'\\{{{exact}}}'
+        else:
+            if min is None:
+                min = 0
+            if max == float('inf'):
+                max = None
+            if min == 0 and max is None:
+                return '*' if greedy else '\\{-}'
+            greed = '' if greedy else '-'
+            if max is None:
+                expr = f'\\{{{greed}{min},}}'
+            elif min == 0:
+                expr = f'\\{{{greed},{max}}}'
+            else:
+                expr = f'\\{{{greed}{min},{max}}}'
+        return expr
+
 
 class PythonRegexBuilder(RegexBuilder):
     r"""
@@ -223,3 +295,58 @@ class PythonRegexBuilder(RegexBuilder):
         self.special = {}
         for item in self.common_patterns + self.python_patterns:
             self.special[item['key']] = item['pattern']
+
+    def previous(self, min=None, max=None, exact=None, greedy=True):
+        r"""
+        Match the previous pattern some number of times.
+
+        Args:
+            min (int | None): minimum number of matches
+
+            max (int | None): maximum number of matches
+
+            exact (int | None):
+                Specify exact number of matches.
+                Mutex with minimum and max.
+
+            greedy (bool):
+                if True match as many as possible, otherwise match as few as
+                possible
+
+        Example:
+            >>> from xdev.regex_builder import *  # NOQA
+            >>> b = PythonRegexBuilder()
+            >>> assert b.previous(exact=1) == '{1}'
+            >>> assert b.previous(min=1, max=3) == '{1,3}'
+            >>> assert b.previous(min=1, max=3, greedy=False) == '{1,3}?'
+            >>> assert b.previous(max=3) == '{,3}'
+            >>> assert b.previous(min=3) == '{3,}'
+            >>> assert b.previous() == '*'
+            >>> assert b.previous(greedy=False) == '*?'
+
+        Example:
+            >>> from xdev.regex_builder import *  # NOQA
+            >>> b = PythonRegexBuilder()
+            >>> assert re.compile('a' + b.previous(exact=2) + '$').match('aa')
+            >>> assert not re.compile('a' + b.previous(exact=2) + '$').match('aaa')
+            >>> assert not re.compile('a' + b.previous(exact=2) + '$').match('a')
+        """
+        if exact is not None:
+            assert min is None and max is None
+            expr = f'{{{exact}}}'
+        else:
+            if min is None:
+                min = 0
+            if max == float('inf'):
+                max = None
+            if min == 0 and max is None:
+                return '*' if greedy else '*?'
+            if max is None:
+                expr = f'{{{min},}}'
+            elif min == 0:
+                expr = f'{{,{max}}}'
+            else:
+                expr = f'{{{min},{max}}}'
+            if not greedy:
+                expr = expr + '?'
+        return expr

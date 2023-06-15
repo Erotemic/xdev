@@ -109,7 +109,7 @@ def sed(regexpr, repl, dpath=None, include=None, exclude=None, recursive=True,
 
 
 def grep(regexpr, dpath=None, include=None, exclude=None, recursive=True,
-         verbose=1):
+         dirblocklist=None, verbose=1):
     r"""
     Execute a grep on multiple files.
 
@@ -119,6 +119,7 @@ def grep(regexpr, dpath=None, include=None, exclude=None, recursive=True,
         include (str | List[str] | MultiPattern | None): passed to :func:`find`.
         exclude (str | List[str] | MultiPattern | None): passed to :func:`find`.
         recursive (bool): passed to :func:`find`.
+        dirblocklist (str | List[str] | MultiPattern | None): passed to :func:`find`.
         verbose (int): verbosity level
 
     Returns:
@@ -133,7 +134,8 @@ def grep(regexpr, dpath=None, include=None, exclude=None, recursive=True,
     grep_results = []
 
     fpath_generator = find(dpath=dpath, type='f', include=include,
-                           exclude=exclude, recursive=recursive)
+                           exclude=exclude, recursive=recursive,
+                           dirblocklist=dirblocklist)
 
     for fpath in fpath_generator:
         grepres = grepfile(fpath, regexpr, verbose=verbose)
