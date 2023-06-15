@@ -1,4 +1,3 @@
-from typing import Union
 from typing import List
 from os import PathLike
 from typing import Tuple
@@ -35,53 +34,54 @@ class GrepResult(ub.NiceRepr):
         ...
 
 
-def sed(regexpr: Union[str, Pattern],
+def sed(regexpr: str | Pattern,
         repl: str,
-        dpath: Union[str, None] = None,
-        include: Union[str, List[str], MultiPattern, None] = None,
-        exclude: Union[str, List[str], MultiPattern, None] = None,
+        dpath: str | None = None,
+        include: str | List[str] | MultiPattern | None = None,
+        exclude: str | List[str] | MultiPattern | None = None,
         recursive: bool = True,
         dry: bool = False,
         verbose: int = 1) -> None:
     ...
 
 
-def grep(regexpr: Union[str, Pattern],
-         dpath: Union[str, None] = None,
-         include: Union[str, List[str], MultiPattern, None] = None,
-         exclude: Union[str, List[str], MultiPattern, None] = None,
+def grep(regexpr: str | Pattern,
+         dpath: str | None = None,
+         include: str | List[str] | MultiPattern | None = None,
+         exclude: str | List[str] | MultiPattern | None = None,
          recursive: bool = True,
+         dirblocklist: str | List[str] | MultiPattern | None = None,
          verbose: int = 1) -> List[GrepResult]:
     ...
 
 
-def find(pattern: Union[str, Pattern, None] = None,
-         dpath: Union[str, Pattern, None] = None,
-         include: Union[str, List[str], MultiPattern, None] = None,
-         exclude: Union[str, List[str], MultiPattern, None] = None,
-         dirblocklist: Union[str, List[str], MultiPattern, None] = None,
-         type: Union[str, List[str], None] = None,
+def find(pattern: str | Pattern | None = None,
+         dpath: str | Pattern | None = None,
+         include: str | List[str] | MultiPattern | None = None,
+         exclude: str | List[str] | MultiPattern | None = None,
+         dirblocklist: str | List[str] | MultiPattern | None = None,
+         type: str | List[str] | None = None,
          recursive: bool = ...,
          followlinks: bool = False) -> Generator[Any, None, Any]:
     ...
 
 
-def sedfile(fpath: Union[str, PathLike],
-            regexpr: Union[str, Pattern],
+def sedfile(fpath: str | PathLike,
+            regexpr: str | Pattern,
             repl: str,
             dry: bool = False,
             verbose: int = 1) -> List[Tuple[str, str]]:
     ...
 
 
-def grepfile(fpath: Union[str, PathLike],
-             regexpr: Union[str, Pattern],
+def grepfile(fpath: str | PathLike,
+             regexpr: str | Pattern,
              verbose: int = 1) -> None | GrepResult:
     ...
 
 
 def greptext(text: str,
-             regexpr: Union[str, Pattern],
+             regexpr: str | Pattern,
              fpath: Incomplete | None = ...,
              verbose: int = 1) -> None | GrepResult:
     ...

@@ -1,12 +1,10 @@
-from typing import Union
 from typing import List
 import numbers
 
 
 def edit_distance(
-        string1: Union[str, List[str]],
-        string2: Union[str,
-                       List[str]]) -> float | List[float] | List[List[float]]:
+        string1: str | List[str],
+        string2: str | List[str]) -> float | List[float] | List[List[float]]:
     ...
 
 

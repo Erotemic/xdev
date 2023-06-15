@@ -1,6 +1,5 @@
 from os import PathLike
 from typing import Dict
-from typing import Union
 from types import ModuleType
 from _typeshed import Incomplete
 from mypy.nodes import FuncDef
@@ -50,5 +49,5 @@ class ExtendedStubGenerator(StubGenerator):
         ...
 
 
-def modpath_coerce(modpath_coercable: Union[str, PathLike, ModuleType]) -> str:
+def modpath_coerce(modpath_coercable: str | PathLike | ModuleType) -> str:
     ...

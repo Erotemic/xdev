@@ -1,7 +1,6 @@
 from typing import Callable
 from typing import Tuple
 from typing import List
-from typing import Union
 import line_profiler
 from _typeshed import Incomplete
 
@@ -65,7 +64,7 @@ class KernprofParser:
 
     def get_block_id(self,
                      block: str,
-                     readlines: Union[None, Callable] = None) -> str:
+                     readlines: None | Callable = None) -> str:
         ...
 
     def parse_timemap_from_blocks(self, profile_block_list):

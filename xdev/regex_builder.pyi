@@ -7,7 +7,7 @@ class RegexBuilder:
     def __init__(self) -> None:
         ...
 
-    def lookahead(self, pat, positive: bool = ...):
+    def lookahead(self, pat, positive: bool = ..., mode: str = ...):
         ...
 
     def lookbehind(self, pat, positive: bool = ...):
@@ -36,6 +36,14 @@ class RegexBuilder:
         ...
 
     @property
+    def identifier(self):
+        ...
+
+    @property
+    def word(self):
+        ...
+
+    @property
     def whitespace(self):
         ...
 
@@ -56,6 +64,13 @@ class VimRegexBuilder(RegexBuilder):
     def __init__(self) -> None:
         ...
 
+    def previous(self,
+                 min: int | None = None,
+                 max: int | None = None,
+                 exact: int | None = None,
+                 greedy: bool = True):
+        ...
+
 
 class PythonRegexBuilder(RegexBuilder):
     python_patterns: Incomplete
@@ -63,4 +78,11 @@ class PythonRegexBuilder(RegexBuilder):
     special: Incomplete
 
     def __init__(self) -> None:
+        ...
+
+    def previous(self,
+                 min: int | None = None,
+                 max: int | None = None,
+                 exact: int | None = None,
+                 greedy: bool = True):
         ...
