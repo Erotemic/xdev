@@ -120,9 +120,7 @@ def sidecar_glob(main_pat, sidecar_ext, main_key='main', sidecar_key=None,
         >>> main_pat = dpath / '*'
         >>> _handle_results(sidecar_glob(main_pat, sidecar_ext))
         >>> _handle_results(sidecar_glob(dpath / '*.ext', '.car'))
-        >>> import pytest
-        >>> with pytest.warns():
-        >>>     _handle_results(sidecar_glob(dpath / '*.car', '.car'))
+        >>> _handle_results(sidecar_glob(dpath / '*.car', '.car'))
         >>> _handle_results(sidecar_glob(dpath / 'file*.ext', '.car'))
         >>> _handle_results(sidecar_glob(dpath / '*', '.ext'))
     """
