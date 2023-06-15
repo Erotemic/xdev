@@ -5,7 +5,7 @@ We are currently working on porting this changelog to the specifications in
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Version 1.3.0 -
+## Version 1.3.0 - Released 2023-06-14 
 
 ### Added
 
@@ -14,6 +14,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 * Support more default editors in `editfile`.
+* Update format quotes to parso.
+* Lower numpy requirement.
+* Update scriptconfig requirement.
 
 
 ## Version 1.2.0 - Released 2023-04-04 
