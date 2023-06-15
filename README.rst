@@ -176,35 +176,8 @@ functionality (much like this library).
 
 .. code::
 
-    usage: xdev [-h] [--version] {info,codeblock,sed,find,tree,pint,pyfile,pyversion,format_quotes,freshpyenv,docstubs,available_package_versions} ...
-
-    The XDEV CLI
-
-    A collection of excellent developer tools for excellent developers.
-
-    options:
-      -h, --help            show this help message and exit
-      --version             show version number and exit (default: False)
-
-    commands:
-      {info,codeblock,sed,find,tree,pint,pyfile,pyversion,format_quotes,freshpyenv,docstubs,available_package_versions}
-                            specify a command to run
-        info                Info about xdev
-        codeblock           Remove indentation from text.
-        sed                 Search and replace text in files
-        find                Find matching files or paths in a directory.
-        tree                List a directory like a tree
-        pint (convert_unit)
-                            Converts one type of unit to another via the pint library.
-        pyfile (modpath)    Prints the path corresponding to a Python module.
-        pyversion (modversion)
-                            Detect and print the version of a Python module or package.
-        format_quotes       Use single quotes for code and double quotes for docs.
-        freshpyenv          Create a fresh environment in a docker container to test a Python package.
-        docstubs (doctypes)
-                            Generate Typed Stubs from Docstrings (experimental)
-        available_package_versions (availpkg)
-                            Print a table of available versions of a python package on Pypi
+   pip install xdev
+   xdev --help
 
 
 It contains functionality that I generally use when developing on my setup, but
