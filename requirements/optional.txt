@@ -20,4 +20,5 @@ line_profiler>=3.4.0     ; python_version < '3.7'  and python_version >= '3.6'  
 yapf  >= 0.16.3
 autoflake >= 1.5.0
 
-parso >= 0.8.0
+parso>=0.8.3 ; python_version < '4.0'  and python_version >= '3.11'    # Python 3.11+
+parso>=0.8.0 ; python_version < '3.11'    # <Python 3.11
