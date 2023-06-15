@@ -15,7 +15,8 @@ def _coerce_editable_fpath(target):
     Rules for coercing inputs to ``editfile`` into a path.
 
     Args:
-        target (str | PathLike | ModuleType): something coercable to a path
+        target (str | PathLike | ModuleType | ClassType | FunctionType):
+            something coercable to a path or module path
 
     Returns:
         ub.Path
@@ -32,12 +33,11 @@ def _coerce_editable_fpath(target):
                 fpath = ub.Path(modpath)
 
     elif isinstance(fpath, types.ModuleType):
-        if isinstance(fpath, types.ModuleType):
-            fpath = fpath.__file__
-        else:
-            fpath =  sys.modules[fpath.__module__].__file__
+        fpath = fpath.__file__
     elif isinstance(fpath, os.PathLike):
         fpath = ub.Path(fpath)
+    elif hasattr(fpath, '__module__'):
+        fpath =  sys.modules[fpath.__module__].__file__
     else:
         raise TypeError(f"Unable to coerce {target} into a file path")
 

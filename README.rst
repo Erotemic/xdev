@@ -9,6 +9,101 @@ It contains miscellaneous and/or interactive debugging tools.
 I mostly maintain this for myself, but I could see polishing it up in the
 future.
 
+This is the CLI:
+
+.. code::
+
+    (pyenv3.11.2) joncrall@toothbrush:~$ xdev --help
+    usage: xdev [-h] [--version] {info,codeblock,sed,find,tree,pint,pyfile,pyversion,editfile,format_quotes,freshpyenv,docstubs,available_package_versions} ...
+
+    The XDEV CLI
+
+    A collection of excellent developer tools for excellent developers.
+
+    options:
+      -h, --help            show this help message and exit
+      --version             show version number and exit (default: False)
+
+    commands:
+      {info,codeblock,sed,find,tree,pint,pyfile,pyversion,editfile,format_quotes,freshpyenv,docstubs,available_package_versions}
+                            specify a command to run
+        info                Info about xdev
+        codeblock           Remove indentation from text.
+        sed                 Search and replace text in files
+        find                Find matching files or paths in a directory.
+        tree                List a directory like a tree
+        pint (convert_unit)
+                            Converts one type of unit to another via the pint library.
+        pyfile (modpath)    Prints the path corresponding to a Python module.
+        pyversion (modversion)
+                            Detect and print the version of a Python module or package.
+        editfile (edit)     Opens a file in your visual editor determined by the ``VISUAL``
+        format_quotes       Use single quotes for code and double quotes for docs.
+        freshpyenv          Create a fresh environment in a docker container to test a Python package.
+        docstubs (doctypes)
+                            Generate Typed Stubs from Docstrings (experimental)
+        available_package_versions (availpkg)
+                            Print a table of available versions of a python package on Pypi
+
+
+.. .... mkinit xdev
+
+This is the top level API:
+
+.. code:: python
+
+    from xdev import algo
+    from xdev import autojit
+    from xdev import class_reloader
+    from xdev import cli
+    from xdev import desktop_interaction
+    from xdev import embeding
+    from xdev import format_quotes
+    from xdev import interactive_iter
+    from xdev import introspect
+    from xdev import misc
+    from xdev import patterns
+    from xdev import profiler
+    from xdev import regex_builder
+    from xdev import search_replace
+    from xdev import tracebacks
+    from xdev import util
+    from xdev import util_networkx
+    from xdev import util_path
+
+    from xdev.algo import (edit_distance, knapsack, knapsack_greedy, knapsack_ilp,
+                           knapsack_iterative, knapsack_iterative_int,
+                           knapsack_iterative_numpy, number_of_decimals,)
+    from xdev.autojit import (import_module_from_pyx,)
+    from xdev.class_reloader import (reload_class,)
+    from xdev.desktop_interaction import (editfile, startfile, view_directory,)
+    from xdev.embeding import (EmbedOnException, embed, embed_if_requested,
+                               embed_on_exception, embed_on_exception_context,
+                               fix_embed_globals,)
+    from xdev.format_quotes import (DOUBLE_QUOTE, SINGLE_QUOTE,
+                                    TRIPLE_DOUBLE_QUOTE, TRIPLE_SINGLE_QUOTE,
+                                    format_quotes, format_quotes_in_file,
+                                    format_quotes_in_text,)
+    from xdev.interactive_iter import (InteractiveIter,)
+    from xdev.introspect import (distext, get_func_kwargs, get_stack_frame,
+                                 iter_object_tree, test_object_pickleability,)
+    from xdev.misc import (byte_str, difftext, nested_type, quantum_random,
+                           set_overlaps, textfind, tree_repr,)
+    from xdev.patterns import (MultiPattern, Pattern, PatternBase, RE_Pattern,
+                               our_extended_regex_compile,)
+    from xdev.profiler import (IS_PROFILING, profile, profile_globals,
+                               profile_now,)
+    from xdev.regex_builder import (PythonRegexBuilder, RegexBuilder,
+                                    VimRegexBuilder,)
+    from xdev.search_replace import (GrepResult, find, grep, grepfile, greptext,
+                                     sed, sedfile,)
+    from xdev.tracebacks import (make_warnings_print_tracebacks,)
+    from xdev.util import (bubbletext, conj_phrase, take_column,)
+    from xdev.util_networkx import (AsciiDirectedGlyphs, AsciiUndirectedGlyphs,
+                                    UtfDirectedGlyphs, UtfUndirectedGlyphs,
+                                    generate_network_text, graph_str,
+                                    write_network_text,)
+    from xdev.util_path import (ChDir, sidecar_glob, tree,)
 
 Remarks
 -------
