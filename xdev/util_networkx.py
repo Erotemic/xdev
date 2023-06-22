@@ -49,15 +49,11 @@ class UtfDirectedGlyphs(_UtfBaseGlyphs):
     backedge = "╾"
 
 
-
-
-└─╼
-
-╼
-
-└─┮ A
-  ┝ B
-  ┝ C
+# └─╼
+# ╼
+# └─┮ A
+#   ┝ B
+#   ┝ C
 
 
 class UtfUndirectedGlyphs(_UtfBaseGlyphs):
