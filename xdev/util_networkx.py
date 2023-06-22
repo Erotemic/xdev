@@ -1,6 +1,3 @@
-"""
-Ideally this will be accepted into networkx eventually.
-"""
 import sys
 from collections import defaultdict
 import networkx as nx
@@ -23,12 +20,14 @@ class AsciiDirectedGlyphs(_AsciiBaseGlyphs):
     last = "L-> "
     mid = "|-> "
     backedge = "<-"
+    vertical_edge = 'v'
 
 
 class AsciiUndirectedGlyphs(_AsciiBaseGlyphs):
     last = "L-- "
     mid = "|-- "
     backedge = "-"
+    vertical_edge = '|'
 
 
 class _UtfBaseGlyphs:
@@ -47,19 +46,14 @@ class UtfDirectedGlyphs(_UtfBaseGlyphs):
     last = "└─╼ "
     mid = "├─╼ "
     backedge = "╾"
-
-
-# └─╼
-# ╼
-# └─┮ A
-#   ┝ B
-#   ┝ C
+    vertical_edge = '╽'
 
 
 class UtfUndirectedGlyphs(_UtfBaseGlyphs):
     last = "└── "
     mid = "├── "
     backedge = "─"
+    vertical_edge = '│'
 
 
 def generate_network_text(
@@ -136,7 +130,7 @@ def generate_network_text(
     ------
     str : a line of generated text
 
-    Ignore:
+    Example:
         >>> graph = nx.path_graph(10)
         >>> graph.add_node('A')
         >>> graph.add_node('B')
@@ -167,23 +161,23 @@ def generate_network_text(
                                                     └── F
         >>> write_network_text(graph, vertical_chains=True)
         ╙── 0
-            |
+            │
             1
-            |
+            │
             2
-            |
+            │
             3
-            |
+            │
             4
-            |
+            │
             5
-            |
+            │
             6
-            |
+            │
             7
-            |
+            │
             8
-            |
+            │
             9
             ├── A
             ├── B
@@ -376,7 +370,7 @@ def generate_network_text(
             # print(f'this_prefix={this_prefix}')
             # print(f'this_islast={this_islast}')
             if this_vertical:
-                yield "".join(this_prefix + ['|'])
+                yield "".join(this_prefix + [glyphs.vertical_edge])
 
             yield "".join(this_prefix + [label, suffix])
 
@@ -485,6 +479,31 @@ def write_network_text(
         │           └── 4 ─ 0
         └──  ...
 
+    >>> graph = nx.cycle_graph(5, nx.DiGraph)
+    >>> write_network_text(graph, vertical_chains=True)
+    ╙── 0 ╾ 4
+        ╽
+        1
+        ╽
+        2
+        ╽
+        3
+        ╽
+        4
+        └─╼  ...
+
+    >>> write_network_text(graph, vertical_chains=True, ascii_only=True)
+    +-- 0 <- 4
+        v
+        1
+        v
+        2
+        v
+        3
+        v
+        4
+        L->  ...
+
     >>> graph = nx.generators.barbell_graph(4, 2)
     >>> write_network_text(graph, vertical_chains=False)
     ╙── 4
@@ -504,18 +523,18 @@ def write_network_text(
     >>> write_network_text(graph, vertical_chains=True)
     ╙── 4
         ├── 5
-        │   |
+        │   │
         │   6
         │   ├── 7
         │   │   ├── 8 ─ 6
-        │   │   │   |
+        │   │   │   │
         │   │   │   9 ─ 6, 7
         │   │   └──  ...
         │   └──  ...
         └── 3
             ├── 0
             │   ├── 1 ─ 3
-            │   │   |
+            │   │   │
             │   │   2 ─ 0, 3
             │   └──  ...
             └──  ...
@@ -639,9 +658,6 @@ def graph_str(graph, with_labels=True, sources=None, write=None, ascii_only=Fals
     Example
     -------
     >>> graph = nx.balanced_tree(r=2, h=3, create_using=nx.DiGraph)
-    >>> graph.add_edge(14, 15)
-    >>> graph.add_edge(15, 16)
-    >>> graph.add_edge(16, 17)
     >>> print(graph_str(graph))
     ╙── 0
         ├─╼ 1
