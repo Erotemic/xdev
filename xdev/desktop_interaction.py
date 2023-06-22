@@ -32,12 +32,12 @@ def _coerce_editable_fpath(target):
             if modpath is not None:
                 fpath = ub.Path(modpath)
 
-    elif isinstance(fpath, types.ModuleType):
-        fpath = fpath.__file__
-    elif isinstance(fpath, os.PathLike):
-        fpath = ub.Path(fpath)
-    elif hasattr(fpath, '__module__'):
-        fpath =  sys.modules[fpath.__module__].__file__
+    elif isinstance(target, types.ModuleType):
+        fpath = ub.Path(target.__file__)
+    elif isinstance(target, os.PathLike):
+        fpath = ub.Path(target)
+    elif hasattr(target, '__module__'):
+        fpath =  ub.Path(sys.modules[target.__module__].__file__)
     else:
         raise TypeError(f"Unable to coerce {target} into a file path")
 

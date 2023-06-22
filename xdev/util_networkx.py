@@ -49,6 +49,17 @@ class UtfDirectedGlyphs(_UtfBaseGlyphs):
     backedge = "╾"
 
 
+
+
+└─╼
+
+╼
+
+└─┮ A
+  ┝ B
+  ┝ C
+
+
 class UtfUndirectedGlyphs(_UtfBaseGlyphs):
     last = "└── "
     mid = "├── "
@@ -124,8 +135,32 @@ def generate_network_text(
     Yields
     ------
     str : a line of generated text
+
+    Ignore:
+        >>> from xdev.util_networkx import *  # NOQA
+        >>> graph = nx.path_graph(10)
+        >>> graph.add_node('A')
+        >>> graph.add_node('B')
+        >>> graph.add_node('C')
+        >>> graph.add_node('D')
+        >>> graph.add_edge(9, 'A')
+        >>> graph.add_edge(9, 'B')
+        >>> graph.add_edge(9, 'C')
+        >>> graph.add_edge('C', 'D')
+        >>> graph.add_edge('C', 'E')
+        >>> graph.add_edge('C', 'F')
+        >>> write_network_text(graph)
     """
     is_directed = graph.is_directed()
+
+    from typing import NamedTuple
+    from typing import Any
+    class StackFrame(NamedTuple):
+        parent: Any
+        node: Any
+        indents: list
+        this_islast: bool
+        this_isonlychild: bool
 
     if is_directed:
         glyphs = AsciiDirectedGlyphs if ascii_only else UtfDirectedGlyphs
@@ -162,13 +197,14 @@ def generate_network_text(
         # Reverse the stack so sources are popped in the correct order.
         last_idx = len(sources) - 1
         stack = [
-            (None, node, [], (idx == last_idx)) for idx, node in enumerate(sources)
+            StackFrame(None, node, [], (idx == last_idx), False)
+            for idx, node in enumerate(sources)
         ][::-1]
 
         num_skipped_children = defaultdict(lambda: 0)
         seen_nodes = set()
         while stack:
-            parent, node, indents, this_islast = stack.pop()
+            parent, node, indents, this_islast, this_isonlychild = stack.pop()
 
             if node is not Ellipsis:
                 skip = node in seen_nodes
@@ -184,12 +220,12 @@ def generate_network_text(
 
                         # Append the ellipsis to be emitted last
                         next_islast = True
-                        try_frame = (node, Ellipsis, indents, next_islast)
+                        try_frame = StackFrame(node, Ellipsis, indents, next_islast, False)
                         stack.append(try_frame)
 
                         # Redo this frame, but not as a last object
                         next_islast = False
-                        try_frame = (parent, node, indents, next_islast)
+                        try_frame = StackFrame(parent, node, indents, next_islast, this_isonlychild)
                         stack.append(try_frame)
                         continue
 
@@ -201,21 +237,37 @@ def generate_network_text(
                 # Top level items (i.e. trees in the forest) get different
                 # glyphs to indicate they are not actually connected
                 if this_islast:
+                    this_isonlychild = False
+                    # if this_isonlychild:
+                    #     this_prefix = indents
+                    #     next_prefix = indents
+                    # else:
                     this_prefix = indents + [glyphs.newtree_last]
                     next_prefix = indents + [glyphs.endof_forest]
                 else:
+                    # if this_isonlychild:
+                    #     this_prefix = indents
+                    #     next_prefix = indents
+                    # else:
                     this_prefix = indents + [glyphs.newtree_mid]
                     next_prefix = indents + [glyphs.within_forest]
 
             else:
-                # For individual tree edges distinguish between directed and
-                # undirected cases
+                # Non-top-level items
                 if this_islast:
-                    this_prefix = indents + [glyphs.last]
-                    next_prefix = indents + [glyphs.endof_forest]
+                    if this_isonlychild:
+                        this_prefix = indents
+                        next_prefix = indents
+                    else:
+                        this_prefix = indents + [glyphs.last]
+                        next_prefix = indents + [glyphs.endof_forest]
                 else:
-                    this_prefix = indents + [glyphs.mid]
-                    next_prefix = indents + [glyphs.within_tree]
+                    if this_isonlychild:
+                        this_prefix = indents
+                        next_prefix = indents
+                    else:
+                        this_prefix = indents + [glyphs.mid]
+                        next_prefix = indents + [glyphs.within_tree]
 
             if node is Ellipsis:
                 label = " ..."
@@ -277,13 +329,24 @@ def generate_network_text(
 
             # Emit the line for this node, this will be called for each node
             # exactly once.
+            # print(f'this_prefix={this_prefix}')
+            # print(f'this_islast={this_islast}')
+            if this_isonlychild:
+                yield "".join(this_prefix + ['|'])
             yield "".join(this_prefix + [label, suffix])
+
+            # TODO: Can we determine if we are an only child?
+            if is_directed:
+                num_children = len(set(children))
+            else:
+                num_children = len(set(children) - {parent})
+            next_isonly_child = num_children == 1
 
             # Push children on the stack in reverse order so they are popped in
             # the original order.
             for idx, child in enumerate(children[::-1]):
                 next_islast = idx == 0
-                try_frame = (node, child, next_prefix, next_islast)
+                try_frame = StackFrame(node, child, next_prefix, next_islast, next_isonly_child)
                 stack.append(try_frame)
 
 
@@ -338,7 +401,7 @@ def write_network_text(
     Example
     -------
     >>> graph = nx.balanced_tree(r=2, h=2, create_using=nx.DiGraph)
-    >>> nx.write_network_text(graph)
+    >>> write_network_text(graph)
     ╙── 0
         ├─╼ 1
         │   ├─╼ 3
@@ -349,7 +412,7 @@ def write_network_text(
 
     >>> # A near tree with one non-tree edge
     >>> graph.add_edge(5, 1)
-    >>> nx.write_network_text(graph)
+    >>> write_network_text(graph)
     ╙── 0
         ├─╼ 1 ╾ 5
         │   ├─╼ 3
@@ -360,7 +423,7 @@ def write_network_text(
             └─╼ 6
 
     >>> graph = nx.cycle_graph(5)
-    >>> nx.write_network_text(graph)
+    >>> write_network_text(graph)
     ╙── 0
         ├── 1
         │   └── 2
@@ -369,7 +432,11 @@ def write_network_text(
         └──  ...
 
     >>> graph = nx.generators.barbell_graph(4, 2)
-    >>> nx.write_network_text(graph)
+    >>> graph.add_edge(5, 'a')
+    >>> graph.add_edge('a', 'b')
+    >>> graph.add_edge('b', 'c')
+    >>> graph.add_edge('c', 'd')
+    >>> write_network_text(graph)
     ╙── 4
         ├── 5
         │   └── 6
@@ -386,7 +453,7 @@ def write_network_text(
             └──  ...
 
     >>> graph = nx.complete_graph(5, create_using=nx.Graph)
-    >>> nx.write_network_text(graph)
+    >>> write_network_text(graph)
     ╙── 0
         ├── 1
         │   ├── 2 ─ 0
@@ -397,7 +464,7 @@ def write_network_text(
         └──  ...
 
     >>> graph = nx.complete_graph(3, create_using=nx.DiGraph)
-    >>> nx.write_network_text(graph)
+    >>> write_network_text(graph)
     ╙── 0 ╾ 1, 2
         ├─╼ 1 ╾ 2
         │   ├─╼ 2 ╾ 0
@@ -503,6 +570,9 @@ def graph_str(graph, with_labels=True, sources=None, write=None, ascii_only=Fals
     Example
     -------
     >>> graph = nx.balanced_tree(r=2, h=3, create_using=nx.DiGraph)
+    >>> graph.add_edge(14, 15)
+    >>> graph.add_edge(15, 16)
+    >>> graph.add_edge(16, 17)
     >>> print(graph_str(graph))
     ╙── 0
         ├─╼ 1

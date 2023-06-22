@@ -508,7 +508,11 @@ def common_unreferenced():
 
         'collections': [
             'OrderedDict', 'defaultdict'
-        ]
+        ],
+
+        'types': [
+            'TracebackType',
+        ],
     }
 
     try:
