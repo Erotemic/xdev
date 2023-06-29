@@ -938,7 +938,10 @@ class ExtendedStubGenerator(StubGenerator):
             # some dunder methods should not have a None return type.
             retname = None  # implicit Any
         elif has_yield_expression(o) or force_yield:
-            self.add_abc_import('Generator')
+            try:
+                self.add_abc_import('Generator')
+            except AttributeError:
+                self.add_typing_import('Generator')
             yield_name = 'None'
             send_name = 'None'
             return_name = 'None'

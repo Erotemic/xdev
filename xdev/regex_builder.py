@@ -118,6 +118,13 @@ class RegexBuilder:
         return '[A-Za-z_][A-Za-z_0-9]*'
 
     @property
+    def hex(self):
+        """
+        A case-independent hex character
+        """
+        return '[0-9a-fA-F]'
+
+    @property
     def word(self):
         return self.special['word']
 
