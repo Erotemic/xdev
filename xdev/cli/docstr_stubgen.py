@@ -535,6 +535,10 @@ def common_unreferenced():
             'Number', 'Real', 'Integral', 'Rational', 'Complex',
         ],
 
+        'concurrent.futures': [
+            'ThreadPoolExecutor', 'ProcessPoolExecutor', 'Future',
+        ],
+
         'numpy.random': [
             'RandomState',
         ],
