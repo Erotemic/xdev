@@ -4,7 +4,6 @@ from typing import Dict
 from typing import Any
 from os import PathLike
 from _typeshed import Incomplete
-from typing import Any
 
 
 def quantum_random(pure: bool = False) -> numpy.uint32:

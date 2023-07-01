@@ -4,12 +4,15 @@ from types import ModuleType
 from _typeshed import Incomplete
 from mypy.nodes import FuncDef
 from mypy.stubgen import StubGenerator
-from typing import Dict
 
 StubStub: Incomplete
 
 
 def generate_typed_stubs(modpath: PathLike) -> Dict[PathLike, str]:
+    ...
+
+
+def remove_duplicate_imports(text):
     ...
 
 

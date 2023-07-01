@@ -2,7 +2,6 @@ from os import PathLike
 from typing import Dict
 import ubelt as ub
 import os
-import os
 from _typeshed import Incomplete
 from collections.abc import Generator
 

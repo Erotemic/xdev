@@ -1,5 +1,4 @@
 import ubelt as ub
-import ubelt as ub
 from _typeshed import Incomplete
 from collections.abc import Generator
 

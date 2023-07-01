@@ -40,6 +40,10 @@ class RegexBuilder:
         ...
 
     @property
+    def hex(self):
+        ...
+
+    @property
     def word(self):
         ...
 

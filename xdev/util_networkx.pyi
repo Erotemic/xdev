@@ -16,12 +16,14 @@ class AsciiDirectedGlyphs(_AsciiBaseGlyphs):
     last: str
     mid: str
     backedge: str
+    vertical_edge: str
 
 
 class AsciiUndirectedGlyphs(_AsciiBaseGlyphs):
     last: str
     mid: str
     backedge: str
+    vertical_edge: str
 
 
 class _UtfBaseGlyphs:
@@ -37,19 +39,23 @@ class UtfDirectedGlyphs(_UtfBaseGlyphs):
     last: str
     mid: str
     backedge: str
+    vertical_edge: str
 
 
 class UtfUndirectedGlyphs(_UtfBaseGlyphs):
     last: str
     mid: str
     backedge: str
+    vertical_edge: str
 
 
-def generate_network_text(graph,
-                          with_labels: bool = ...,
-                          sources: Incomplete | None = ...,
-                          max_depth: Incomplete | None = ...,
-                          ascii_only: bool = ...) -> Generator[Any, None, Any]:
+def generate_network_text(
+        graph,
+        with_labels: bool = ...,
+        sources: Incomplete | None = ...,
+        max_depth: Incomplete | None = ...,
+        ascii_only: bool = ...,
+        vertical_chains: bool = ...) -> Generator[Any, None, Any]:
     ...
 
 
@@ -59,7 +65,8 @@ def write_network_text(graph,
                        sources: Incomplete | None = ...,
                        max_depth: Incomplete | None = ...,
                        ascii_only: bool = ...,
-                       end: str = ...) -> None:
+                       end: str = ...,
+                       vertical_chains: bool = ...) -> None:
     ...
 
 
