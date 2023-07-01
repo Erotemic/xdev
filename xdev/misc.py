@@ -336,7 +336,8 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
         cwd = os.getcwd()
 
     import networkx as nx
-    tree = nx.OrderedDiGraph()
+    # tree = nx.OrderedDiGraph()
+    tree = nx.DiGraph()
 
     from xdev.patterns import MultiPattern
     if dirblocklist is not None:

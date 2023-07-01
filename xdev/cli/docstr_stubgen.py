@@ -70,7 +70,7 @@ except Exception:
     METHODS_WITH_RETURN_VALUE = []
 
 import sys
-from typing import (List, Dict, Optional)
+from typing import (List,)
 # from mypy.stubgenc import generate_stub_for_c_module
 # from mypy.stubutil import (
 #     default_py2_interpreter, CantImport, generate_guarded,
@@ -334,6 +334,51 @@ def generate_typed_stubs(modpath):
     return generated
 
 
+def remove_duplicate_imports(text):
+    import parso
+    from parso.normalizer import Normalizer
+
+    class DuplicateImportRemover(Normalizer):
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.import_from_nodes = []
+            self.import_name_nodes = []
+            self.seen_import_name_code = set()
+            self.seen_import_from_code = set()
+
+        def visit(self, node):
+            self.node = node
+            if node.type == 'import_from':
+                self.import_from_nodes.append(node)
+                is_top_level = node.parent.type == 'simple_stmt' and node.parent.parent.type == 'file_input'
+                if is_top_level:
+                    code = node.get_code()
+                    if code in self.seen_import_from_code:
+                        node.parent.children.clear()
+                    self.seen_import_from_code.add(code)
+            elif node.type == 'import_name':
+                self.import_from_nodes.append(node)
+                is_top_level = node.parent.type == 'simple_stmt' and node.parent.parent.type == 'file_input'
+                if is_top_level:
+                    code = node.get_code()
+                    if code in self.seen_import_name_code:
+                        node.parent.children.clear()
+                    self.seen_import_name_code.add(code)
+            else:
+                ...
+            return super().visit(node)
+
+    module = parso.parse(text)
+    normalizer = DuplicateImportRemover(None, None)
+    normalizer.walk(module)
+    normalizer.import_from_nodes
+    normalizer.import_name_nodes
+
+    new_text = module.get_code()
+    return new_text
+
+
 def postprocess_hacks(text, mod):
     import autoflake
     import yapf
@@ -368,6 +413,9 @@ def postprocess_hacks(text, mod):
         # Hack for util_dict
         text = text.replace('DictBase = OrderedDict\n', '')
         text = text.replace('DictBase = dict\n', 'DictBase = OrderedDict if sys.version_info[0:2] <= (3, 6) else dict')
+
+    if 1:
+        text = remove_duplicate_imports(text)
 
     # Format the PYI file nicely
     text = autoflake.fix_code(text, remove_unused_variables=True,
