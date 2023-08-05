@@ -25,7 +25,7 @@ class AvailablePackageConfig(scfg.DataConfig):
     available versions of a python package that meet some critera
     """
     package_name = scfg.Value(None, position=1, help='the pypi package name')
-    request_min = scfg.Value(None, help='request a minimum version')
+    request_min = scfg.Value(None, help='request a minimum version', position=2)
     refresh = scfg.Value(False, isflag=1, help='if True refresh the cache')
 
 
@@ -93,8 +93,20 @@ class ReqPythonVersionSpec:
             })
 
     def highest_explicit(self):
+        cands = [c['partver'] for c in self.constraints if c['opstr'] in {'>=', '~='}]
+        if len(cands):
+            return max(cands)
 
-        return max(c['partver'] for c in self.constraints if c['opstr'] in {'>=', '~='})
+        # No explicit mineq version was given, check to see if there is an
+        # implicit one we can use.
+        cands2 = [c['partver'] for c in self.constraints if c['opstr'] in {'>'}]
+        if len(cands2):
+            not_allowed = max(cands2)
+            python_versions = PythonVersions()
+            available = python_versions.table['pyver'].apply(Version)
+            remain = available[available > not_allowed]
+            if len(remain):
+                return min(remain)
 
     def matches(self, other):
         return other in self.specifier
@@ -456,35 +468,64 @@ def summarize_package_availability(package_name):
         rich.print(piv.to_string())
 
 
-LATEST_PYTHON = '3.11'
-
-
-def resolve_pyversion(pyver, maximize=False):
-    if pyver == 'any':
-        pyver = LATEST_PYTHON if maximize else '2.7'
-    elif pyver == 'py2':
-        pyver = '2.7'
-    elif pyver == 'py3':
-        pyver = LATEST_PYTHON if maximize else '3.6'
-    elif pyver == 'py2.py3':
-        pyver = LATEST_PYTHON if maximize else '2.7'
-    return pyver
-
-
-def minimum_cross_python_versions(package_name, request_min=None, refresh=False):
+class PythonVersions:
     """
-    package_name = 'scipy'
-    request_min = None
-
-    package_name = 'opencv-python-headless'
-
-    package_name = 'numpy'
-    request_min = '1.21.0'
+    Class that contains information about different Python versions
     """
+    def __init__(self):
+        import pandas as pd
+        # https://en.wikipedia.org/wiki/History_of_Python#Version_3
+        python_version_rows = [
+            # {'release_date': '2024-10-01', 'pyver': '3.13'},
+            # {'release_date': '2023-10-02', 'pyver': '3.12'},
+
+            {'release_date': '2022-10-24', 'pyver': '3.11'},
+            {'release_date': '2021-10-04', 'pyver': '3.10'},
+            {'release_date': '2020-10-05', 'pyver': '3.9'},
+            {'release_date': '2019-10-14', 'pyver': '3.8'},
+            {'release_date': '2018-06-27', 'pyver': '3.7'},
+            {'release_date': '2016-12-23', 'pyver': '3.6'},
+            {'release_date': '2015-09-13', 'pyver': '3.5'},
+            {'release_date': '2014-03-16', 'pyver': '3.4'},
+
+            {'release_date': '2012-09-29', 'pyver': '3.3'},
+            {'release_date': '2011-02-20', 'pyver': '3.2'},
+            {'release_date': '2009-06-27', 'pyver': '3.1'},
+            {'release_date': '2008-12-03', 'pyver': '3.0'},
+
+            {'release_date': '2010-07-03', 'pyver': '2.7'},
+            {'release_date': '2008-10-01', 'pyver': '2.6'},
+        ]
+        python_vstrings = [
+            r['pyver'] for r in python_version_rows
+        ]
+        table = pd.DataFrame(python_version_rows)
+        table = table.set_index('pyver', drop=0)
+        table['release_date'] = table['release_date'].apply(ub.timeparse)
+        cp_codes = {'cp{}{}'.format(*v.split('.')): v for v in python_vstrings}
+        doubledigit_pyvers = [v for v in python_vstrings if len(v.split('.')[1]) > 1]
+        cp_codes.update({'cp{}_{}'.format(*v.split('.')): v for v in doubledigit_pyvers})
+
+        self.latest = python_vstrings[0]
+        self.cp_codes = cp_codes
+        self.table = table
+        self.python_vstrings = python_vstrings
+        self.python_version_rows = python_version_rows
+
+    def resolve_pyversion(self, pyver, maximize=False):
+        if pyver == 'any':
+            pyver = self.latest if maximize else '2.7'
+        elif pyver == 'py2':
+            pyver = '2.7'
+        elif pyver == 'py3':
+            pyver = self.latest if maximize else '3.6'
+        elif pyver == 'py2.py3':
+            pyver = self.latest if maximize else '2.7'
+        return pyver
+
+
+def build_package_table(package_name, refresh=False):
     import pandas as pd
-    if request_min is not None:
-        request_min = Version(request_min)
-
     table = grab_pypi_items(package_name, refresh=refresh)
     table = table[~table['yanked']]
 
@@ -507,40 +548,8 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
 
     table = pd.concat(keepers)
 
-    python_vstrings = [
-        '2.6', '2.7', '3.0', '3.1', '3.2', '3.3', '3.4', '3.5',
-        '3.6', '3.7', '3.8', '3.9',
-        '3.10', '3.11'
-    ]
-
-    # https://en.wikipedia.org/wiki/History_of_Python#Version_3
-
-    python_version_rows = [
-        {'release_date': '2021-10-04', 'pyver': '3.11'},
-        {'release_date': '2021-10-04', 'pyver': '3.10'},
-        {'release_date': '2020-10-05', 'pyver': '3.9'},
-        {'release_date': '2019-10-14', 'pyver': '3.8'},
-        {'release_date': '2018-06-27', 'pyver': '3.7'},
-        {'release_date': '2016-12-23', 'pyver': '3.6'},
-        {'release_date': '2015-09-13', 'pyver': '3.5'},
-        {'release_date': '2014-03-16', 'pyver': '3.4'},
-
-        {'release_date': '2012-09-29', 'pyver': '3.3'},
-        {'release_date': '2011-02-20', 'pyver': '3.2'},
-        {'release_date': '2009-06-27', 'pyver': '3.1'},
-        {'release_date': '2008-12-03', 'pyver': '3.0'},
-
-        {'release_date': '2010-07-03', 'pyver': '2.7'},
-        {'release_date': '2008-10-01', 'pyver': '2.6'},
-    ]
-    python_version_table = pd.DataFrame(python_version_rows)
-    python_version_table = python_version_table.set_index('pyver', drop=0)
-    python_version_table['release_date'] = python_version_table['release_date'].apply(ub.timeparse)
-
-    cp_codes = {'cp{}{}'.format(*v.split('.')): v for v in python_vstrings}
-
-    doubledigit_pyvers = [v for v in python_vstrings if len(v.split('.')[1]) > 1]
-    cp_codes.update({'cp{}_{}'.format(*v.split('.')): v for v in doubledigit_pyvers})
+    python_versions = PythonVersions()
+    python_version_table = python_versions.table
 
     # Go through packages versions in reverse order.  If at some point, the
     # python requirements disappear, assume the maintainer did not set them and
@@ -555,8 +564,8 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
             min_pyver = None
             max_pyver = None
             if row['python_version'] is not None:
-                min_pyver = cp_codes.get(row['python_version'], row['python_version'])
-                max_pyver = cp_codes.get(row['python_version'], row['python_version'])
+                min_pyver = python_versions.cp_codes.get(row['python_version'], row['python_version'])
+                max_pyver = python_versions.cp_codes.get(row['python_version'], row['python_version'])
 
             upload_time = ub.timeparse(row['upload_time_iso_8601'])
             flags = [upload_time >= t for t in python_version_table['release_date']]
@@ -567,19 +576,21 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
             if row['requires_python']:
                 requires_python = row['requires_python']
                 reqspec = ReqPythonVersionSpec(requires_python)
-                min_pyver = reqspec.highest_explicit()
+                import xdev
+                with xdev.embed_on_exception_context:
+                    min_pyver = reqspec.highest_explicit()
                 # min_pyver = min_pyver.vstring
                 min_pyver = min_pyver.base_version
                 last_min_pyver = min_pyver
 
                 # Declared support is generally only good for the python
                 # versions that existed at the time.
-                declared_support = [v for v in python_vstrings if reqspec.matches(v)]
+                declared_support = [v for v in python_versions.python_vstrings if reqspec.matches(v)]
                 heuristic_support = set(contemporary_pyvers) & set(declared_support)
                 max_pyver = max(heuristic_support, key=Version)
 
-            min_pyver = resolve_pyversion(min_pyver, maximize=False)
-            max_pyver = resolve_pyversion(max_pyver, maximize=True)
+            min_pyver = python_versions.resolve_pyversion(min_pyver, maximize=False)
+            max_pyver = python_versions.resolve_pyversion(max_pyver, maximize=True)
 
             if row.get('abi_tag', None) is not None:
                 abi_tag = str(row['abi_tag'])
@@ -591,8 +602,8 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
                     # General ABI Be permissive here.
                     ...
 
-            min_pyver = cp_codes.get(min_pyver, min_pyver)
-            max_pyver = cp_codes.get(max_pyver, max_pyver)
+            min_pyver = python_versions.cp_codes.get(min_pyver, min_pyver)
+            max_pyver = python_versions.cp_codes.get(max_pyver, max_pyver)
             if min_pyver == 'source':
                 min_pyver = None
             if max_pyver == 'source':
@@ -630,6 +641,24 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
 
     new_table = pd.DataFrame(new_rows)
     new_table = new_table.sort_values('pkg_version', key=vectorize(Version))
+    return new_table, hacked_pyver_to_pkgvers
+
+
+def minimum_cross_python_versions(package_name, request_min=None, refresh=False):
+    """
+    package_name = 'scipy'
+    request_min = None
+
+    package_name = 'opencv-python-headless'
+
+    package_name = 'numpy'
+    request_min = '1.21.0'
+    """
+    if request_min is not None:
+        request_min = Version(request_min)
+
+    new_table, hacked_pyver_to_pkgvers = build_package_table(package_name, refresh)
+
     import rich
     rich.print(new_table.to_string())
     rich.print(new_table['min_pyver'].unique())
@@ -641,7 +670,7 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
     chosen_minimum_for = {}
 
     # groups = dict(list(new_table.groupby('min_pyver')))
-    _grouped = sorted(new_table.groupby('min_pyver'), key=lambda t: RobustVersion(t[0]))
+    _grouped = sorted(new_table.groupby('min_pyver'), key=lambda t: Version(t[0]))
 
     for min_pyver, subdf in _grouped:
         # print('--- min_pyver = {!r} --- '.format(min_pyver))
@@ -712,7 +741,8 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
     # For each Python version find the minimum and maximum Package version it
     # can handle
     # TODO: implement this
-    for pyver in python_vstrings:
+    python_versions = PythonVersions()
+    for pyver in python_versions.python_vstrings:
         pass
 
     # TODO better logic:
@@ -728,9 +758,9 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
             if pyver not in chosen_minimum_for:
                 chosen_minimum_for[pyver] = min(pkgvers, key=Version)
 
-    python_versions = sorted(chosen_minimum_for, key=RobustVersion)
+    chosen_python_versions = sorted(chosen_minimum_for, key=Version)
     lines = []
-    for cur_pyver, next_pyver in ub.iter_window(python_versions, 2):
+    for cur_pyver, next_pyver in ub.iter_window(chosen_python_versions, 2):
         pkg_ver = chosen_minimum_for[cur_pyver]
         if not pkg_ver.startswith('stdlib'):
             line = f"{package_name}>={pkg_ver:<8}  ; python_version < {next_pyver!r:<6} and python_version >= {cur_pyver!r:<6}    # Python {cur_pyver}"
@@ -740,8 +770,8 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
             lines.append(line)
     # last
     # https://peps.python.org/pep-0508/
-    if len(python_versions):
-        cur_pyver = python_versions[-1]
+    if len(chosen_python_versions):
+        cur_pyver = chosen_python_versions[-1]
         pkg_ver = chosen_minimum_for[cur_pyver]
         if not pkg_ver.startswith('stdlib'):
             # line =     f"{package_name}>={pkg_ver:<8}  ;                             python_version >= {cur_pyver!r:<6}    # Python {cur_pyver}+"
@@ -753,13 +783,6 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
             lines.append(line)
     text = '\n'.join(lines[::-1])
     rich.print(text)
-
-
-def RobustVersion(v):
-    if v == 'py2':
-        return Version('2.7')
-    else:
-        return Version(v)
 
 
 def demo():
