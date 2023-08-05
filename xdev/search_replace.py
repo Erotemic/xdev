@@ -62,8 +62,8 @@ class GrepResult(ub.NiceRepr):
         return '\n'.join(summary)
 
 
-def sed(regexpr, repl, dpath=None, include=None, exclude=None, recursive=True,
-        dry=False, verbose=1):
+def sed(regexpr, repl, dpath=None, include=None, exclude=None,
+        dirblocklist=None, recursive=True, dry=False, verbose=1):
     r"""
     Execute a sed on multiple files.
 
@@ -73,6 +73,7 @@ def sed(regexpr, repl, dpath=None, include=None, exclude=None, recursive=True,
         dpath (str | None): passed to :func:`find`.
         include (str | List[str] | MultiPattern | None): passed to :func:`find`.
         exclude (str | List[str] | MultiPattern | None): passed to :func:`find`.
+        dirblocklist (str | List[str] | MultiPattern | None): passed to :func:`find`.
         recursive (bool): passed to :func:`find`.
         dry (bool): if True does not apply edits
         verbose (int): verbosity level
@@ -89,7 +90,7 @@ def sed(regexpr, repl, dpath=None, include=None, exclude=None, recursive=True,
     fpaths_changed = []
 
     fpath_generator = find(dpath=dpath, type='f', include=include,
-                           exclude=exclude, recursive=recursive)
+                           exclude=exclude, dirblocklist=dirblocklist, recursive=recursive)
     for fpath in fpath_generator:
         try:
             changed_lines = sedfile(fpath, regexpr, repl, dry=dry)
@@ -151,8 +152,8 @@ def grep(regexpr, dpath=None, include=None, exclude=None, recursive=True,
     return grep_results
 
 
-def find(pattern=None, dpath=None, include=None, exclude=None, dirblocklist=None,
-         type=None, recursive=True, followlinks=False):
+def find(pattern=None, dpath=None, include=None, exclude=None,
+         dirblocklist=None, type=None, recursive=True, followlinks=False):
     """
     Find all paths in a root subject to a search criterion
 

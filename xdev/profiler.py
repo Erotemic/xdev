@@ -74,13 +74,13 @@ def _dump_global_profile_report():
 
 def profile_now(func):
     """
-    Eagerly report profile information after each call to `func`.
+    Wrap a function to print profile information after it is called.
 
     Args:
         func (Callable): function to profile
 
     Returns:
-        Callable:
+        Callable: the wrapped function
 
     Example:
         >>> # xdoctest: +SKIP

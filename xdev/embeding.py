@@ -118,6 +118,11 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         parent_ns = parent_globals.copy()
         parent_ns.update(parent_locals)
         locals().update(parent_ns)
+
+        SNAPSHOT_STATE = 0
+        if SNAPSHOT_STATE:
+            _make_snapshot(parent_ns)
+
         try:
             embed2()
             # IPython.embed()
@@ -137,6 +142,67 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         if vars().get('EXIT_NOW', False) or vars().get('qqq', False):
             print('[xdev.embed] EXIT_NOW specified')
             sys.exit(1)
+
+
+def _devcheck_frames():
+    # TODO: how do we find the right frame when executing code directly in
+    # IPython?
+    import ubelt as ub
+    for n in range(0, 3):
+        frame = get_parent_frame(n=n)
+        print(f'n={n}')
+        print('frame.f_code.co_filename = {}'.format(ub.urepr(frame.f_code.co_filename, nl=1)))
+        print('frame.f_code.co_name = {}'.format(ub.urepr(frame.f_code.co_name, nl=1)))
+    ...
+
+
+def _load_snapshot(fpath, parent_globals=None):
+    import pickle
+    import ubelt as ub
+    if parent_globals is None:
+        parent_globals = get_parent_frame(n=1).f_globals
+    fpath = ub.Path(fpath)
+    snapshot = pickle.loads(fpath.read_bytes())
+    loaded_variables = dict()
+    for k, v in snapshot['variables'].items():
+        loaded_variables[k] = pickle.loads(v)
+    parent_globals.update(loaded_variables)
+
+
+def _make_snapshot(parent_ns):
+    import pickle
+    snapshot = {}
+    variables = snapshot['variables'] = {}
+    not_pickleable = snapshot['not_pickleable'] = []
+    for k, v in parent_ns.items():
+        try:
+            variables[k] = pickle.dumps(v)
+        except Exception:
+            not_pickleable.append(k)
+
+    import ubelt as ub
+    dpath = ub.Path.appdir('xdev', 'states').ensuredir()
+    fpath = dpath / ('state_' + ub.timestamp() + '.pkl')
+
+    snapshot_data = pickle.dumps(snapshot)
+    fpath.write_bytes(snapshot_data)
+
+    print(ub.highlight_code(ub.codeblock(
+        f'''
+        # To debug in a fresh IPython session:
+        fpath = '{fpath}'
+        from xdev.embeding import _load_snapshot
+        _load_snapshot(fpath, globals())
+        '''), 'python'))
+    # import pickle
+    # import ubelt as ub
+    # fpath = ub.Path(fpath)
+    # snapshot = pickle.loads(fpath.read_bytes())
+    # loaded_variables = dict()
+    # for k, v in snapshot['variables'].items():
+    #     loaded_variables[k] = pickle.loads(v)
+    # globals().update(loaded_variables)
+    ...
 
 
 def embed_if_requested(n=0):

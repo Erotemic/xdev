@@ -456,6 +456,21 @@ def summarize_package_availability(package_name):
         rich.print(piv.to_string())
 
 
+LATEST_PYTHON = '3.11'
+
+
+def resolve_pyversion(pyver, maximize=False):
+    if pyver == 'any':
+        pyver = LATEST_PYTHON if maximize else '2.7'
+    elif pyver == 'py2':
+        pyver = '2.7'
+    elif pyver == 'py3':
+        pyver = LATEST_PYTHON if maximize else '3.6'
+    elif pyver == 'py2.py3':
+        pyver = LATEST_PYTHON if maximize else '2.7'
+    return pyver
+
+
 def minimum_cross_python_versions(package_name, request_min=None, refresh=False):
     """
     package_name = 'scipy'
@@ -563,17 +578,8 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
                 heuristic_support = set(contemporary_pyvers) & set(declared_support)
                 max_pyver = max(heuristic_support, key=Version)
 
-            if min_pyver == 'any':
-                min_pyver = '2.7'
-            if min_pyver == 'py2.py3':
-                min_pyver = '2.7'
-            if min_pyver == 'py3':
-                min_pyver = '3.6'
-
-            if max_pyver == 'py2.py3':
-                max_pyver = '2.7'
-            if max_pyver == 'py3':
-                max_pyver = '3.6'
+            min_pyver = resolve_pyversion(min_pyver, maximize=False)
+            max_pyver = resolve_pyversion(max_pyver, maximize=True)
 
             if row.get('abi_tag', None) is not None:
                 abi_tag = str(row['abi_tag'])
@@ -635,8 +641,9 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
     chosen_minimum_for = {}
 
     # groups = dict(list(new_table.groupby('min_pyver')))
+    _grouped = sorted(new_table.groupby('min_pyver'), key=lambda t: RobustVersion(t[0]))
 
-    for min_pyver, subdf in sorted(new_table.groupby('min_pyver'), key=lambda x: Version(x[0])):
+    for min_pyver, subdf in _grouped:
         # print('--- min_pyver = {!r} --- '.format(min_pyver))
 
         if 'version' in subdf.columns:
@@ -721,7 +728,7 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
             if pyver not in chosen_minimum_for:
                 chosen_minimum_for[pyver] = min(pkgvers, key=Version)
 
-    python_versions = sorted(chosen_minimum_for, key=Version)
+    python_versions = sorted(chosen_minimum_for, key=RobustVersion)
     lines = []
     for cur_pyver, next_pyver in ub.iter_window(python_versions, 2):
         pkg_ver = chosen_minimum_for[cur_pyver]
@@ -746,6 +753,13 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
             lines.append(line)
     text = '\n'.join(lines[::-1])
     rich.print(text)
+
+
+def RobustVersion(v):
+    if v == 'py2':
+        return Version('2.7')
+    else:
+        return Version(v)
 
 
 def demo():

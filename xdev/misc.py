@@ -307,7 +307,7 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
 
 def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
               return_text=False, return_tree=False, pathstyle='name',
-              max_depth=None, with_type=False, colors=not ub.NO_COLOR):
+              max_depth=None, with_type=False, abs_root_label=True, colors=not ub.NO_COLOR):
     """
     Filesystem tree representation
 
@@ -321,6 +321,7 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
         return_tree (bool): if True return the tree
         return_text (bool): if True return the text
         maxdepth (int | None): maximum depth to descend
+        abs_root_label (bool): if True force the root to always be absolute
         colors (bool): if True use rich
 
     SeeAlso:
@@ -343,8 +344,10 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
     if dirblocklist is not None:
         dirblocklist = MultiPattern.coerce(dirblocklist, hint='glob')
 
-    def _make_label(p):
-        if pathstyle == 'rel':
+    def _make_label(p, force_abs=False):
+        if force_abs:
+            pathrep = p
+        elif pathstyle == 'rel':
             pathrep = relpath(p, cwd)
         elif pathstyle == 'name':
             pathrep = basename(p)
@@ -430,7 +433,8 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
         else:
             prefix = ''
 
-        label = '{}{}'.format(prefix, _make_label(root))
+        force_abs = abs_root_label and curr_depth == start_depth
+        label = '{}{}'.format(prefix, _make_label(root, force_abs))
 
         tree.nodes[root]['label'] = label
 

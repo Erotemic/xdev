@@ -6,9 +6,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## Version 1.3.4 - Released 2023-06-14 
 
+### Added
+* Add repostats CLI
+* Add dirblocklist to sed CLI
+
 ### Fixed
 
+* Fixed issue in availpkg
 * bug in editfile
+* bug in find CLI dirblocklist
 
 
 ## Version 1.3.3 - Released 2023-06-14 

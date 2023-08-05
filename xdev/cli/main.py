@@ -93,8 +93,11 @@ class XdevCLI(ModalCLI):
                 then show the dry run and then ask for confirmation.
                 '''
             )),
-            'include': scfg.Value(None),
-            'exclude': scfg.Value(None),
+            'include': scfg.Value(None, help='If specified, only consider results with matching basenames'),
+            'exclude': scfg.Value(None, help='If specified, do not consider results with matching basenames'),
+            'dirblocklist': scfg.Value(None, help=(
+                'Any directory matching this pattern will be removed from '
+                'traveral.')),
             'recursive': scfg.Value(True),
             'verbose': scfg.Value(1),
         }
@@ -138,13 +141,13 @@ class XdevCLI(ModalCLI):
         __default__ = {
             'pattern': scfg.Value('', position=1),
             'dpath': scfg.Value(None, position=2, help='the path to search. Defaults to cwd'),
-            'include': scfg.Value(None, help='If specified, only list results with matching basenames'),
-            'exclude': scfg.Value(None, help='If specified, do not list results with matching basenames'),
+            'include': scfg.Value(None, help='If specified, only consider results with matching basenames'),
+            'exclude': scfg.Value(None, help='If specified, do not consider results with matching basenames'),
+            'dirblocklist': scfg.Value(None, help=(
+                'Any directory matching this pattern will be removed from '
+                'traveral.')),
             'type': scfg.Value('f', help="can be f and/or d"),
             'recursive': scfg.Value(True),
-            'dirblocklist': scfg.Value(
-                'Any directory matching this pattern will be removed from '
-                'traveral.'),
             'followlinks': scfg.Value(False),
         }
 
@@ -468,6 +471,8 @@ class XdevCLI(ModalCLI):
         @classmethod
         def main(cls, cmdline=False, **kwargs):
             available_package_versions.main(cmdline=cmdline, **kwargs)
+
+    from xdev.cli.repo_stats import RepoStatsCLI
 
 
 def main():
