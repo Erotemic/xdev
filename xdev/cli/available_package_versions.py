@@ -281,16 +281,16 @@ def grab_pypi_items(package_name, refresh=False):
         for item in items:
             packagetype = item['packagetype']
             if packagetype == 'sdist':
-                pass
+                ...
             elif packagetype == 'bdist_egg':
                 # not handled, sqlalchemy has an example.
-                pass
+                ...
             elif packagetype == 'bdist_wininst':
                 # not handled, pandas has an example.
-                pass
+                ...
             elif packagetype == 'bdist_rpm':
                 # not handled, IPython has an example.
-                pass
+                ...
             elif packagetype == 'bdist_wheel':
                 wheel_info = parse_wheel_name(item['filename'])
                 if wheel_info:
@@ -453,15 +453,15 @@ def summarize_package_availability(package_name):
         try:
             piv = piv.sort_values('os', axis=1, dtype=str)
         except Exception:
-            pass
+            ...
         try:
             piv = piv.sort_values('abi_tag', axis=1, key=vec_sorter, dtype=str)
         except Exception:
-            pass
+            ...
         try:
             piv = piv.sort_values('pkg_version', key=vec_ver, dtype=str)
         except Exception:
-            pass
+            ...
         import rich
         rich.print('')
         rich.print('package_name = {}'.format(ub.repr2(package_name, nl=1)))
@@ -716,7 +716,7 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
 
         # This is a proxy metric, but a pretty good one in 2021
         if len(cand_to_score) == 0:
-            pass
+            ...
             # print('no cand for')
             # print(f'min_pyver={min_pyver}')
         else:
@@ -743,7 +743,7 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
     # TODO: implement this
     python_versions = PythonVersions()
     for pyver in python_versions.python_vstrings:
-        pass
+        ...
 
     # TODO better logic:
     # FOR EACH PYTHON VERSION
