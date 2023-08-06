@@ -329,18 +329,32 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
 
     Ignore:
         >>> import xdev
-        >>> xdev.tree_repr()
+        >>> import ubelt as ub
+        >>> dpath = ub.Path.appdir('xdev/tests/test_tree_repr')
+        >>> (dpath / 'dir1').ensuredir()
+        >>> (dpath / 'dir2').ensuredir()
+        >>> (dpath / 'dir3').ensuredir()
+        >>> (dpath / 'dir1/subdir1').ensuredir()
+        >>> (dpath / 'dir1/subdir2').ensuredir()
+        >>> (dpath / 'dir2/subdir1').ensuredir()
+        >>> (dpath / 'dir2/subdir2').ensuredir()
+        >>> (dpath / 'dir1/subdir1/file1').touch()
+        >>> (dpath / 'dir1/subdir1/file2').touch()
+        >>> (dpath / 'dir1/subdir1/file3').touch()
+        >>> (dpath / 'dir1/subdir2/file4').touch()
+        >>> (dpath / 'dir1/subdir2/file4').touch()
+        >>> xdev.tree_repr(dpath)
     """
     import os
     from os.path import join, relpath, basename
+    import networkx as nx
+    from xdev.patterns import MultiPattern
     if cwd is None:
         cwd = os.getcwd()
 
-    import networkx as nx
     # tree = nx.OrderedDiGraph()
     tree = nx.DiGraph()
 
-    from xdev.patterns import MultiPattern
     if dirblocklist is not None:
         dirblocklist = MultiPattern.coerce(dirblocklist, hint='glob')
 
@@ -388,8 +402,8 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
             types.append('F')
         if isdir:
             if colors:
-                scolor = '[blue]'
-                tcolor = '[/blue]'
+                scolor = f'[blue][link={p}]'
+                tcolor = '[/link][/blue]'
             types.append('D')
 
         if islink:
