@@ -11,6 +11,8 @@ CommandLine:
     xdev availpkg uritools
     xdev availpkg textual
     xdev availpkg networkx
+    xdev availpkg fsspec
+    xdev availpkg coverage
 """
 import scriptconfig as scfg
 import ubelt as ub
@@ -388,84 +390,83 @@ def summarize_package_availability(package_name):
         new.append(item)
     flat_table = pd.DataFrame(new)
 
-    if 1:
-        df = pd.DataFrame(flat_table)
-        df = df.drop(df.columns.intersection([
-            'digests', 'downloads', 'comment_text', 'has_sig',
-            # 'filename',
-            'size',
-            'url', 'upload_time', 'upload_time_iso_8601', 'distribution',
-            'md5_digest', 'yanked', 'yanked_reason']), axis=1)
+    df = pd.DataFrame(flat_table)
+    df = df.drop(df.columns.intersection([
+        'digests', 'downloads', 'comment_text', 'has_sig',
+        # 'filename',
+        'size',
+        'url', 'upload_time', 'upload_time_iso_8601', 'distribution',
+        'md5_digest', 'yanked', 'yanked_reason']), axis=1)
 
-        # def vec_ver(vs):
-        #     return [Version(v) for v in vs]
+    # def vec_ver(vs):
+    #     return [Version(v) for v in vs]
 
-        vec_sorter = vectorize(cp_sorter)
+    vec_sorter = vectorize(cp_sorter)
 
-        flags = (df['packagetype'] != 'sdist')
-        if not np.any(flags):
-            df = df[flags]
+    flags = (df['packagetype'] != 'sdist')
+    if not np.any(flags):
+        df = df[flags]
 
-        flags = (df['abi_tag'] != 'none')
-        if np.any(flags):
-            df = df[flags]
+    flags = (df['abi_tag'] != 'none')
+    if np.any(flags):
+        df = df[flags]
 
-        if 0:
-            counts = df.value_counts(['pkg_version', 'abi_tag', 'os']).to_frame('count').reset_index()
-            # piv = counts.to_frame('count').reset_index().pivot(['pkg_version', 'abi_tag'], 'os', 'count')
+    if 0:
+        counts = df.value_counts(['pkg_version', 'abi_tag', 'os']).to_frame('count').reset_index()
+        # piv = counts.to_frame('count').reset_index().pivot(['pkg_version', 'abi_tag'], 'os', 'count')
+        counts = counts.sort_values('abi_tag')
+        # counts.sort_values('abi_tag', key=vec_sorter)
+        # counts = counts.sort_values('abi_tag')
+        piv = counts.pivot(
+            index=['pkg_version'],
+            columns=['abi_tag', 'os'],
+            values='count')
+    else:
+        abi_blocklist = {
+            # 'cp36m',
+            'cp26m', 'cp26mu', 'cp27m', 'cp27mu', 'cp32m', 'cp33m', 'cp34m', 'cp35m',
+            'pypy36_pp73', 'pypy37_pp73', 'pypy38_pp73', 'pypy_73', 'pypy_41'
+        }
+        flags = df['abi_tag'].apply(lambda x: x in abi_blocklist)
+        if np.any(~flags):
+            df = df[~flags]
+
+        try:
+            counts = df.value_counts(['pkg_version', 'abi_tag', 'os', 'arch']).to_frame('count').reset_index()
+        except KeyError:
+            counts = []
+        if len(counts):
             counts = counts.sort_values('abi_tag')
-            # counts.sort_values('abi_tag', key=vec_sorter)
-            # counts = counts.sort_values('abi_tag')
             piv = counts.pivot(
                 index=['pkg_version'],
-                columns=['abi_tag', 'os'],
+                columns=['abi_tag', 'os', 'arch'],
                 values='count')
         else:
-            abi_blocklist = {
-                # 'cp36m',
-                'cp26m', 'cp26mu', 'cp27m', 'cp27mu', 'cp32m', 'cp33m', 'cp34m', 'cp35m',
-                'pypy36_pp73', 'pypy37_pp73', 'pypy38_pp73', 'pypy_73', 'pypy_41'
-            }
-            flags = df['abi_tag'].apply(lambda x: x in abi_blocklist)
-            if np.any(~flags):
-                df = df[~flags]
+            counts = df.value_counts(['pkg_version', 'requires_python'], dropna=False).to_frame('count').reset_index()
+            piv = counts.pivot(
+                index=['pkg_version'],
+                columns=['requires_python'],
+                values='count')
 
-            try:
-                counts = df.value_counts(['pkg_version', 'abi_tag', 'os', 'arch']).to_frame('count').reset_index()
-            except KeyError:
-                counts = []
-            if len(counts):
-                counts = counts.sort_values('abi_tag')
-                piv = counts.pivot(
-                    index=['pkg_version'],
-                    columns=['abi_tag', 'os', 'arch'],
-                    values='count')
-            else:
-                counts = df.value_counts(['pkg_version', 'requires_python'], dropna=False).to_frame('count').reset_index()
-                piv = counts.pivot(
-                    index=['pkg_version'],
-                    columns=['requires_python'],
-                    values='count')
-
-        vec_ver = vectorize(Version)
-        # vec_sorter(['cp310', 'cp27'])
-        vec_sorter(df.abi_tag)
-        try:
-            piv = piv.sort_values('os', axis=1, dtype=str)
-        except Exception:
-            ...
-        try:
-            piv = piv.sort_values('abi_tag', axis=1, key=vec_sorter, dtype=str)
-        except Exception:
-            ...
-        try:
-            piv = piv.sort_values('pkg_version', key=vec_ver, dtype=str)
-        except Exception:
-            ...
-        import rich
-        rich.print('')
-        rich.print('package_name = {}'.format(ub.repr2(package_name, nl=1)))
-        rich.print(piv.to_string())
+    vec_ver = vectorize(Version)
+    # vec_sorter(['cp310', 'cp27'])
+    vec_sorter(df.abi_tag)
+    try:
+        piv = piv.sort_values('os', axis=1, dtype=str)
+    except Exception:
+        ...
+    try:
+        piv = piv.sort_values('abi_tag', axis=1, key=vec_sorter, dtype=str)
+    except Exception:
+        ...
+    try:
+        piv = piv.sort_values('pkg_version', key=vec_ver, dtype=str)
+    except Exception:
+        ...
+    import rich
+    rich.print('')
+    rich.print('package_name = {}'.format(ub.repr2(package_name, nl=1)))
+    rich.print(piv.to_string())
 
 
 class PythonVersions:
@@ -477,7 +478,7 @@ class PythonVersions:
         # https://en.wikipedia.org/wiki/History_of_Python#Version_3
         python_version_rows = [
             # {'release_date': '2024-10-01', 'pyver': '3.13'},
-            # {'release_date': '2023-10-02', 'pyver': '3.12'},
+            {'release_date': '2023-10-02', 'pyver': '3.12'},
 
             {'release_date': '2022-10-24', 'pyver': '3.11'},
             {'release_date': '2021-10-04', 'pyver': '3.10'},
@@ -789,7 +790,6 @@ def demo():
     package_names = [
         'ipykernel',
         'IPython',
-        # minimum_cross_python_versions(package_name),
         'nbconvert',
         'jupyter_core',
         'pytest',
