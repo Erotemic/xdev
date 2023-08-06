@@ -131,6 +131,7 @@ def generate_network_text(
     str : a line of generated text
 
     Example:
+        >>> # xdoctest: +REQUIRES(module:networkx)
         >>> graph = nx.path_graph(10)
         >>> graph.add_node('A')
         >>> graph.add_node('B')
@@ -448,6 +449,7 @@ def write_network_text(
 
     Example
     -------
+    >>> # xdoctest: +REQUIRES(module:networkx)
     >>> graph = nx.balanced_tree(r=2, h=2, create_using=nx.DiGraph)
     >>> write_network_text(graph)
     ╙── 0
@@ -657,6 +659,7 @@ def graph_str(graph, with_labels=True, sources=None, write=None, ascii_only=Fals
 
     Example
     -------
+    >>> # xdoctest: +REQUIRES(module:networkx)
     >>> graph = nx.balanced_tree(r=2, h=3, create_using=nx.DiGraph)
     >>> print(graph_str(graph))
     ╙── 0
@@ -676,12 +679,14 @@ def graph_str(graph, with_labels=True, sources=None, write=None, ascii_only=Fals
                 └─╼ 14
 
 
+    >>> # xdoctest: +REQUIRES(module:networkx)
     >>> graph = nx.balanced_tree(r=1, h=2, create_using=nx.Graph)
     >>> print(graph_str(graph))
     ╙── 0
         └── 1
             └── 2
 
+    >>> # xdoctest: +REQUIRES(module:networkx)
     >>> print(graph_str(graph, ascii_only=True))
     +-- 0
         L-- 1
