@@ -10,7 +10,7 @@ if not os.environ.get('_ARGCOMPLETE', ''):
     from progiter.manager import ProgressManager
 
 
-class RepoStatsCLI(scfg.DataConfig):
+class DirectoryStatsCLI(scfg.DataConfig):
     """
     Analysis for code in a repository
 
@@ -18,17 +18,26 @@ class RepoStatsCLI(scfg.DataConfig):
     --------
     python ~/code/xdev/xdev/cli/repo_stats.py .
     """
-    __command__ = 'repo_stats'
+    __command__ = 'dirstats'
 
     dpath = scfg.Value('.', type=str, help='path to the git repo. If prefixed with ``module:``, then treated as a python module', position=1)
     # block_dnames = scfg.Value('py:auto', help='A coercable multi-pattern. If "py:auto" chooses sensible defaults for a Python dev.', nargs='+')
     # block_fnames = scfg.Value('py:auto', help='A coercable multi-pattern. If "py:auto" chooses sensible defaults for a Python dev.', nargs='+')
     block_dnames = scfg.Value(None, help='A coercable multi-pattern. If "py:auto" chooses sensible defaults for a Python dev.', nargs='+')
     block_fnames = scfg.Value(None, help='A coercable multi-pattern. If "py:auto" chooses sensible defaults for a Python dev.', nargs='+')
-    max_depth = scfg.Value(None, short_alias=['L'])
+
+    include_dnames = scfg.Value(None, help='A coercable multi-pattern. Only directory names matching this pattern will be considered', nargs='+')
+    include_fnames = scfg.Value(None, help='A coercable multi-pattern. Only file names matching this pattern will be considered', nargs='+')
+
+    parse_content = scfg.Value(True, isflag=True, help='if True parse stats about the content of each file')
+    # parse_meta_stats = scfg.Value(True, isflag=True, help='if True parse stats about the content of each file')
+
+    max_walk_depth = scfg.Value(None, short_alias=['L'], help='maximum depth to walk')
+    max_display_depth = scfg.Value(None, short_alias=['D'], help='maximum depth to display')
+
     verbose = scfg.Value(0, isflag=True, short_alias=['-v'])
     version = scfg.Value(False, isflag=True, short_alias=['-V'])
-    python = scfg.Value(False, isflag=True, help='enable python defaults', alias=['pydev'])
+    python = scfg.Value(False, isflag=True, help='enable python repository defaults', alias=['pydev'])
 
     def __post_init__(config):
         if config.dpath.startswith('module:'):
@@ -61,7 +70,7 @@ class RepoStatsCLI(scfg.DataConfig):
         cls.main = func
         return func
 
-__cli__ = RepoStatsCLI
+__cli__ = DirectoryStatsCLI
 
 
 @__cli__._register_main
@@ -73,89 +82,53 @@ def main(cmdline=1, **kwargs):
         >>> kwargs = dict(dpath='module:watch')
         >>> main(cmdline=cmdline, **kwargs)
     """
-    config = RepoStatsCLI.cli(cmdline=cmdline, data=kwargs, strict=True)
+    config = DirectoryStatsCLI.cli(cmdline=cmdline, data=kwargs, strict=True)
 
     if config.verbose:
         kwargs = {'dpath': ub.modname_to_modpath('kwarray')}
-    print('config = ' + ub.urepr(dict(config), nl=1))
+    rich.print('config = ' + ub.urepr(config, nl=1))
 
-    self = DirectoryAnalysis(
-        config.dpath,
-        block_dnames=config.block_dnames,
-        block_fnames=config.block_fnames
-    )
+    kwargs = ub.udict(config) & {
+        'dpath', 'block_dnames', 'block_fnames', 'include_dnames',
+        'include_fnames', 'max_walk_depth', 'parse_content'
+    }
+    self = DirectoryAnalysis(**kwargs)
     self.build()
-
-    nxtxt_kwargs = ub.udict(config) & {'max_depth'}
+    nxtxt_kwargs = {'max_depth': config['max_display_depth']}
     self.write_report(**nxtxt_kwargs)
-
-    # base = ub.Path(config.repo_dpath)
-    # main_module_dpath = list(base.glob('*/__init__.py'))[0].parent
-
-    # path_to_info = ub.ddict(dict)
-    # g = nx.DiGraph()
-    # g.add_node(main_module_dpath, label=main_module_dpath.name)
-    # for root, dnames, fnames in main_module_dpath.walk():
-    #     print(f'root={root}')
-    #     g.add_node(root, label=root.name)
-    #     root_info = path_to_info[root]
-    #     dnames[:] = [d for d in dnames if not block_dnames.match(d)]
-    #     # fnames[:] = [f for f in fnames if not block_fnames.match(f)]
-    #     root_info['num_good_files'] = len(fnames)
-    #     root_info['num_good_dirs'] = len(dnames)
-
-    #     ext_to_files = ub.udict(ub.group_items(fnames, lambda f: ub.Path(f).suffix))
-    #     ext_hist = ext_to_files.map_values(len)
-
-    #     ext_to_nlines = {}
-    #     for ext, _fnames in ext_to_files.items():
-    #         if ext == '.py':
-    #             s = 0
-    #             for fname in _fnames:
-    #                 fpath = root / fname
-    #                 s += len(fpath.read_text().split('\n'))
-    #             ext_to_nlines[ext] = s
-
-    #     root_info['ext_hist'] = ext_hist
-    #     root_info['ext_lines'] = ext_to_nlines
-    #     # root_info['ext_hist']['__init__.py'] = '__init__.py' in fnames
-    #     root_info['has_init'] = '__init__.py' in fnames
-
-    #     for d in dnames:
-    #         dpath = root / d
-    #         g.add_node(dpath, label=dpath.name)
-    #         g.add_edge(root, dpath)
-
-    # for p in list(g.nodes):
-    #     root_info = path_to_info[p]
-    #     if not root_info.get('has_init', False):
-    #         g.remove_node(p)
-
-    # for p in list(g.nodes):
-    #     node_data = g.nodes[p]
-    #     root_info = path_to_info[p]
-    #     node_data['label'] = ub.color_text(node_data['label'], 'green') + ' ' + ub.repr2(root_info['ext_lines'], nl=0)
-
-    # print(util.util_networkx.write_network_text(g, sources=[main_module_dpath]))
 
 
 class DirectoryAnalysis:
-    def __init__(self, dpath, block_dnames=None, block_fnames=None):
+    def __init__(self, dpath, block_dnames=None, block_fnames=None,
+                 include_dnames=None, include_fnames=None, max_walk_depth=None,
+                 parse_content=True):
         self.dpath = ub.Path(dpath).resolve()
         if block_dnames is not None:
             block_dnames = MultiPattern.coerce(block_dnames)
         if block_fnames is not None:
             block_fnames = MultiPattern.coerce(block_fnames)
+        if include_fnames is not None:
+            include_fnames = MultiPattern.coerce(include_fnames)
+        if include_dnames is not None:
+            include_dnames = MultiPattern.coerce(include_dnames)
         self.block_fnames = block_fnames
         self.block_dnames = block_dnames
+        self.include_fnames = include_fnames
+        self.include_dnames = include_dnames
+        self.max_walk_depth = max_walk_depth
         self.graph = None
+        self.parse_content = parse_content
         self._topo_order = None
 
     def write_report(self, **nxtxt_kwargs):
+        import pandas as pd
         # lines = []
         # write = lines.append
         # nx.write_network_text(self.graph, write, end='', **nxtxt_kwargs)
-        nx.write_network_text(self.graph, rich.print, end='', **nxtxt_kwargs)
+        try:
+            nx.write_network_text(self.graph, rich.print, end='', **nxtxt_kwargs)
+        except KeyboardInterrupt:
+            ...
         # text = '\n'.join(lines)
         # rich.print(text)
 
@@ -163,7 +136,7 @@ class DirectoryAnalysis:
 
         def _node_table(node):
             node_data = self.graph.nodes[node]
-            stats = node_data['stats']
+            stats = node_data.get('stats', {})
             stat_rows = []
             for k, v in stats.items():
                 ext, kind = k.split('.')
@@ -172,10 +145,14 @@ class DirectoryAnalysis:
                     # ext = '𝙣𝙪𝙡𝙡'
                     ext = '*null*'
                 stat_rows.append({'ext': ext, 'kind': kind, 'value': v})
-            import pandas as pd
             table = pd.DataFrame(stat_rows)
-            piv = table.pivot(index='ext', columns='kind', values='value')
-            piv = piv.sort_values('size')
+
+            if len(table) > 0:
+                piv = table.pivot(index='ext', columns='kind', values='value')
+                piv = piv.sort_values('size')
+            else:
+                piv = pd.DataFrame([], index=pd.Index([], name='ext'), columns=pd.Index(['size', 'files'], name='kind'))
+
             totals = piv.sum(axis=0)
             disp_totals = totals.copy()
             disp_totals['size'] = byte_str(totals['size'])
@@ -194,8 +171,10 @@ class DirectoryAnalysis:
             child_rows.append(row)
         if child_rows:
             print('')
-            import pandas as pd
-            rich.print(pd.DataFrame(child_rows).sort_values('total_lines'))
+            df = pd.DataFrame(child_rows)
+            if 'total_lines' in df.columns:
+                df = df.sort_values('total_lines')
+            rich.print(df)
             # if self.graph.nodes[node]['ntype'] == 'dir':
             # print(f'node={node}')
 
@@ -214,6 +193,18 @@ class DirectoryAnalysis:
         self._update_labels()
         self._sort()
 
+    def _inplace_filter_dnames(self, dnames):
+        if self.include_dnames is not None:
+            dnames[:] = [d for d in dnames if self.include_dnames.match(d)]
+        if self.block_dnames is not None:
+            dnames[:] = [d for d in dnames if not self.block_dnames.match(d)]
+
+    def _inplace_filter_fnames(self, fnames):
+        if self.include_fnames is not None:
+            fnames[:] = [f for f in fnames if self.include_fnames.match(f)]
+        if self.block_fnames is not None:
+            fnames[:] = [f for f in fnames if not self.block_fnames.match(f)]
+
     def _walk(self):
         dpath = self.dpath
         g = nx.DiGraph()
@@ -222,18 +213,29 @@ class DirectoryAnalysis:
         pman = ProgressManager()
         with pman:
             prog = pman.progiter(desc='Walking directory')
+
+            if self.max_walk_depth is not None:
+                start_depth = str(self.dpath).count(os.path.sep)
+
             for root, dnames, fnames in self.dpath.walk():
                 prog.step()
 
-                # Remove directories that match the blocklist
-                if self.block_dnames is not None:
-                    dnames[:] = [d for d in dnames if not self.block_dnames.match(d)]
+                if self.max_walk_depth is not None:
+                    curr_depth = str(root).count(os.path.sep)
+                    rel_depth = (curr_depth - start_depth)
+                    if rel_depth >= self.max_walk_depth:
+                        del dnames[:]
 
                 g.add_node(root, name=root.name, label=root.name, type='dir')
                 if root != dpath:
                     g.add_edge(root.parent, root)
 
-                for f in (f for f in fnames if self.block_fnames is None or not self.block_fnames.match(f)):
+                # Remove directories / files that match the blocklist or dont
+                # match the include list
+                self._inplace_filter_dnames(dnames)
+                self._inplace_filter_fnames(fnames)
+
+                for f in fnames:
                     fpath = root / f
                     g.add_node(fpath, name=fpath.name, label=fpath.name, type='file')
                     g.add_edge(root, fpath)
@@ -250,7 +252,8 @@ class DirectoryAnalysis:
             prog = pman.progiter(desc='Parse File Info', total=len(g))
             for fpath, node_data in g.nodes(data=True):
                 if node_data['type'] == 'file':
-                    stats = parse_file_stats(fpath)
+                    stats = parse_file_stats(fpath,
+                                             parse_content=self.parse_content)
                     node_data['stats'] = stats
                 prog.step()
 
@@ -295,25 +298,24 @@ class DirectoryAnalysis:
         g = self.graph
         for p in list(g.nodes):
             node_data = g.nodes[p]
-            stats = node_data['stats']
+            stats = node_data.get('stats', None)
             ntype = node_data.get('type', None)
             if stats:
                 disp_stats = self._humanize_stats(stats, ntype)
+                stats_text = ub.urepr(disp_stats, nl=0, compact=1)
                 if ntype == 'dir':
                     color = 'blue'
-                    # node_data['label'] = ub.color_text(node_data['name'], 'blue') + ': ' + ub.urepr(disp_stats, nl=0, compact=1)
-                    node_data['label'] = f'[{color}][link={p}]' + node_data['name'] + f'[/link][/{color}]' + ': ' + ub.urepr(disp_stats, nl=0, compact=1)
+                    node_data['label'] = f'[{color}][link={p}]' + node_data['name'] + f'[/link][/{color}]' + ': ' + stats_text
                 elif ntype == 'file':
                     color = 'green'
-                    # node_data['label'] = ub.color_text(node_data['name'], 'green') + ': ' + ub.urepr(disp_stats, nl=0, compact=1)
-                    node_data['label'] = f'[{color}]' + node_data['name'] + f'[/{color}]' + ': ' + ub.urepr(disp_stats, nl=0, compact=1)
+                    node_data['label'] = f'[{color}]' + node_data['name'] + f'[/{color}]' + ': ' + stats_text
             else:
                 if ntype == 'dir':
                     color = 'blue'
-                    node_data['label'] = ub.color_text(node_data['label'], 'blue')
+                    node_data['label'] = f'[{color}]' + node_data['name'] + f'[/{color}]'
                 elif ntype == 'file':
                     color = 'green'
-                    node_data['label'] = ub.color_text(node_data['label'], 'green')
+                    node_data['label'] = f'[{color}]' + node_data['name'] + f'[/{color}]'
 
     def _sort(self):
         g = self.graph
@@ -324,7 +326,7 @@ class DirectoryAnalysis:
             # Sort children by total lines
             children = g.succ[node]
             children = ub.udict({c: g.nodes[c] for c in children})
-            children = children.sorted_keys(lambda c: (g.nodes[c]['type'], g.nodes[c]['stats'].get('total_lines', 0)), reverse=True)
+            children = children.sorted_keys(lambda c: (g.nodes[c]['type'], g.nodes[c].get('stats', {}).get('total_lines', 0)), reverse=True)
             for c, d in children.items():
                 ordered_nodes.pop(c, None)
                 ordered_nodes[c] = d
@@ -339,7 +341,7 @@ class DirectoryAnalysis:
         self.graph = new
 
 
-def parse_file_stats(fpath):
+def parse_file_stats(fpath, parse_content=True):
     """
     Get information about a file, including things like number of code lines /
     documentation lines, if that sort of information is available.
@@ -357,7 +359,7 @@ def parse_file_stats(fpath):
 
     stats['files'] = 1
 
-    if not is_broken:
+    if not is_broken and parse_content:
         try:
             text = fpath.read_text()
         except UnicodeDecodeError:

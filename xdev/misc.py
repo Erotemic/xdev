@@ -424,7 +424,7 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
         curr_depth = str(root).count(os.path.sep)
 
         if max_depth is not None:
-            if (curr_depth - start_depth):
+            if (curr_depth - start_depth) > max_depth:
                 del dnames[:]
 
         if dirblocklist is not None:

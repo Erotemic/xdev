@@ -472,7 +472,7 @@ class XdevCLI(ModalCLI):
         def main(cls, cmdline=False, **kwargs):
             available_package_versions.main(cmdline=cmdline, **kwargs)
 
-    from xdev.cli.repo_stats import RepoStatsCLI
+    from xdev.cli.dirstats import DirectoryStatsCLI
 
 
 def main():
