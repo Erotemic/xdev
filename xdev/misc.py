@@ -307,7 +307,8 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
 
 def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
               return_text=False, return_tree=False, pathstyle='name',
-              max_depth=None, with_type=False, abs_root_label=True, colors=not ub.NO_COLOR):
+              max_depth=None, with_type=False, abs_root_label=True,
+              ignore_dotprefix=True, colors=not ub.NO_COLOR):
     """
     Filesystem tree representation
 
@@ -330,147 +331,191 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
     Ignore:
         >>> import xdev
         >>> import ubelt as ub
-        >>> dpath = ub.Path.appdir('xdev/tests/test_tree_repr')
-        >>> (dpath / 'dir1').ensuredir()
-        >>> (dpath / 'dir2').ensuredir()
-        >>> (dpath / 'dir3').ensuredir()
-        >>> (dpath / 'dir1/subdir1').ensuredir()
-        >>> (dpath / 'dir1/subdir2').ensuredir()
-        >>> (dpath / 'dir2/subdir1').ensuredir()
-        >>> (dpath / 'dir2/subdir2').ensuredir()
-        >>> (dpath / 'dir1/subdir1/file1').touch()
-        >>> (dpath / 'dir1/subdir1/file2').touch()
-        >>> (dpath / 'dir1/subdir1/file3').touch()
-        >>> (dpath / 'dir1/subdir2/file4').touch()
-        >>> (dpath / 'dir1/subdir2/file4').touch()
-        >>> xdev.tree_repr(dpath)
+        >>> dpath = ub.Path.appdir('xdev/tests/test_tree_repr').delete().ensuredir()
+        >>> outside_fpath = ((dpath / 'outside_path').ensuredir() / 'file').touch()
+        >>> outside_dpath2 = ((dpath / 'outside_path/path2')).ensuredir()
+        >>> outside_dpath1 = ((dpath / 'outside_path/path')).ensuredir()
+        >>> (outside_dpath1 / 'file1').write_text('foo')
+        >>> (outside_dpath1 / 'subdir1').ensuredir()
+        >>> (outside_dpath1 / 'subdir1/file2').write_text('bar')
+        >>> cwd = (dpath / 'root').ensuredir()
+        >>> (cwd / 'dir1').ensuredir()
+        >>> (cwd / 'dir2').ensuredir()
+        >>> (cwd / 'dir3').ensuredir()
+        >>> ub.symlink(link_path=(cwd / 'dir1/file_link'), real_path=outside_fpath, verbose=3)
+        >>> ub.symlink(link_path=(cwd / 'dir1/dir_link1'), real_path=outside_dpath1, verbose=3)
+        >>> ub.symlink(link_path=(cwd / 'dir1/dir_link2'), real_path=outside_dpath2, verbose=3)
+        >>> ub.symlink(link_path=(cwd / 'dir1/broken_link'), real_path=outside_dpath1 / 'does-not-exist', verbose=3)
+        >>> (cwd / 'dir1/subdir1').ensuredir()
+        >>> (cwd / 'dir1/subdir2').ensuredir()
+        >>> (cwd / 'dir2/subdir1').ensuredir()
+        >>> (cwd / 'dir2/subdir2').ensuredir()
+        >>> (cwd / 'dir1/subdir1/file1').touch()
+        >>> (cwd / 'dir1/subdir1/file2').touch()
+        >>> (cwd / 'dir1/subdir1/file3').touch()
+        >>> (cwd / 'dir1/subdir2/file4').touch()
+        >>> print('---------')
+        >>> xdev.tree_repr(cwd, show_nfiles=True, with_type=True)
+        >>> print('---------')
+        >>> xdev.tree_repr(cwd, max_files=1)
+        >>> print('---------')
+
+        if 1:
+            _ = ub.cmd('tree ' + cwd, verbose=3)
     """
     import os
     from os.path import join, relpath, basename
     import networkx as nx
     from xdev.patterns import MultiPattern
+
     if cwd is None:
         cwd = os.getcwd()
 
-    # tree = nx.OrderedDiGraph()
-    tree = nx.DiGraph()
+    from xdev.cli import dirstats
+    # import rich
 
     if dirblocklist is not None:
         dirblocklist = MultiPattern.coerce(dirblocklist, hint='glob')
 
-    def _make_label(p, force_abs=False):
-        if force_abs:
-            pathrep = p
-        elif pathstyle == 'rel':
-            pathrep = relpath(p, cwd)
-        elif pathstyle == 'name':
-            pathrep = basename(p)
-        elif pathstyle == 'abs':
-            pathrep = p
+    if ignore_dotprefix:
+        if dirblocklist is None:
+            dirblocklist = MultiPattern.coerce('.*', hint='glob')
         else:
-            KeyError(pathstyle)
+            dirblocklist = MultiPattern.coerce([dirblocklist, '.*'], hint='glob')
 
-        types = []
-        islink = os.path.islink(p)
-        isdir = os.path.isdir(p)
-        isfile = os.path.isfile(p)
-        isbroken = False
-        scolor = ''
-        tcolor = ''
-        L_scolor = ''
-        L_tcolor = ''
-        if islink:
-            if colors:
-                L_scolor = '[cyan]'
-                L_tcolor = '[/cyan]'
-            types.append('L')
-            if not isfile and not isdir:
-                isbroken = True
-                if isbroken:
-                    if colors:
-                        L_scolor = '[red]'
-                        L_tcolor = '[/red]'
-                types.append('B')
+    # tree = nx.OrderedDiGraph()
+    OLD_CODE = 0
+    if OLD_CODE:
+        # OLD
+        tree = nx.DiGraph()
 
-        if isfile:
-            if colors:
-                scolor = '[reset]'
-                tcolor = '[/reset]'
-                if os.access(p, os.X_OK):
-                    scolor = '[green]'
-                    tcolor = '[/green]'
-            types.append('F')
-        if isdir:
-            if colors:
-                scolor = f'[blue][link={p}]'
-                tcolor = '[/link][/blue]'
-            types.append('D')
+        def _make_label(p, force_abs=False):
+            if force_abs:
+                pathrep = p
+            elif pathstyle == 'rel':
+                pathrep = relpath(p, cwd)
+            elif pathstyle == 'name':
+                pathrep = basename(p)
+            elif pathstyle == 'abs':
+                pathrep = p
+            else:
+                KeyError(pathstyle)
 
-        if islink:
-            target = os.readlink(p)
-            pathrep = L_scolor + pathrep + L_tcolor + ' -> ' + scolor + target + tcolor
-        else:
-            pathrep = scolor + pathrep + tcolor
+            types = []
+            islink = os.path.islink(p)
+            isdir = os.path.isdir(p)
+            isfile = os.path.isfile(p)
+            isbroken = False
+            scolor = ''
+            tcolor = ''
+            L_scolor = ''
+            L_tcolor = ''
+            if islink:
+                if colors:
+                    L_scolor = '[cyan]'
+                    L_tcolor = '[/cyan]'
+                types.append('L')
+                if not isfile and not isdir:
+                    isbroken = True
+                    if isbroken:
+                        if colors:
+                            L_scolor = '[red]'
+                            L_tcolor = '[/red]'
+                    types.append('B')
 
-        if with_type:
-            typelabel = ''.join(types)
-            return f'({typelabel}) ' + pathrep
-        else:
-            return pathrep
+            if isfile:
+                if colors:
+                    scolor = '[reset]'
+                    tcolor = '[/reset]'
+                    if os.access(p, os.X_OK):
+                        scolor = '[green]'
+                        tcolor = '[/green]'
+                types.append('F')
+            if isdir:
+                if colors:
+                    scolor = f'[blue][link={p}]'
+                    tcolor = '[/link][/blue]'
+                types.append('D')
 
-    # TODO: rectify with "find"
-    start_depth = str(cwd).count(os.path.sep)
-    for root, dnames, fnames in os.walk(cwd):
-        curr_depth = str(root).count(os.path.sep)
+            if islink:
+                target = os.readlink(p)
+                pathrep = L_scolor + pathrep + L_tcolor + ' -> ' + scolor + target + tcolor
+            else:
+                pathrep = scolor + pathrep + tcolor
 
-        if max_depth is not None:
-            if (curr_depth - start_depth) > max_depth:
-                del dnames[:]
+            if with_type:
+                typelabel = ''.join(types)
+                return f'({typelabel}) ' + pathrep
+            else:
+                return pathrep
 
-        if dirblocklist is not None:
-            dnames[:] = [
-                dname for dname in dnames if not dirblocklist.match(dname)]
+        # TODO: rectify with "find"
+        start_depth = str(cwd).count(os.path.sep)
+        for root, dnames, fnames in os.walk(cwd):
+            curr_depth = str(root).count(os.path.sep)
 
-        dnames[:] = sorted(dnames)
-        tree.add_node(root)
+            if max_depth is not None:
+                if (curr_depth - start_depth) > max_depth:
+                    del dnames[:]
 
-        too_many_files = max_files is not None and len(fnames) >= max_files
+            if dirblocklist is not None:
+                dnames[:] = [
+                    dname for dname in dnames if not dirblocklist.match(dname)]
 
-        if show_nfiles == 'auto':
-            show_nfiles_ = too_many_files
-        else:
-            show_nfiles_ = show_nfiles
+            dnames[:] = sorted(dnames)
+            tree.add_node(root)
 
-        num_files = len(fnames)
-        if show_nfiles_:
-            prefix = '[ {} ] '.format(num_files)
-        else:
-            prefix = ''
+            too_many_files = max_files is not None and len(fnames) >= max_files
 
-        force_abs = abs_root_label and curr_depth == start_depth
-        label = '{}{}'.format(prefix, _make_label(root, force_abs))
+            if show_nfiles == 'auto':
+                show_nfiles_ = too_many_files
+            else:
+                show_nfiles_ = show_nfiles
 
-        tree.nodes[root]['label'] = label
+            num_files = len(fnames)
+            if show_nfiles_:
+                prefix = '[ {} ] '.format(num_files)
+            else:
+                prefix = ''
 
-        if not too_many_files:
-            for fname in fnames:
-                fpath = join(root, fname)
-                tree.add_node(fpath)
-                tree.nodes[fpath]['label'] = _make_label(fpath)
-                tree.add_edge(root, fpath)
+            force_abs = abs_root_label and curr_depth == start_depth
+            label = '{}{}'.format(prefix, _make_label(root, force_abs))
 
-        for dname in dnames:
-            dpath = join(root, dname)
-            tree.add_node(dpath)
-            tree.nodes[dpath]['label'] = _make_label(dpath)
-            tree.add_edge(root, dpath)
+            tree.nodes[root]['label'] = label
+
+            if not too_many_files:
+                for fname in fnames:
+                    fpath = join(root, fname)
+                    tree.add_node(fpath)
+                    tree.nodes[fpath]['label'] = _make_label(fpath)
+                    tree.add_edge(root, fpath)
+
+            for dname in dnames:
+                dpath = join(root, dname)
+                tree.add_node(dpath)
+                tree.nodes[dpath]['label'] = _make_label(dpath)
+                tree.add_edge(root, dpath)
+    else:
+        walker = dirstats.DirectoryWalker(
+            cwd,
+            block_dnames=dirblocklist,
+            max_files=max_files,
+            abs_root_label=abs_root_label,
+            pathstyle=pathstyle,
+            show_nfiles=show_nfiles,
+            show_progress=False,
+            show_types=with_type,
+            colors=colors,
+        )
+        walker._walk()
+        walker._update_labels()
+        tree = walker.graph
 
     from xdev.util_networkx import write_network_text
     import io
     file = io.StringIO()
     write_network_text(tree, file)
-    file.seek(0)
-    text = file.read()
+    text = file.getvalue()
 
     info = {}
 
@@ -485,6 +530,7 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
 
     if return_tree:
         info['tree'] = tree
+        info['walker'] = walker
     return info
 
 

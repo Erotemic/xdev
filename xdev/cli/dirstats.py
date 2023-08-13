@@ -39,6 +39,8 @@ class DirectoryStatsCLI(scfg.DataConfig):
     version = scfg.Value(False, isflag=True, short_alias=['-V'])
     python = scfg.Value(False, isflag=True, help='enable python repository defaults', alias=['pydev'])
 
+    ignore_dotprefix = scfg.Value(True, isflag=True, help='if True ignore directories and folders with a dot prefix')
+
     def __post_init__(config):
         if config.dpath.startswith('module:'):
             config.dpath = ub.modname_to_modpath(config.dpath.split('module:', 1)[1])
@@ -56,7 +58,7 @@ class DirectoryStatsCLI(scfg.DataConfig):
                 '_static',
                 '_modules',
                 'htmlcov',
-                '.*',
+                # '.*',
             ]
 
         if config.block_fnames == 'py:auto':
@@ -64,6 +66,14 @@ class DirectoryStatsCLI(scfg.DataConfig):
                 '*.pyc',
                 '*.pyi',
             ]
+
+        if config.ignore_dotprefix:
+            if config.block_fnames is None:
+                config.block_fnames = []
+            if config.block_dnames is None:
+                config.block_dnames = []
+            config.block_fnames.append('.*')
+            config.block_dnames.append('.*')
 
     @classmethod
     def _register_main(cls, func):
@@ -92,32 +102,92 @@ def main(cmdline=1, **kwargs):
         'dpath', 'block_dnames', 'block_fnames', 'include_dnames',
         'include_fnames', 'max_walk_depth', 'parse_content'
     }
-    self = DirectoryAnalysis(**kwargs)
+    self = DirectoryWalker(**kwargs)
     self.build()
     nxtxt_kwargs = {'max_depth': config['max_display_depth']}
     self.write_report(**nxtxt_kwargs)
 
 
-class DirectoryAnalysis:
-    def __init__(self, dpath, block_dnames=None, block_fnames=None,
-                 include_dnames=None, include_fnames=None, max_walk_depth=None,
-                 parse_content=True):
+def _null_coerce(cls, arg, **kwargs):
+    if arg is None:
+        return arg
+    else:
+        return cls.coerce(arg, **kwargs)
+
+
+class DirectoryWalker:
+    """
+    Configurable directory walker that can explore a directory
+    and report information about its contents in a concise manner.
+
+    Options will impact how long this process takes based on how much data /
+    metadata we need to parse out of the filesystem.
+    """
+
+    def __init__(self,
+                 dpath,
+                 block_dnames=None,
+                 block_fnames=None,
+                 include_dnames=None,
+                 include_fnames=None,
+                 max_walk_depth=None,
+                 max_files=None,
+                 parse_content=False,
+                 show_progress=True,
+                 **kwargs):
+        """
+        Args:
+            dpath (str | PathLike): the path to walk
+
+            block_dnames (Coercable[MultiPattern]):
+                blocks directory names matching this pattern
+
+            block_fnames (Coercable[MultiPattern]):
+                blocks file names matching this pattern
+
+            include_dnames (Coercable[MultiPattern]):
+                if specified, excludes directories that do NOT match this pattern.
+
+            include_fnames (Coercable[MultiPattern]):
+                if specified, excludes files that do NOT match this pattern.
+
+            max_files (None | int):
+                ignore all files in directories with more than this number.
+
+            max_walk_depth (None | int):
+                how far to recurse
+
+            parse_content (bool):
+                if True, include content analysis
+
+            **kwargs : passed to label options
+        """
         self.dpath = ub.Path(dpath).resolve()
-        if block_dnames is not None:
-            block_dnames = MultiPattern.coerce(block_dnames)
-        if block_fnames is not None:
-            block_fnames = MultiPattern.coerce(block_fnames)
-        if include_fnames is not None:
-            include_fnames = MultiPattern.coerce(include_fnames)
-        if include_dnames is not None:
-            include_dnames = MultiPattern.coerce(include_dnames)
-        self.block_fnames = block_fnames
-        self.block_dnames = block_dnames
-        self.include_fnames = include_fnames
-        self.include_dnames = include_dnames
+        self.block_fnames = _null_coerce(MultiPattern, block_fnames)
+        self.block_dnames = _null_coerce(MultiPattern, block_dnames)
+        self.include_fnames = _null_coerce(MultiPattern, include_fnames)
+        self.include_dnames = _null_coerce(MultiPattern, include_dnames)
         self.max_walk_depth = max_walk_depth
-        self.graph = None
         self.parse_content = parse_content
+        self.max_files = max_files
+        self.show_progress = show_progress
+
+        kwargs = ub.udict(kwargs)
+
+        self.label_options = {
+            'abs_root_label': True,
+            'pathstyle': 'name',
+            'show_nfiles': 'auto',
+            'show_types': False,
+            'colors': True,
+        }
+        self.label_options.update(kwargs & self.label_options)
+        kwargs -= self.label_options
+
+        if kwargs:
+            raise ValueError(f'Unhandled kwargs {kwargs}')
+
+        self.graph = None
         self._topo_order = None
 
     def write_report(self, **nxtxt_kwargs):
@@ -175,7 +245,7 @@ class DirectoryAnalysis:
             if 'total_lines' in df.columns:
                 df = df.sort_values('total_lines')
             rich.print(df)
-            # if self.graph.nodes[node]['ntype'] == 'dir':
+            # if self.graph.nodes[node]['type'] == 'dir':
             # print(f'node={node}')
 
         disp_piv = _node_table(root_node)
@@ -208,9 +278,12 @@ class DirectoryAnalysis:
     def _walk(self):
         dpath = self.dpath
         g = nx.DiGraph()
-        g.add_node(self.dpath, label=self.dpath.name, type='dir')
 
-        pman = ProgressManager()
+        g.add_node(self.dpath, label=self.dpath.name, type='dir', is_root=True)
+
+        max_files = self.max_files
+
+        pman = ProgressManager(enabled=self.show_progress)
         with pman:
             prog = pman.progiter(desc='Walking directory')
 
@@ -220,25 +293,49 @@ class DirectoryAnalysis:
             for root, dnames, fnames in self.dpath.walk():
                 prog.step()
 
+                root_attrs = {}
+
+                root_attrs['unfiltered_num_dirs'] = len(dnames)
+                root_attrs['unfiltered_num_files'] = len(fnames)
+
                 if self.max_walk_depth is not None:
                     curr_depth = str(root).count(os.path.sep)
                     rel_depth = (curr_depth - start_depth)
                     if rel_depth >= self.max_walk_depth:
                         del dnames[:]
 
-                g.add_node(root, name=root.name, label=root.name, type='dir')
-                if root != dpath:
-                    g.add_edge(root.parent, root)
-
                 # Remove directories / files that match the blocklist or dont
                 # match the include list
                 self._inplace_filter_dnames(dnames)
                 self._inplace_filter_fnames(fnames)
 
-                for f in fnames:
-                    fpath = root / f
-                    g.add_node(fpath, name=fpath.name, label=fpath.name, type='file')
-                    g.add_edge(root, fpath)
+                root_attrs['num_dirs'] = len(dnames)
+                root_attrs['num_files'] = num_files = len(fnames)
+
+                too_many_files = max_files is not None and num_files >= max_files
+                if too_many_files:
+                    root_attrs['too_many_files'] = too_many_files
+
+                g.add_node(
+                    root,
+                    type='dir',
+                    name=root.name,
+                    label=root.name,
+                    **root_attrs,
+                )
+                # if root != dpath:
+                #     g.add_edge(root.parent, root)
+
+                if not too_many_files:
+                    for f in fnames:
+                        fpath = root / f
+                        g.add_node(fpath, name=fpath.name, label=fpath.name, type='file')
+                        g.add_edge(root, fpath)
+
+                for d in dnames:
+                    dpath = root / d
+                    g.add_node(dpath, name=dpath.name, label=dpath.name, type='dir')
+                    g.add_edge(root, dpath)
 
         self._topo_order = list(nx.topological_sort(g))
         self.graph = g
@@ -272,7 +369,7 @@ class DirectoryAnalysis:
                             accum_stats[key] = 0
                         accum_stats[key] += stat_value
 
-    def _humanize_stats(self, stats, ntype, reduce_prefix=False):
+    def _humanize_stats(self, stats, node_type, reduce_prefix=False):
         disp_stats = {}
         if reduce_prefix:
             suffixes = [k.split('.', 1)[1] for k in stats.keys()]
@@ -280,42 +377,164 @@ class DirectoryAnalysis:
             # _stats.update({k: v for k, v in stats.items() if k.endswith('.files')})
         else:
             _stats = stats
-        if ntype == 'dir':
+        if node_type == 'dir':
             for k, v in _stats.items():
                 if k.endswith('.size') or k == 'size':
                     disp_stats[k] = byte_str(v)
                 else:
                     disp_stats[k] = v
-        elif ntype == 'file':
+        elif node_type == 'file':
             disp_stats = {k.split('.', 1)[1]: v for k, v in _stats.items()}
             disp_stats.pop('files', None)
             disp_stats['size'] = byte_str(disp_stats['size'])
         else:
-            raise KeyError(ntype)
+            raise KeyError(node_type)
         return disp_stats
 
-    def _update_labels(self):
+    def _update_path_metadata(self):
         g = self.graph
-        for p in list(g.nodes):
-            node_data = g.nodes[p]
+        for path in self._topo_order:
+            node_data = g.nodes[path]
+
+            islink = os.path.islink(path)
+            isfile = os.path.isfile(path)
+            isdir = os.path.isdir(path)
+
+            if islink:
+                target = os.readlink(path)
+                isbroken = not isdir and not isfile
+                node_data['broken'] = isbroken
+                node_data['target'] = target
+
+            if isfile:
+                node_data['X_ok'] = os.access(path, os.X_OK)
+
+            types = []
+            if islink:
+                types.append('L')
+                if isbroken:
+                    types.append('B')
+            if isfile:
+                types.append('F')
+            if isdir:
+                types.append('D')
+            typelabel = ''.join(types)
+
+            node_data['islink'] = islink
+            node_data['isfile'] = isfile
+            node_data['isdir'] = isdir
+            node_data['typelabel'] = typelabel
+
+    def _update_labels(self):
+        """
+        Update how each node will be displayed
+        """
+        from os.path import relpath
+        g = self.graph
+
+        label_options = self.label_options
+        pathstyle = label_options['pathstyle']
+        show_nfiles = label_options['show_nfiles']
+        show_types = label_options['show_types']
+        abs_root_label = label_options['abs_root_label']
+        colors = label_options['colors']
+
+        def pathrep_name(p, node_data):
+            return node_data['name']
+
+        def pathrep_rel(p, node_data):
+            return relpath(p, self.dpath)
+
+        def pathrep_abs(p, node_data):
+            return os.fspath(p)
+
+        if pathstyle == 'name':
+            pathrep_func = pathrep_name
+        elif pathstyle == 'rel':
+            pathrep_func = pathrep_rel
+        elif pathstyle == 'abs':
+            pathrep_func = pathrep_abs
+        else:
+            raise KeyError(pathstyle)
+
+        self._update_path_metadata()
+
+        for path in self.graph.nodes:
+            node_data = g.nodes[path]
             stats = node_data.get('stats', None)
-            ntype = node_data.get('type', None)
-            if stats:
-                disp_stats = self._humanize_stats(stats, ntype)
-                stats_text = ub.urepr(disp_stats, nl=0, compact=1)
-                if ntype == 'dir':
-                    color = 'blue'
-                    node_data['label'] = f'[{color}][link={p}]' + node_data['name'] + f'[/link][/{color}]' + ': ' + stats_text
-                elif ntype == 'file':
-                    color = 'green'
-                    node_data['label'] = f'[{color}]' + node_data['name'] + f'[/{color}]' + ': ' + stats_text
+            node_type = node_data.get('type', None)
+
+            if abs_root_label and node_data.get('is_root', False):
+                pathrep = pathrep_abs(path, node_data)
             else:
-                if ntype == 'dir':
-                    color = 'blue'
-                    node_data['label'] = f'[{color}]' + node_data['name'] + f'[/{color}]'
-                elif ntype == 'file':
+                pathrep = pathrep_func(path, node_data)
+
+            if stats:
+                disp_stats = self._humanize_stats(stats, node_type)
+                stats_text = ub.urepr(disp_stats, nl=0, compact=1)
+                suffix = ': ' + stats_text
+            else:
+                suffix = ''
+
+            prefix_parts = []
+
+            if show_types:
+                prefix_parts.append(f'({node_data["typelabel"]})')
+
+            if node_type == 'dir':
+                richlink = True
+                color = 'blue'
+
+                if show_nfiles == 'auto':
+                    show_nfiles_ = node_data.get('too_many_files', False)
+                else:
+                    show_nfiles_ = show_nfiles
+                if show_nfiles_ and 'num_files' in node_data:
+                    prefix_parts.append(
+                        '[ {} ]'.format(node_data['num_files'])
+                    )
+            elif node_type == 'file':
+                richlink = False
+                if node_data.get('X_ok', False):
                     color = 'green'
-                    node_data['label'] = f'[{color}]' + node_data['name'] + f'[/{color}]'
+                else:
+                    color = 'reset'
+            else:
+                raise KeyError(node_type)
+
+            targetrep = None
+            if node_data['islink']:
+                target = node_data['target']
+                targetrep = target
+                if node_data['broken']:
+                    color = 'red'
+                else:
+                    color = 'cyan'
+                if node_data['isdir']:
+                    target_color = 'blue'
+                    target_richlink = True
+                else:
+                    target_color = 'reset'
+                    target_richlink = False
+
+                if colors:
+                    if target_richlink:
+                        targetrep = f'[link={target}]{targetrep}[/link]'
+                    targetrep = f'[{target_color}]{targetrep}[/{target_color}]'
+
+            if colors:
+                if richlink:
+                    pathrep = f'[link={path}]{pathrep}[/link]'
+                pathrep = f'[{color}]{pathrep}[/{color}]'
+
+            if targetrep is not None:
+                pathrep = f'{pathrep} -> {targetrep}'
+
+            if prefix_parts:
+                prefix = ' '.join(prefix_parts) + ' '
+            else:
+                prefix = ''
+            node_data['label'] = prefix + pathrep + suffix
 
     def _sort(self):
         g = self.graph

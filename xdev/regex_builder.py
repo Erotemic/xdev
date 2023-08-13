@@ -107,15 +107,20 @@ class RegexBuilder:
         """
         A word, except it must start with a letter or underscore (not a number)
 
+        References:
+            https://stackoverflow.com/questions/5474008/regular-expression-to-confirm-whether-a-string-is-a-valid-python-identifier
+
         Example:
             >>> from xdev.regex_builder import *  # NOQA
             >>> b = PythonRegexBuilder()
             >>> assert re.match(b.identifier, 'hello')
-            >>> assert re.match(b.identifier, 'h_ello')
+            >>> assert re.match(b.identifier, 'hello')
+            >>> assert re.match(b.identifier, '𝛣_ello')
             >>> assert re.match(b.identifier, 'h_1e8llo')
             >>> assert not re.match(b.identifier, '1hello')
         """
-        return '[A-Za-z_][A-Za-z_0-9]*'
+        return r'[^\d\W]\w*'
+        # return '[A-Za-z_][A-Za-z_0-9]*'
 
     @property
     def hex(self):
@@ -286,7 +291,7 @@ class PythonRegexBuilder(RegexBuilder):
         {'key': 'boundary', 'pattern': r'\b', 'docs': r'The boundary at the start or end of a word'},
         {'key': 'non-boundary', 'pattern': r'\B'},
         {'key': 'left-expr', 'pattern': r'\A'},
-        {'key': 'right-expr', 'pattern': r'\Z'},
+        {'key': 'right-expr', 'pattern': r'\Z', 'docs': 'Matches only at the end of the string'},
     ]
     def __init__(self):
         self.constructs = {}

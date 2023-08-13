@@ -170,6 +170,10 @@ def _load_snapshot(fpath, parent_globals=None):
 
 
 def _make_snapshot(parent_ns):
+    """
+    TODO:
+        need to handle __main__
+    """
     import pickle
     snapshot = {}
     variables = snapshot['variables'] = {}

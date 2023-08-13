@@ -177,6 +177,7 @@ class XdevCLI(ModalCLI):
             'max_files': scfg.Value(100),
             'colors': scfg.Value(not ub.NO_COLOR, isflag=True),
             'dirblocklist': scfg.Value(None),
+            'ignore_dotprefix': scfg.Value(True, isflag=True),
             'max_depth': scfg.Value(
                 None, help='maximum depth to recurse', short_alias=['L']),
         }
