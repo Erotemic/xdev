@@ -30,6 +30,7 @@ class DirectoryStatsCLI(scfg.DataConfig):
     include_fnames = scfg.Value(None, help='A coercable multi-pattern. Only file names matching this pattern will be considered', nargs='+')
 
     parse_content = scfg.Value(True, isflag=True, help='if True parse stats about the content of each file')
+    max_files = scfg.Value(None)
     # parse_meta_stats = scfg.Value(True, isflag=True, help='if True parse stats about the content of each file')
 
     max_walk_depth = scfg.Value(None, short_alias=['L'], help='maximum depth to walk')
@@ -100,7 +101,7 @@ def main(cmdline=1, **kwargs):
 
     kwargs = ub.udict(config) & {
         'dpath', 'block_dnames', 'block_fnames', 'include_dnames',
-        'include_fnames', 'max_walk_depth', 'parse_content'
+        'include_fnames', 'max_walk_depth', 'parse_content', 'max_files'
     }
     self = DirectoryWalker(**kwargs)
     self.build()
@@ -122,6 +123,13 @@ class DirectoryWalker:
 
     Options will impact how long this process takes based on how much data /
     metadata we need to parse out of the filesystem.
+
+    Ignore:
+        >>> from xdev.cli.dirstats import *  # NOQA
+        >>> self = DirectoryWalker('.', block_dnames=['.*'])
+        >>> self._walk()
+        >>> self._update_labels()
+        >>> self.write_network_text()
     """
 
     def __init__(self,
@@ -190,17 +198,15 @@ class DirectoryWalker:
         self.graph = None
         self._topo_order = None
 
+    def write_network_text(self, **kwargs):
+        nx.write_network_text(self.graph, rich.print, end='', **kwargs)
+
     def write_report(self, **nxtxt_kwargs):
         import pandas as pd
-        # lines = []
-        # write = lines.append
-        # nx.write_network_text(self.graph, write, end='', **nxtxt_kwargs)
         try:
-            nx.write_network_text(self.graph, rich.print, end='', **nxtxt_kwargs)
+            self.write_network_text(**nxtxt_kwargs)
         except KeyboardInterrupt:
             ...
-        # text = '\n'.join(lines)
-        # rich.print(text)
 
         root_node = self._topo_order[0]
 
@@ -391,6 +397,26 @@ class DirectoryWalker:
             raise KeyError(node_type)
         return disp_stats
 
+    def _find_duplicate_files(self):
+        hasher = 'blake3'
+        for path, node_data in self.graph.nodes(data=True):
+            if node_data['isfile']:
+                node_data[hasher] = ub.hash_file(path, hasher=hasher)
+
+        hash_to_paths = ub.ddict(list)
+        for path, node_data in self.graph.nodes(data=True):
+            if node_data['isfile']:
+                hash = node_data[hasher]
+                hash_to_paths[hash].append(path)
+
+        hash_to_paths = ub.udict(hash_to_paths)
+        dups = []
+        for k, v in hash_to_paths.items():
+            if len(v) > 1:
+                dups.append(k)
+        dup_hash_to_paths = hash_to_paths & dups
+        print('dup_hash_to_paths = {}'.format(ub.urepr(dup_hash_to_paths, nl=2)))
+
     def _update_path_metadata(self):
         g = self.graph
         for path in self._topo_order:
@@ -430,7 +456,6 @@ class DirectoryWalker:
         Update how each node will be displayed
         """
         from os.path import relpath
-        g = self.graph
 
         label_options = self.label_options
         pathstyle = label_options['pathstyle']
@@ -459,8 +484,7 @@ class DirectoryWalker:
 
         self._update_path_metadata()
 
-        for path in self.graph.nodes:
-            node_data = g.nodes[path]
+        for path, node_data in self.graph.nodes(data=True):
             stats = node_data.get('stats', None)
             node_type = node_data.get('type', None)
 

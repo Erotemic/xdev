@@ -5,6 +5,9 @@ from collections import defaultdict
 import ubelt as ub
 
 
+import xdev
+
+@xdev.profile
 def edit_distance(string1, string2):
     """
     Edit distance algorithm. String1 and string2 can be either
