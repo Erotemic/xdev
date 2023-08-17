@@ -782,9 +782,9 @@ def byte_str(num, unit='auto', precision=2):
         >>> num_list = [1, 100, 1024,  1048576, 1073741824, 1099511627776]
         >>> result = ub.urepr(list(map(byte_str, num_list)), nl=0)
         >>> print(result)
-        ['0.00KB', '0.10KB', '1.00KB', '1.00MB', '1.00GB', '1.00TB']
+        ['0.00 KB', '0.10 KB', '1.00 KB', '1.00 MB', '1.00 GB', '1.00 TB']
         >>> byte_str(10, unit='B')
-        10.00B
+        '10.00 B'
     """
     abs_num = abs(num)
     if unit == 'auto':
