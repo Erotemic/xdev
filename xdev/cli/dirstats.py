@@ -653,7 +653,7 @@ def strip_comments_and_newlines(source):
         would be better if this was some sort of configurable minify API
 
     Example:
-        >>> from xdoctest.static_analysis import _strip_hashtag_comments_and_newlines
+        >>> from xdev.cli.dirstats import strip_comments_and_newlines
         >>> from xdoctest import utils
         >>> fmtkw = dict(sss=chr(39) * 3, ddd=chr(34) * 3)
         >>> source = utils.codeblock(
