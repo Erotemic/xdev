@@ -6,7 +6,7 @@ import os
 if not os.environ.get('_ARGCOMPLETE', ''):
     import networkx as nx
     import rich
-    from kwutil.util_pattern import MultiPattern
+    from xdev.util_pattern import MultiPattern
     from progiter.manager import ProgressManager
 
 
