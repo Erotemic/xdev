@@ -646,9 +646,6 @@ def strip_comments_and_newlines(source):
     Args:
         source (str | List[str]):
 
-    CommandLine:
-        xdoctest -m xdoctest.static_analysis _strip_hashtag_comments_and_newlines
-
     TODO:
         would be better if this was some sort of configurable minify API
 
@@ -675,7 +672,7 @@ def strip_comments_and_newlines(source):
                ]
                c = 3
                ''').format(**fmtkw)
-        >>> non_comments = _strip_hashtag_comments_and_newlines(source)
+        >>> non_comments = strip_comments_and_newlines(source)
         >>> print(non_comments)
         >>> assert non_comments.count(chr(10)) == 10
         >>> assert non_comments.count('#') == 1
