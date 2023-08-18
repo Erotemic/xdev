@@ -3,6 +3,15 @@ This is Jon Crall's xdev module.
 
 These are tools I often use in IPython, but they almost never make it into
 production code, otherwise they would be in :mod:`ubelt`.
+
++------------------+------------------------------------------+
+| Read the docs    | https://xdev.readthedocs.io              |
++------------------+------------------------------------------+
+| Github           | https://github.com/Erotemic/xdev         |
++------------------+------------------------------------------+
+| Pypi             | https://pypi.org/project/xdev            |
++------------------+------------------------------------------+
+
 """
 
 __dev__ = """
