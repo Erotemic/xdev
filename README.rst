@@ -3,18 +3,30 @@ Xdev - Excellent Developer
 
 |GithubActions| |Codecov| |Pypi| |Downloads| |ReadTheDocs|
 
+
++------------------+------------------------------------------+
+| Read the docs    | https://xdev.readthedocs.io              |
++------------------+------------------------------------------+
+| Github           | https://github.com/Erotemic/xdev         |
++------------------+------------------------------------------+
+| Pypi             | https://pypi.org/project/xdev            |
++------------------+------------------------------------------+
+
 Xdev is an excellent developer tool for excellent developers.
 It contains miscellaneous and/or interactive debugging tools.
 
-I mostly maintain this for myself, but I could see polishing it up in the
-future.
+This started as a project for myself to contain development related tools that
+I wouldn't want to ship with a package itself (where as `ubelt
+<https://github.com/Erotemic/ubelt>`_ contains the tools used in programs
+themselves). I've polished it up over the years, and it's become a reasonably
+useful package with tools I could see other's making use of.
+
 
 This is the CLI:
 
 .. code::
 
-    (pyenv3.11.2) joncrall@toothbrush:~$ xdev --help
-    usage: xdev [-h] [--version] {info,codeblock,sed,find,tree,pint,pyfile,pyversion,editfile,format_quotes,freshpyenv,docstubs,available_package_versions} ...
+    usage: xdev [-h] [--version] {info,codeblock,sed,find,tree,pint,pyfile,pyversion,editfile,format_quotes,freshpyenv,docstubs,available_package_versions,dirstats} ...
 
     The XDEV CLI
 
@@ -25,7 +37,7 @@ This is the CLI:
       --version             show version number and exit (default: False)
 
     commands:
-      {info,codeblock,sed,find,tree,pint,pyfile,pyversion,editfile,format_quotes,freshpyenv,docstubs,available_package_versions}
+      {info,codeblock,sed,find,tree,pint,pyfile,pyversion,editfile,format_quotes,freshpyenv,docstubs,available_package_versions,dirstats}
                             specify a command to run
         info                Info about xdev
         codeblock           Remove indentation from text.
@@ -44,6 +56,7 @@ This is the CLI:
                             Generate Typed Stubs from Docstrings (experimental)
         available_package_versions (availpkg)
                             Print a table of available versions of a python package on Pypi
+        dirstats            Analysis for code in a repository
 
 
 .. .... mkinit xdev
@@ -191,6 +204,18 @@ system while helping them debug.
 
 Other examples are ``sed``, ``find``, ``pyfile``, and ``pyversion``. Look at
 the ``--help`` for more info on them.
+
+The ``dirstats`` function is like a buffed up ``tree``. In addition to printing
+the directory tree structure it inspects the contents of the tree and
+summarizes things like: number of lines per type of file. For Python files it
+breaks up the analysis into code-lines and docstring lines to give a better
+sense of project complexity.
+
+
+For repo maintence I use this package in conjunction with `xcookie
+<https://github.com/Erotemic/xcookie>`_. I use xcookie to generate the package
+structure and then xdev helps fill in the details. Specifically the
+``availpkg`` and ``docstubs`` commands.
 
 
 The ``availpkg`` command has been indispensable for me when writing
