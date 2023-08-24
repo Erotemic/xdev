@@ -45,10 +45,12 @@ Notes:
             Set the Repository NAME: xdev
             Set the Repository URL: https://github.com/Erotemic/xdev
 
-        For gitlab you also need to setup an integrations and add gitlab
-        incoming webhook
+        For gitlab you also need to setup an integrations. Navigate to:
 
             https://readthedocs.org/dashboard/xdev/integrations/create/
+
+        Then add gitlab incoming webhook and copy the URL (make sure
+        you copy the real url and not the text so https is included).
 
         Then go to
 
