@@ -595,7 +595,8 @@ def common_unreferenced():
     try:
         import nptyping
         modname_to_refs['nptyping'] = ['NDArray', 'Shape', 'DType'] + list(set(nptyping.typing_.dtype_per_name.keys()) - {'Number'})
-    except ModuleNotFoundError:
+    except ModuleNotFoundError as ex:
+        print('Warning: ex = {}'.format(ub.urepr(ex, nl=1)))
         pass
 
     unref = [
@@ -1061,6 +1062,26 @@ class ExtendedStubGenerator(StubGenerator):
         self.add(', '.join(args))
         self.add("){}: ...\n".format(retfield))
         self._state = FUNC
+
+    def process_decorator(self, o) -> None:
+        from mypy.stubgen import get_qualified_name
+        from mypy.nodes import CallExpr
+        parent_mod = ub.import_module_from_name(self.module)
+        for decorator in o.original_decorators:
+            if parent_mod.__name__ == 'kwarray.arrayapi':
+                # Very specific hacks that need better support
+                # This is for decorators that wrap functions in static methods.
+                # mypy doesn't handle this natively, but we can handle it in
+                # pyi files
+                HACKED_STATICMETHODS = {'_apimethod', '_torchmethod', '_numpymethod'}
+                if isinstance(decorator, CallExpr):
+                    qualname = decorator.callee.name
+                else:
+                    qualname = get_qualified_name(decorator)
+                    # print(f'qualname={qualname}')
+                if qualname in HACKED_STATICMETHODS:
+                    self.add_decorator('staticmethod', require_name=True)
+        super().process_decorator(o)
 
     def visit_class_def(self, o) -> None:
         # from mypy.stubgen import (
