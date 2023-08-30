@@ -331,7 +331,32 @@ def generate_typed_stubs(modpath):
                 print(f'generated target={target}')
             # with open(target, 'w') as file:
             #     file.write(text)
+
+    delete_unpaired_pyi_files(modpath)
     return generated
+
+
+def delete_unpaired_pyi_files(modpath):
+    """
+    Cleanup pyi files corresponding to renamed or removed py files.
+    """
+    import os
+    from xdev.cli import dirstats
+    walker = dirstats.DirectoryWalker(modpath, block_dnames=['__pycache__'])
+    walker._walk()
+    dangling_pyi_fpaths = []
+    for node in walker.graph.nodes():
+        if node.endswith('.pyi'):
+            pypath = ub.Path(os.fspath(node)[0:-1])
+            if not pypath.exists():
+                dangling_pyi_fpaths.append(node)
+
+    if dangling_pyi_fpaths:
+        from rich.prompt import Confirm
+        ans = Confirm.ask(f'Found {len(dangling_pyi_fpaths)} unpaired pyi files. Delete them?')
+        if ans:
+            for p in dangling_pyi_fpaths:
+                p.delete()
 
 
 def remove_duplicate_imports(text):
