@@ -773,6 +773,8 @@ class ExtendedStubGenerator(StubGenerator):
         fullname = o.name
         if getattr(self, '_IN_CLASS', None) is not None:
             fullname = self._IN_CLASS + '.' + o.name
+
+        # TODO: Can we do this statically instead?
         parent_mod = ub.import_module_from_name(self.module)
         if DEBUG:
             print('fullname = {!r}'.format(fullname))

@@ -81,6 +81,7 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
     # print('[xdev.embed]  Get stack location with: ')
     # print('[xdev.embed] get_parent_frame(n=8).f_code.co_name')
     print('[xdev.embed] use xdev.fix_embed_globals() to address https://github.com/ipython/ipython/issues/62')
+    print('[xdev.embed] to debug in a fresh IPython context, run ``snapshot()`` and then follow instructions')
     print('[xdev.embed] set EXIT_NOW or qqq=1 to hard exit on unembed')
     #print('set iup to True to draw plottool stuff')
     # print('[util] call %pylab qt4 to get plottool stuff working')
@@ -119,9 +120,12 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         parent_ns.update(parent_locals)
         locals().update(parent_ns)
 
+        def snapshot():
+            make_embed_snapshot(parent_ns)
+
         SNAPSHOT_STATE = 0
         if SNAPSHOT_STATE:
-            _make_snapshot(parent_ns)
+            make_embed_snapshot(parent_ns)
 
         try:
             embed2()
@@ -156,33 +160,77 @@ def _devcheck_frames():
     ...
 
 
-def _load_snapshot(fpath, parent_globals=None):
+def load_embed_snapshot(fpath, parent_globals=None):
     import pickle
     import ubelt as ub
     if parent_globals is None:
         parent_globals = get_parent_frame(n=1).f_globals
     fpath = ub.Path(fpath)
     snapshot = pickle.loads(fpath.read_bytes())
+
+    context = snapshot['context']
+    if context['__name__'] == '__main__':
+        # To work around issue where we embed on the __main__ context we import
+        # the module it was associated with (which we can do because
+        # make-snapshot recorded it) and then load its globals into the parent
+        # globals (which I think will usually be a different __main__ context,
+        # but I'm not 100% sure about this). Might need to update to handle
+        # that case.
+        modpath = context['modpath']
+        module = ub.import_module_from_path(modpath)
+        parent_globals.update(module.__dict__)
+
     loaded_variables = dict()
     for k, v in snapshot['variables'].items():
         loaded_variables[k] = pickle.loads(v)
+
+    imports = snapshot.get('imports')
+    for row in imports:
+        module = ub.import_module_from_name(row['modname'])
+        loaded_variables[row['alias']] = module
+
     parent_globals.update(loaded_variables)
 
 
-def _make_snapshot(parent_ns):
+def make_embed_snapshot(parent_ns):
     """
     TODO:
         need to handle __main__
     """
     import pickle
+    import types
     snapshot = {}
     variables = snapshot['variables'] = {}
     not_pickleable = snapshot['not_pickleable'] = []
+    imports = snapshot['imports'] = []
+
     for k, v in parent_ns.items():
-        try:
-            variables[k] = pickle.dumps(v)
-        except Exception:
-            not_pickleable.append(k)
+        if isinstance(v, types.ModuleType):
+            imports.append({
+                'modname': getattr(v, '__name__', None),
+                'modpath': getattr(v, '__file__', None),
+                'alias': k,
+            })
+        else:
+            try:
+                variables[k] = pickle.dumps(v)
+            except Exception:
+                not_pickleable.append(k)
+
+    context = {
+        '__name__': parent_ns['__name__'],
+    }
+    if parent_ns['__name__'] == '__main__':
+        import ubelt as ub
+        context['modpath'] = parent_ns['__file__']
+        context['modname'] = ub.modpath_to_modname(parent_ns['__file__'])
+
+    snapshot['context'] = context
+
+    if not_pickleable:
+        if len(not_pickleable) < 20:
+            print('not_pickleable = {}'.format(ub.urepr(not_pickleable, nl=1)))
+        print(f'Could not pickle {len(not_pickleable)} variables')
 
     import ubelt as ub
     dpath = ub.Path.appdir('xdev', 'states').ensuredir()
@@ -193,11 +241,14 @@ def _make_snapshot(parent_ns):
 
     print(ub.highlight_code(ub.codeblock(
         f'''
-        # To debug in a fresh IPython session:
-        fpath = '{fpath}'
-        from xdev.embeding import _load_snapshot
-        _load_snapshot(fpath, globals())
-        '''), 'python'))
+        # To debug in a fresh IPython session run:
+
+        ipython -i -c "if 1:
+            fpath = '{fpath}'
+            from xdev.embeding import load_embed_snapshot
+            load_embed_snapshot(fpath, globals())
+        "
+        '''), 'bash'))
     # import pickle
     # import ubelt as ub
     # fpath = ub.Path(fpath)

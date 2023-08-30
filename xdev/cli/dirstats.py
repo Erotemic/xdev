@@ -46,14 +46,21 @@ class DirectoryStatsCLI(scfg.DataConfig):
         if config.dpath.startswith('module:'):
             config.dpath = ub.modname_to_modpath(config.dpath.split('module:', 1)[1])
 
-        if config.python:
-            if config.block_dnames is None:
-                config.block_dnames = 'py:auto'
-            if config.block_fnames is None:
-                config.block_fnames = 'py:auto'
+        if config.block_fnames is None:
+            config.block_fnames = []
+        if config.block_dnames is None:
+            config.block_dnames = []
 
-        if config.block_dnames == 'py:auto':
-            config.block_dnames = [
+        if config.ignore_dotprefix:
+            config.block_fnames.append('.*')
+            config.block_dnames.append('.*')
+
+        if config.python:
+            config.block_fnames += [
+                '*.pyc',
+                '*.pyi',
+            ]
+            config.block_dnames += [
                 # '_*',
                 '__pycache__',
                 '_static',
@@ -61,20 +68,6 @@ class DirectoryStatsCLI(scfg.DataConfig):
                 'htmlcov',
                 # '.*',
             ]
-
-        if config.block_fnames == 'py:auto':
-            config.block_fnames = [
-                '*.pyc',
-                '*.pyi',
-            ]
-
-        if config.ignore_dotprefix:
-            if config.block_fnames is None:
-                config.block_fnames = []
-            if config.block_dnames is None:
-                config.block_dnames = []
-            config.block_fnames.append('.*')
-            config.block_dnames.append('.*')
 
     @classmethod
     def _register_main(cls, func):

@@ -477,7 +477,7 @@ class PythonVersions:
         import pandas as pd
         # https://en.wikipedia.org/wiki/History_of_Python#Version_3
         python_version_rows = [
-            # {'release_date': '2024-10-01', 'pyver': '3.13'},
+            {'release_date': '2024-10-01', 'pyver': '3.13'},
             {'release_date': '2023-10-02', 'pyver': '3.12'},
 
             {'release_date': '2022-10-24', 'pyver': '3.11'},
@@ -671,9 +671,10 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
     chosen_minimum_for = {}
 
     # groups = dict(list(new_table.groupby('min_pyver')))
-    _grouped = sorted(new_table.groupby('min_pyver'), key=lambda t: Version(t[0]))
-
-    for min_pyver, subdf in _grouped:
+    max_grouped = ub.udict(sorted(new_table.groupby('max_pyver'), key=lambda t: Version(t[0])))
+    min_grouped = ub.udict(sorted(new_table.groupby('min_pyver'), key=lambda t: Version(t[0])))
+    grouped = min_grouped | (max_grouped - min_grouped)
+    for min_pyver, subdf in grouped.items():
         # print('--- min_pyver = {!r} --- '.format(min_pyver))
 
         if 'version' in subdf.columns:
@@ -681,7 +682,7 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
         else:
             version_to_support = dict(list(subdf.groupby('pkg_version')))
 
-        cand_to_score = {}
+        cand_to_score = ub.udict()
         try:
             version_to_support = ub.sorted_keys(version_to_support, key=Version)
         except Exception:
@@ -702,8 +703,8 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
                 score = total_have
                 cand_to_score[cand] = score
 
-        cand_to_score = ub.sorted_vals(cand_to_score)
-        cand_to_score = ub.sorted_keys(cand_to_score, key=Version)
+        cand_to_score = ub.udict.sorted_values(cand_to_score)
+        cand_to_score = ub.udict.sorted_keys(cand_to_score, key=Version)
 
         # Filter to only the versions we requested, but if
         # none exist, return something
