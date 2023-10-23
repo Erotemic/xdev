@@ -1,5 +1,107 @@
-"""
+r"""
 Minor quality of life improvements over IPython.embed
+
+For a full featured debugger see [PypiIPDB]_, although note that this still
+suffers from issues like [IpythonIssue62]_, which this code contains
+workarounds for.
+
+The latest workaround is the "snapshot" function.
+
+When calling `xdev.embed()` it exposes a new function called `snapshot()`. This
+allows you to pickle your interpreter state to disk, and startup a new IPython
+shell (where [IpythonIssue62]_ doesnt apply) and essentially simulates the
+embedded stack frame.
+
+
+export PYTHONBREAKPOINT=xdev.embed
+
+python -c "if 1:
+
+    def foo(arg1):
+        a = 2
+        b = 3 + arg1
+        breakpoint()
+
+    foo(432)
+"
+
+
+
+.. code:: bash
+
+    echo "if 1:
+
+        def foo(arg1):
+            a = 2
+            b = 3 + arg1
+            import xdev
+            xdev.embed()
+
+    " > mymod.py
+
+    # This new features does not handle __main__ modules yet, so we use this
+    # workaround to demo the feature.
+    python -c "import mymod; mymod.foo(23)"
+
+This will embed you in an IPython session with the prompt:
+
+
+.. code::
+
+    ================
+    ____ _  _ ___  ____ ___  ___  _ _  _ ____
+    |___ |\/| |__] |___ |  \ |  \ | |\ | | __
+    |___ |  | |__] |___ |__/ |__/ | | \| |__]
+
+
+    ================
+    [xdev.embed] embedding
+    [xdev.embed] use xdev.fix_embed_globals() to address https://github.com/ipython/ipython/issues/62
+    [xdev.embed] to debug in a fresh IPython context, run:
+
+    snapshot()
+
+                 and then follow instructions
+    [xdev.embed] set EXIT_NOW or qqq=1 to hard exit on unembed
+    [util] calling IPython.embed()
+    In [1]:
+
+
+And calling ``snapshot()`` will result in:
+
+
+.. code:: python
+
+    In [1]: snapshot()
+       ...:
+    not_pickleable = [
+        '__builtins__',
+    ]
+    Could not pickle 1 variables
+    # To debug in a fresh IPython session run:
+
+    ipython -i -c "if 1:
+        fpath = '/home/joncrall/.cache/xdev/states/state_2023-10-23T120433-5.pkl'
+        from xdev.embeding import load_embed_snapshot
+        load_embed_snapshot(fpath, globals())
+    "
+
+
+Now, executing that code in a new terminal will startup a fresh IPython session
+(where issue 62 no longer applies because IPython was the entry point), and it
+loads your entired state into memory as long as it is pickleable. This is very
+handy for interactive development, but like all workaround it does still have
+limitations - namely everything needs to be pickleable. However, it has several
+advantages:
+
+    * Quickly restart from the breakpoint state because it is saved in a pickle file.
+
+    * Have more than one independent interpreter session looking at the same state.
+
+
+References:
+    .. [PypiIPDB] https://pypi.org/project/ipdb/
+    .. [IpythonIssue62] https://github.com/ipython/ipython/issues/62
 """
 import sys
 from functools import partial
@@ -30,10 +132,6 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
 
     SeeAlso:
         :func:`embed_on_exception`
-
-    References:
-        .. [PypiIPDB] https://pypi.org/project/ipdb/
-        .. [IpythonIssue62] https://github.com/ipython/ipython/issues/62
     """
     if 1:
         _stop_rich_live_contexts()
@@ -89,7 +187,9 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
     # print('[xdev.embed] get_parent_frame(n=8).f_code.co_name')
     print('[xdev.embed] use xdev.fix_embed_globals() to address https://github.com/ipython/ipython/issues/62')
     print('[xdev.embed] to debug in a fresh IPython context, run:')
+    print('')
     print('snapshot()')
+    print('')
     print('             and then follow instructions')
     print('[xdev.embed] set EXIT_NOW or qqq=1 to hard exit on unembed')
     #print('set iup to True to draw plottool stuff')
@@ -170,6 +270,9 @@ def _devcheck_frames():
 
 
 def load_embed_snapshot(fpath, parent_globals=None):
+    """
+    Loads a snapshot of a local state from disk.
+    """
     import pickle
     import ubelt as ub
     if parent_globals is None:
@@ -186,8 +289,9 @@ def load_embed_snapshot(fpath, parent_globals=None):
         # but I'm not 100% sure about this). Might need to update to handle
         # that case.
         modpath = context['modpath']
-        module = ub.import_module_from_path(modpath)
-        parent_globals.update(module.__dict__)
+        if modpath is not None:
+            module = ub.import_module_from_path(modpath)
+            parent_globals.update(module.__dict__)
 
     loaded_variables = dict()
     for k, v in snapshot['variables'].items():
@@ -195,16 +299,23 @@ def load_embed_snapshot(fpath, parent_globals=None):
 
     imports = snapshot.get('imports')
     for row in imports:
-        module = ub.import_module_from_name(row['modname'])
-        loaded_variables[row['alias']] = module
+        modname = row['modname']
+        if modname is not None:
+            module = ub.import_module_from_name(modname)
+            loaded_variables[row['alias']] = module
 
     parent_globals.update(loaded_variables)
 
 
 def make_embed_snapshot(parent_ns):
     """
+    Writes a snapshot of the local state to disk.
+
     TODO:
         need to handle __main__
+
+    References:
+        https://stackoverflow.com/questions/11866944/how-to-pickle-functions-classes-defined-in-main-python
     """
     import pickle
     import types
@@ -231,8 +342,13 @@ def make_embed_snapshot(parent_ns):
         '__name__': parent_ns['__name__'],
     }
     if parent_ns['__name__'] == '__main__':
-        context['modpath'] = parent_ns['__file__']
-        context['modname'] = ub.modpath_to_modname(parent_ns['__file__'])
+        modpath = parent_ns.get('__file__', None)
+        if modpath is None:
+            modname = None
+        else:
+            modname = parent_ns['__file__']
+        context['modpath'] = modpath
+        context['modname'] = modname
 
     snapshot['context'] = context
 
@@ -288,6 +404,9 @@ def embed_if_requested(n=0):
 class EmbedOnException(object):
     """
     Context manager which embeds in ipython if an exception is thrown
+
+    SeeAlso:
+        :func:`embed`
     """
     def __init__(self, before_embed=None):
         self.before_embed = before_embed
