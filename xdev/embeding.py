@@ -27,6 +27,13 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         Contains helper logic to allow the developer to more easilly exit the
         program if embed is called in a loop. Specifically if you want to quit
         and not embed again, then set qqq=1 before exiting the embed session.
+
+    SeeAlso:
+        :func:`embed_on_exception`
+
+    References:
+        .. [PypiIPDB] https://pypi.org/project/ipdb/
+        .. [IpythonIssue62] https://github.com/ipython/ipython/issues/62
     """
     if 1:
         _stop_rich_live_contexts()
@@ -81,7 +88,9 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
     # print('[xdev.embed]  Get stack location with: ')
     # print('[xdev.embed] get_parent_frame(n=8).f_code.co_name')
     print('[xdev.embed] use xdev.fix_embed_globals() to address https://github.com/ipython/ipython/issues/62')
-    print('[xdev.embed] to debug in a fresh IPython context, run ``snapshot()`` and then follow instructions')
+    print('[xdev.embed] to debug in a fresh IPython context, run:')
+    print('snapshot()')
+    print('             and then follow instructions')
     print('[xdev.embed] set EXIT_NOW or qqq=1 to hard exit on unembed')
     #print('set iup to True to draw plottool stuff')
     # print('[util] call %pylab qt4 to get plottool stuff working')
@@ -199,6 +208,7 @@ def make_embed_snapshot(parent_ns):
     """
     import pickle
     import types
+    import ubelt as ub
     snapshot = {}
     variables = snapshot['variables'] = {}
     not_pickleable = snapshot['not_pickleable'] = []
@@ -221,7 +231,6 @@ def make_embed_snapshot(parent_ns):
         '__name__': parent_ns['__name__'],
     }
     if parent_ns['__name__'] == '__main__':
-        import ubelt as ub
         context['modpath'] = parent_ns['__file__']
         context['modname'] = ub.modpath_to_modname(parent_ns['__file__'])
 
@@ -232,7 +241,6 @@ def make_embed_snapshot(parent_ns):
             print('not_pickleable = {}'.format(ub.urepr(not_pickleable, nl=1)))
         print(f'Could not pickle {len(not_pickleable)} variables')
 
-    import ubelt as ub
     dpath = ub.Path.appdir('xdev', 'states').ensuredir()
     fpath = dpath / ('state_' + ub.timestamp() + '.pkl')
 
