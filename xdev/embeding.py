@@ -5,12 +5,13 @@ For a full featured debugger see [PypiIPDB]_, although note that this still
 suffers from issues like [IpythonIssue62]_, which this code contains
 workarounds for.
 
-The latest workaround is the "snapshot" function.
+The latest workaround is the "xdev.snapshot" function (new in 1.5.0).
 
-When calling `xdev.embed()` it exposes a new function called `snapshot()`. This
-allows you to pickle your interpreter state to disk, and startup a new IPython
-shell (where [IpythonIssue62]_ doesnt apply) and essentially simulates the
-embedded stack frame.
+Either when calling ``xdev.embed()`` or at any point in your code you can call
+the `xdev.snapshot()` function.
+This allows you to pickle your interpreter state to disk, and startup a new
+IPython shell (where [IpythonIssue62]_ doesnt apply) and essentially simulates
+the embedded stack frame.
 
 
 export PYTHONBREAKPOINT=xdev.embed
@@ -59,7 +60,7 @@ This will embed you in an IPython session with the prompt:
     [xdev.embed] use xdev.fix_embed_globals() to address https://github.com/ipython/ipython/issues/62
     [xdev.embed] to debug in a fresh IPython context, run:
 
-    snapshot()
+    xdev.snapshot()
 
                  and then follow instructions
     [xdev.embed] set EXIT_NOW or qqq=1 to hard exit on unembed
@@ -67,12 +68,12 @@ This will embed you in an IPython session with the prompt:
     In [1]:
 
 
-And calling ``snapshot()`` will result in:
+And calling ``xdev.snapshot()`` will result in:
 
 
 .. code:: python
 
-    In [1]: snapshot()
+    In [1]: xdev.snapshot()
        ...:
     not_pickleable = [
         '__builtins__',
@@ -82,8 +83,8 @@ And calling ``snapshot()`` will result in:
 
     ipython -i -c "if 1:
         fpath = '/home/joncrall/.cache/xdev/states/state_2023-10-23T120433-5.pkl'
-        from xdev.embeding import load_embed_snapshot
-        load_embed_snapshot(fpath, globals())
+        from xdev.embeding import load_snapshot
+        load_snapshot(fpath, globals())
     "
 
 
@@ -188,7 +189,7 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
     print('[xdev.embed] use xdev.fix_embed_globals() to address https://github.com/ipython/ipython/issues/62')
     print('[xdev.embed] to debug in a fresh IPython context, run:')
     print('')
-    print('snapshot()')
+    print('xdev.snapshot()')
     print('')
     print('             and then follow instructions')
     print('[xdev.embed] set EXIT_NOW or qqq=1 to hard exit on unembed')
@@ -229,13 +230,6 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         parent_ns.update(parent_locals)
         locals().update(parent_ns)
 
-        def snapshot():
-            make_embed_snapshot(parent_ns)
-
-        SNAPSHOT_STATE = 0
-        if SNAPSHOT_STATE:
-            make_embed_snapshot(parent_ns)
-
         try:
             embed2()
             # IPython.embed()
@@ -269,22 +263,29 @@ def _devcheck_frames():
     ...
 
 
-def load_embed_snapshot(fpath, parent_globals=None):
+def load_snapshot(fpath, parent_globals=None):
     """
     Loads a snapshot of a local state from disk.
+
+    Args:
+        fpath (str | PathLike): the path to the snapshot file to load
+
+        parent_globals (dict | None):
+            The state dictionary to update. Should be given as ``globals()``.
+            If unspecified, it is inferred via frame inspection.
     """
     import pickle
     import ubelt as ub
     if parent_globals is None:
         parent_globals = get_parent_frame(n=1).f_globals
     fpath = ub.Path(fpath)
-    snapshot = pickle.loads(fpath.read_bytes())
+    snapshot_state = pickle.loads(fpath.read_bytes())
 
-    context = snapshot['context']
+    context = snapshot_state['context']
     if context['__name__'] == '__main__':
         # To work around issue where we embed on the __main__ context we import
         # the module it was associated with (which we can do because
-        # make-snapshot recorded it) and then load its globals into the parent
+        # make-snapshot_state recorded it) and then load its globals into the parent
         # globals (which I think will usually be a different __main__ context,
         # but I'm not 100% sure about this). Might need to update to handle
         # that case.
@@ -294,10 +295,10 @@ def load_embed_snapshot(fpath, parent_globals=None):
             parent_globals.update(module.__dict__)
 
     loaded_variables = dict()
-    for k, v in snapshot['variables'].items():
+    for k, v in snapshot_state['variables'].items():
         loaded_variables[k] = pickle.loads(v)
 
-    imports = snapshot.get('imports')
+    imports = snapshot_state.get('imports')
     for row in imports:
         modname = row['modname']
         if modname is not None:
@@ -307,23 +308,43 @@ def load_embed_snapshot(fpath, parent_globals=None):
     parent_globals.update(loaded_variables)
 
 
-def make_embed_snapshot(parent_ns):
+def snapshot(parent_ns=None, n=0):
     """
-    Writes a snapshot of the local state to disk.
+    Save a snapshot of the local state to disk.
+
+    Serialize all names in scope to a pickle and save to disk. Also print the
+    command that will let the user start an IPython session with this
+    namespace.
+
+    Args:
+        parent_ns (dict):
+            A dictionary containing all of the available names in the scope to
+            export.
+
+        n (int):
+            if ``parent_ns`` is unspecified, infer locals and globals from the
+            frame ``n`` stack levels above the namespace this function is
+            called in.
 
     TODO:
-        need to handle __main__
+        - [ ] need to handle __main__
 
     References:
-        https://stackoverflow.com/questions/11866944/how-to-pickle-functions-classes-defined-in-main-python
+        .. [SO11866944] https://stackoverflow.com/questions/11866944/how-to-pickle-functions-classes-defined-in-main-python
     """
     import pickle
     import types
     import ubelt as ub
-    snapshot = {}
-    variables = snapshot['variables'] = {}
-    not_pickleable = snapshot['not_pickleable'] = []
-    imports = snapshot['imports'] = []
+    if parent_ns is None:
+        parent_globals = get_parent_frame(n=n).f_globals
+        parent_locals = get_parent_frame(n=n).f_locals
+        parent_ns = parent_globals.copy()
+        parent_ns.update(parent_locals)
+
+    snapshot_state = {}
+    variables = snapshot_state['variables'] = {}
+    not_pickleable = snapshot_state['not_pickleable'] = []
+    imports = snapshot_state['imports'] = []
 
     for k, v in parent_ns.items():
         if isinstance(v, types.ModuleType):
@@ -350,17 +371,17 @@ def make_embed_snapshot(parent_ns):
         context['modpath'] = modpath
         context['modname'] = modname
 
-    snapshot['context'] = context
+    snapshot_state['context'] = context
 
     if not_pickleable:
         if len(not_pickleable) < 20:
             print('not_pickleable = {}'.format(ub.urepr(not_pickleable, nl=1)))
         print(f'Could not pickle {len(not_pickleable)} variables')
 
-    dpath = ub.Path.appdir('xdev', 'states').ensuredir()
+    dpath = ub.Path.appdir('xdev', 'snapshot_states').ensuredir()
     fpath = dpath / ('state_' + ub.timestamp() + '.pkl')
 
-    snapshot_data = pickle.dumps(snapshot)
+    snapshot_data = pickle.dumps(snapshot_state)
     fpath.write_bytes(snapshot_data)
 
     print(ub.highlight_code(ub.codeblock(
@@ -369,16 +390,16 @@ def make_embed_snapshot(parent_ns):
 
         ipython -i -c "if 1:
             fpath = '{fpath}'
-            from xdev.embeding import load_embed_snapshot
-            load_embed_snapshot(fpath, globals())
+            from xdev.embeding import load_snapshot
+            load_snapshot(fpath, globals())
         "
         '''), 'bash'))
     # import pickle
     # import ubelt as ub
     # fpath = ub.Path(fpath)
-    # snapshot = pickle.loads(fpath.read_bytes())
+    # snapshot_state = pickle.loads(fpath.read_bytes())
     # loaded_variables = dict()
-    # for k, v in snapshot['variables'].items():
+    # for k, v in snapshot_state['variables'].items():
     #     loaded_variables[k] = pickle.loads(v)
     # globals().update(loaded_variables)
     ...
