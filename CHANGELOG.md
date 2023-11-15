@@ -6,7 +6,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## Version 1.5.0 - Unreleased
 
+
+### Added
+
 * Add `xdev.snapshot`
+* Add attributes `file_paths` and `dir_paths` to `DirectoryWalker`.
+* Add `ignore_empty_dirs` argument to `DirectoryWalker`.
+
+### Fixed:
+
+* Fixed issue in `DirectoryWalker` with rich links.
 
 
 ## Version 1.4.0 - Released 2023-08-18 

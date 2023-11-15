@@ -230,7 +230,9 @@ def generate_typed_stubs(modpath):
         files=[os.fspath(p) for p in files],
         verbose=False,
         quiet=False,
-        export_less=True)
+        export_less=True,
+        include_docstrings=True,
+    )
     # generate_stubs(options)
 
     mypy_opts = stubgen.mypy_options(options)
@@ -642,13 +644,39 @@ def hacked_typing_info(type_name):
         add_typing_import('Union')
         add_import_line('from typing import {}\n'.format('Union'))
 
-    for typing_arg in ['Iterable', 'Callable', 'Dict',
-                       'List', 'Union', 'Type', 'Mapping',
-                       'Tuple', 'Optional', 'Sequence',
-                       'Iterator', 'Set', 'Dict']:
+    common_typing_types = [
+        'Iterable', 'Callable', 'Dict',
+        'List', 'Union', 'Type', 'Mapping',
+        'Tuple', 'Optional', 'Sequence',
+        'Iterator', 'Set', 'Dict'
+    ]
+
+    # See: https://github.com/python/typeshed/blob/main/stdlib/_typeshed/__init__.pyi
+    common_typeshed_types = [
+        'SupportsItems',
+        'SupportsKeysAndGetItem',
+        'SupportsGetItem',
+        'SupportsItemAccess',
+        'SupportsWrite',
+        'SupportsRead',
+        'SupportsReadline',
+        'SupportsNoArgReadline',
+        'HasFileno',
+        'FileDescriptor',
+        'FileDescriptorLike',
+        'FileDescriptorOrPath',
+
+    ]
+
+    for typing_arg in common_typing_types:
         if typing_arg in type_name:
             add_typing_import(typing_arg)
             add_import_line('from typing import {}\n'.format(typing_arg))
+
+    for typing_arg in common_typeshed_types:
+        if typing_arg in type_name:
+            add_typing_import(typing_arg)
+            add_import_line('from _typeshed import {}\n'.format(typing_arg))
 
     if 'Float32' in type_name:
         add_import_line('from nptyping import {}\n'.format('Float32'))
@@ -736,6 +764,11 @@ class ExtendedStubGenerator(StubGenerator):
     def _hack_for_info(self, info):
         type_name = info['type']
         if type_name is not None:
+
+            if type_name == 'NoParamType' and self.path == 'ubelt/util_const.py':
+                # hack: Ignore util const
+                return
+
             results = hacked_typing_info(type_name)
             for typing_arg in results['typing_imports']:
                 self.add_typing_import(typing_arg)

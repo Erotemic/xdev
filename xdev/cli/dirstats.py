@@ -135,6 +135,7 @@ class DirectoryWalker:
                  max_files=None,
                  parse_content=False,
                  show_progress=True,
+                 ignore_empty_dirs=False,
                  **kwargs):
         """
         Args:
@@ -172,6 +173,7 @@ class DirectoryWalker:
         self.parse_content = parse_content
         self.max_files = max_files
         self.show_progress = show_progress
+        self.ignore_empty_dirs = ignore_empty_dirs
 
         kwargs = ub.udict(kwargs)
 
@@ -190,6 +192,7 @@ class DirectoryWalker:
 
         self.graph = None
         self._topo_order = None
+        self._type_to_path = {}
 
     def write_network_text(self, **kwargs):
         nx.write_network_text(self.graph, rich.print, end='', **kwargs)
@@ -201,7 +204,10 @@ class DirectoryWalker:
         except KeyboardInterrupt:
             ...
 
-        root_node = self._topo_order[0]
+        if len(self._topo_order):
+            root_node = self._topo_order[0]
+        else:
+            root_node = None
 
         def _node_table(node):
             node_data = self.graph.nodes[node]
@@ -232,25 +238,26 @@ class DirectoryWalker:
             disp_piv['files'] = disp_piv['files'].astype(int)
             return disp_piv
 
-        child_rows = []
-        for node in self.graph.succ[root_node]:
-            disp_piv = _node_table(node)
-            row = disp_piv.iloc[-1].to_dict()
-            row['name'] = self.graph.nodes[node]['name']
-            child_rows.append(row)
-        if child_rows:
-            print('')
-            df = pd.DataFrame(child_rows)
-            if 'total_lines' in df.columns:
-                df = df.sort_values('total_lines')
-            rich.print(df)
-            # if self.graph.nodes[node]['type'] == 'dir':
-            # print(f'node={node}')
+        if root_node:
+            child_rows = []
+            for node in self.graph.succ[root_node]:
+                disp_piv = _node_table(node)
+                row = disp_piv.iloc[-1].to_dict()
+                row['name'] = self.graph.nodes[node]['name']
+                child_rows.append(row)
+            if child_rows:
+                print('')
+                df = pd.DataFrame(child_rows)
+                if 'total_lines' in df.columns:
+                    df = df.sort_values('total_lines')
+                rich.print(df)
+                # if self.graph.nodes[node]['type'] == 'dir':
+                # print(f'node={node}')
 
-        disp_piv = _node_table(root_node)
-        print('')
-        rich.print(disp_piv[:-1])
-        rich.print(disp_piv[-1:])
+            disp_piv = _node_table(root_node)
+            print('')
+            rich.print(disp_piv[:-1])
+            rich.print(disp_piv[-1:])
         print('root_node = {}'.format(ub.urepr(root_node, nl=1)))
 
         # disp_stats = self._humanize_stats(stats, 'dir', reduce_prefix=True)
@@ -339,20 +346,40 @@ class DirectoryWalker:
         self._topo_order = list(nx.topological_sort(g))
         self.graph = g
 
-    def _update_stats(self):
-        g = self.graph
-
-        # Get size stats for each file.
-        pman = ProgressManager()
-        with pman:
-            prog = pman.progiter(desc='Parse File Info', total=len(g))
-            for fpath, node_data in g.nodes(data=True):
+        if self.ignore_empty_dirs:
+            for node in self._topo_order[::-1]:
+                node_data = g.nodes[node]
                 if node_data['type'] == 'file':
-                    stats = parse_file_stats(fpath,
-                                             parse_content=self.parse_content)
-                    node_data['stats'] = stats
-                prog.step()
+                    node_data['stats'] = {'file': 1}
+            self._accum_stats()
 
+            to_remove = []
+            for node in self._topo_order[::-1]:
+                node_data = g.nodes[node]
+                if node_data['stats'].get('file', 0) == 0:
+                    to_remove.append(node)
+
+            g.remove_nodes_from(to_remove)
+            self._topo_order = list(nx.topological_sort(g))
+            self.graph = g
+
+        self._type_to_path = {}
+        for p, d in self.graph.nodes(data=True):
+            t = d['type']
+            if t not in self._type_to_path:
+                self._type_to_path[t] = []
+            self._type_to_path[t].append(p)
+
+    @property
+    def file_paths(self):
+        return self._type_to_path.get('file', [])
+
+    @property
+    def dir_paths(self):
+        return self._type_to_path.get('dir', [])
+
+    def _accum_stats(self):
+        g = self.graph
         # Accumulate size stats
         ### Iterate from leaf-to-root, and accumulate info in directories
         for node in self._topo_order[::-1]:
@@ -367,6 +394,21 @@ class DirectoryWalker:
                         if key not in accum_stats:
                             accum_stats[key] = 0
                         accum_stats[key] += stat_value
+
+    def _update_stats(self):
+        g = self.graph
+
+        # Get size stats for each file.
+        pman = ProgressManager()
+        with pman:
+            prog = pman.progiter(desc='Parse File Info', total=len(g))
+            for fpath, node_data in g.nodes(data=True):
+                if node_data['type'] == 'file':
+                    stats = parse_file_stats(fpath,
+                                             parse_content=self.parse_content)
+                    node_data['stats'] = stats
+                prog.step()
+        self._accum_stats()
 
     def _humanize_stats(self, stats, node_type, reduce_prefix=False):
         disp_stats = {}
@@ -536,12 +578,16 @@ class DirectoryWalker:
 
                 if colors:
                     if target_richlink:
-                        targetrep = f'[link={target}]{targetrep}[/link]'
+                        import urllib.parse
+                        encoded_target = 'file://' + urllib.parse.quote(os.fspath(target))
+                        targetrep = f'[link={encoded_target}]{targetrep}[/link]'
                     targetrep = f'[{target_color}]{targetrep}[/{target_color}]'
 
             if colors:
                 if richlink:
-                    pathrep = f'[link={path}]{pathrep}[/link]'
+                    import urllib.parse
+                    encoded_path = 'file://' + urllib.parse.quote(os.fspath(path))
+                    pathrep = f'[link={encoded_path}]{pathrep}[/link]'
                 pathrep = f'[{color}]{pathrep}[/{color}]'
 
             if targetrep is not None:
