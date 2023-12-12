@@ -5,3 +5,4 @@ xdev.regex\_builder module
    :members:
    :undoc-members:
    :show-inheritance:
+   :private-members:

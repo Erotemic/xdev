@@ -1,12 +1,22 @@
 xdev package
 ============
 
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   xdev.cli
+
 Submodules
 ----------
 
 .. toctree::
    :maxdepth: 4
 
+   xdev.__main__
+   xdev._ipython_ext
    xdev.algo
    xdev.autojit
    xdev.class_reloader
@@ -22,6 +32,8 @@ Submodules
    xdev.search_replace
    xdev.tracebacks
    xdev.util
+   xdev.util_networkx
+   xdev.util_path
 
 Module contents
 ---------------
@@ -30,3 +42,4 @@ Module contents
    :members:
    :undoc-members:
    :show-inheritance:
+   :private-members:

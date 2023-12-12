@@ -5,3 +5,4 @@ xdev.interactive\_iter module
    :members:
    :undoc-members:
    :show-inheritance:
+   :private-members:
