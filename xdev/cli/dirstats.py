@@ -14,9 +14,8 @@ class DirectoryStatsCLI(scfg.DataConfig):
     """
     Analysis for code in a repository
 
-    Examples
-    --------
-    python ~/code/xdev/xdev/cli/repo_stats.py .
+    CommandLine:
+        python ~/code/xdev/xdev/cli/repo_stats.py .
     """
     __command__ = 'dirstats'
 

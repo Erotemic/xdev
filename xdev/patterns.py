@@ -65,12 +65,12 @@ class Pattern(PatternBase, ub.NiceRepr):
             interpereted with. Current modes are: strict, regex, and glob.
 
     Notes:
-        The glob backend uses the :module:`fnmatch` module [fnmatch_docs]_.
-        The regex backend uses the Python :module:`re` module.
+        The glob backend uses the :mod:`fnmatch` module [fnmatch_docs]_.
+        The regex backend uses the Python :mod:`re` module.
         The strict backend uses the "==" string equality testing.
 
     References:
-        ..[fnmatch_docs] https://docs.python.org/3/library/fnmatch.html
+        .. [fnmatch_docs] https://docs.python.org/3/library/fnmatch.html
 
     Example:
         >>> repat = Pattern.coerce('foo.*', 'regex')
