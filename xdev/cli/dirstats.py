@@ -163,7 +163,7 @@ class DirectoryWalker:
 
             **kwargs : passed to label options
         """
-        self.dpath = ub.Path(dpath).resolve()
+        self.dpath = ub.Path(dpath).absolute()
         self.block_fnames = _null_coerce(MultiPattern, block_fnames)
         self.block_dnames = _null_coerce(MultiPattern, block_dnames)
         self.include_fnames = _null_coerce(MultiPattern, include_fnames)
