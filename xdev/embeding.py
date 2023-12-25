@@ -251,6 +251,10 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
             sys.exit(1)
 
 
+def breakpoint():
+    return embed(n=1)
+
+
 def _devcheck_frames():
     # TODO: how do we find the right frame when executing code directly in
     # IPython?

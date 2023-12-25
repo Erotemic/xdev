@@ -253,7 +253,9 @@ def grab_pypi_items(package_name, refresh=False):
     Get all the information about a package from pypi
 
     Ignore:
+        from xdev.cli.available_package_versions import *  # NOQA
         package_name = 'ubelt'
+        package_name = 'scikit-image'
     """
     import pandas as pd
     import json
@@ -310,6 +312,8 @@ def grab_pypi_items(package_name, refresh=False):
                 platinfo = parse_platform_tag(platform_tag)
                 item['os'] = platinfo['os']
                 item['arch'] = platinfo['arch']
+
+            python_version = item['python_version']
 
             flat_table.append(item)
     table = pd.DataFrame(flat_table)
@@ -565,8 +569,15 @@ def build_package_table(package_name, refresh=False):
             min_pyver = None
             max_pyver = None
             if row['python_version'] is not None:
+
+                # Validate that the Python version is reasonable and
+                # fix it if it is not. Hack for scikit-image
+                if str(row['python_version']) == 'image/tools/scikit_image':
+                    row['python_version'] = row['python_tag']
+
                 min_pyver = python_versions.cp_codes.get(row['python_version'], row['python_version'])
                 max_pyver = python_versions.cp_codes.get(row['python_version'], row['python_version'])
+
 
             upload_time = ub.timeparse(row['upload_time_iso_8601'])
             flags = [upload_time >= t for t in python_version_table['release_date']]
@@ -670,9 +681,18 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
     chosen_minmax_for = {}
     chosen_minimum_for = {}
 
+    def parse_vertup(tup):
+        item = tup[0]
+        try:
+            ver = Version(item)
+        except Exception:
+            print(f'Failed to paser Version: item={item}')
+            raise
+        return ver
+
     # groups = dict(list(new_table.groupby('min_pyver')))
-    max_grouped = ub.udict(sorted(new_table.groupby('max_pyver'), key=lambda t: Version(t[0])))
-    min_grouped = ub.udict(sorted(new_table.groupby('min_pyver'), key=lambda t: Version(t[0])))
+    max_grouped = ub.udict(sorted(new_table.groupby('max_pyver'), key=parse_vertup))
+    min_grouped = ub.udict(sorted(new_table.groupby('min_pyver'), key=parse_vertup))
     grouped = min_grouped | (max_grouped - min_grouped)
     for min_pyver, subdf in grouped.items():
         # print('--- min_pyver = {!r} --- '.format(min_pyver))
