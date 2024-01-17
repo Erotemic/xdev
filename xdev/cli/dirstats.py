@@ -267,6 +267,7 @@ class DirectoryWalker:
         self._update_stats()
         self._update_labels()
         self._sort()
+        return self
 
     def _inplace_filter_dnames(self, dnames):
         if self.include_dnames is not None:
