@@ -162,7 +162,12 @@ def find(pattern=None, dpath=None, include=None, exclude=None,
             The glob pattern the path name must match to be returned
 
         dpath (str | Pattern | None):
-            The root directory to search. Default to cwd.
+            The root directory to search.
+            Can also be a filepath, in which case, that is the only filepath
+            considered.
+            NOTE: in the future, this argument may change to `path` to indicate
+            specifying a filepath is allowed.
+            Defaults to cwd.
 
         include (str | List[str] | MultiPattern | None):
             Pattern or list of patterns. If specified, search only files whose
@@ -251,7 +256,16 @@ def find(pattern=None, dpath=None, include=None, exclude=None,
 
         return False
 
-    for root, dnames, fnames in os.walk(dpath, followlinks=followlinks):
+    if os.path.isfile(dpath):
+        # Spoof walk output when dpath is given as a file path
+        root = os.path.dirname(dpath)
+        dnames = []
+        fnames = [os.path.basename(dpath)]
+        walkgen = [(root, dnames, fnames)]
+    else:
+        walkgen = os.walk(dpath, followlinks=followlinks)
+
+    for root, dnames, fnames in walkgen:
 
         if dirblocklist is not None:
             dnames[:] = [

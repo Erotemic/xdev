@@ -1,7 +1,8 @@
-xdev.util module
+xdev.misc module
 ================
 
-.. automodule:: xdev.util
+.. automodule:: xdev.misc
    :members:
    :undoc-members:
    :show-inheritance:
+   :private-members:

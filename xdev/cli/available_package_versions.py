@@ -253,7 +253,9 @@ def grab_pypi_items(package_name, refresh=False):
     Get all the information about a package from pypi
 
     Ignore:
+        from xdev.cli.available_package_versions import *  # NOQA
         package_name = 'ubelt'
+        package_name = 'scikit-image'
     """
     import pandas as pd
     import json
@@ -310,6 +312,8 @@ def grab_pypi_items(package_name, refresh=False):
                 platinfo = parse_platform_tag(platform_tag)
                 item['os'] = platinfo['os']
                 item['arch'] = platinfo['arch']
+
+            python_version = item['python_version']
 
             flat_table.append(item)
     table = pd.DataFrame(flat_table)
@@ -477,7 +481,7 @@ class PythonVersions:
         import pandas as pd
         # https://en.wikipedia.org/wiki/History_of_Python#Version_3
         python_version_rows = [
-            # {'release_date': '2024-10-01', 'pyver': '3.13'},
+            {'release_date': '2024-10-01', 'pyver': '3.13'},
             {'release_date': '2023-10-02', 'pyver': '3.12'},
 
             {'release_date': '2022-10-24', 'pyver': '3.11'},
@@ -565,8 +569,15 @@ def build_package_table(package_name, refresh=False):
             min_pyver = None
             max_pyver = None
             if row['python_version'] is not None:
+
+                # Validate that the Python version is reasonable and
+                # fix it if it is not. Hack for scikit-image
+                if str(row['python_version']) == 'image/tools/scikit_image':
+                    row['python_version'] = row['python_tag']
+
                 min_pyver = python_versions.cp_codes.get(row['python_version'], row['python_version'])
                 max_pyver = python_versions.cp_codes.get(row['python_version'], row['python_version'])
+
 
             upload_time = ub.timeparse(row['upload_time_iso_8601'])
             flags = [upload_time >= t for t in python_version_table['release_date']]
@@ -670,10 +681,20 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
     chosen_minmax_for = {}
     chosen_minimum_for = {}
 
-    # groups = dict(list(new_table.groupby('min_pyver')))
-    _grouped = sorted(new_table.groupby('min_pyver'), key=lambda t: Version(t[0]))
+    def parse_vertup(tup):
+        item = tup[0]
+        try:
+            ver = Version(item)
+        except Exception:
+            print(f'Failed to paser Version: item={item}')
+            raise
+        return ver
 
-    for min_pyver, subdf in _grouped:
+    # groups = dict(list(new_table.groupby('min_pyver')))
+    max_grouped = ub.udict(sorted(new_table.groupby('max_pyver'), key=parse_vertup))
+    min_grouped = ub.udict(sorted(new_table.groupby('min_pyver'), key=parse_vertup))
+    grouped = min_grouped | (max_grouped - min_grouped)
+    for min_pyver, subdf in grouped.items():
         # print('--- min_pyver = {!r} --- '.format(min_pyver))
 
         if 'version' in subdf.columns:
@@ -681,7 +702,7 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
         else:
             version_to_support = dict(list(subdf.groupby('pkg_version')))
 
-        cand_to_score = {}
+        cand_to_score = ub.udict()
         try:
             version_to_support = ub.sorted_keys(version_to_support, key=Version)
         except Exception:
@@ -702,8 +723,8 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
                 score = total_have
                 cand_to_score[cand] = score
 
-        cand_to_score = ub.sorted_vals(cand_to_score)
-        cand_to_score = ub.sorted_keys(cand_to_score, key=Version)
+        cand_to_score = ub.udict.sorted_values(cand_to_score)
+        cand_to_score = ub.udict.sorted_keys(cand_to_score, key=Version)
 
         # Filter to only the versions we requested, but if
         # none exist, return something

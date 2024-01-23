@@ -5,3 +5,4 @@ xdev.patterns module
    :members:
    :undoc-members:
    :show-inheritance:
+   :private-members:

@@ -86,7 +86,7 @@ class XdevCLI(ModalCLI):
                 '''
                 The directory to recursively search or a file pattern to match.
                 '''
-            )),
+            ), alias=['path']),
             'dry': scfg.Value('ask', position=4, help=ub.paragraph(
                 '''
                 if 1, show what would be done. if 0, execute the change, if "ask",
@@ -99,15 +99,16 @@ class XdevCLI(ModalCLI):
                 'Any directory matching this pattern will be removed from '
                 'traveral.')),
             'recursive': scfg.Value(True),
-            'verbose': scfg.Value(1),
+            'verbose': scfg.Value(2),
         }
 
         @classmethod
         def main(cls, cmdline=False, **kwargs):
             from xdev import search_replace
             config = cls.cli(cmdline=cmdline, data=kwargs)
-            if config['verbose'] > 2:
-                print('config = {}'.format(ub.repr2(dict(config), nl=1, sort=0)))
+            if config['verbose'] >= 2:
+                rprint(f'config = {ub.urepr(config, nl=1, sort=0)}')
+                # print('config = {}'.format(ub.repr2(dict(config), nl=1, sort=0)))
 
             if config['dry'] in {'ask', 'auto'}:
                 from rich.prompt import Confirm
@@ -140,7 +141,7 @@ class XdevCLI(ModalCLI):
         __command__ = 'find'
         __default__ = {
             'pattern': scfg.Value('', position=1),
-            'dpath': scfg.Value(None, position=2, help='the path to search. Defaults to cwd'),
+            'dpath': scfg.Value(None, position=2, help='the path to search. Defaults to cwd', alias=['path']),
             'include': scfg.Value(None, help='If specified, only consider results with matching basenames'),
             'exclude': scfg.Value(None, help='If specified, do not consider results with matching basenames'),
             'dirblocklist': scfg.Value(None, help=(
@@ -474,6 +475,38 @@ class XdevCLI(ModalCLI):
             available_package_versions.main(cmdline=cmdline, **kwargs)
 
     from xdev.cli.dirstats import DirectoryStatsCLI
+
+    class RegexCLI(scfg.DataConfig):
+        """
+        Query the regex builder for help on the command line.
+        By default prints useful regex constructs I have a hard time
+        remembering.
+        """
+        __command__ = 'regex'
+        backend = scfg.Value('python', choices=['python', 'vim'], help='regex flavor')
+
+        @classmethod
+        def main(cls, cmdline=False, **kwargs):
+            """
+            Ignore:
+                from xdev.cli.main import *  # NOQA
+                cls = XdevCLI.RegexCLI
+                cmdline = 0
+                kwargs = {}
+            """
+            config = cls.cli(cmdline=cmdline, data=kwargs)
+            rprint(f'config = {ub.urepr(config, nl=1)}')
+            from xdev.regex_builder import RegexBuilder
+            b = RegexBuilder.coerce(config.backend)
+            rprint(f'b.constructs = {ub.urepr(b.constructs, nl=1, sk=1, align=":")}')
+
+
+def rprint(*args):
+    try:
+        import rich
+        rich.print(*args)
+    except ImportError:
+        print(*args)
 
 
 def main():

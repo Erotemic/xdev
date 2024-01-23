@@ -1,7 +1,7 @@
 """
 Notes:
     Based on template code in:
-        ~/code/xcookie/xcookie/builders/docs_conf.py
+        ~/code/xcookie/xcookie/builders/docs.py
         ~/code/xcookie/xcookie/rc/conf_ext.py
 
     http://docs.readthedocs.io/en/latest/getting_started.html
@@ -17,10 +17,13 @@ Notes:
     # need to edit the conf.py
 
     cd ~/code/xdev/docs
-    sphinx-apidoc --private -f -o ~/code/xdev/docs/source ~/code/xdev/xdev --separate
+    sphinx-apidoc --private -f -o ~/code/xdev/docs/source/auto ~/code/xdev/xdev --separate
+
+    # Note: the module should importable before running this
+    # (e.g. install it in developer mode or munge the PYTHONPATH)
     make html
 
-    git add source/*.rst
+    git add source/auto/*.rst
 
     Also:
         To turn on PR checks
@@ -45,10 +48,12 @@ Notes:
             Set the Repository NAME: xdev
             Set the Repository URL: https://github.com/Erotemic/xdev
 
-        For gitlab you also need to setup an integrations and add gitlab
-        incoming webhook
+        For gitlab you also need to setup an integrations. Navigate to:
 
             https://readthedocs.org/dashboard/xdev/integrations/create/
+
+        Then add gitlab incoming webhook and copy the URL (make sure
+        you copy the real url and not the text so https is included).
 
         Then go to
 
@@ -83,6 +88,7 @@ Notes:
 
 # -- Project information -----------------------------------------------------
 import sphinx_rtd_theme
+import sys
 from os.path import exists
 from os.path import dirname
 from os.path import join
@@ -112,10 +118,15 @@ copyright = '2023, Jon Crall'
 author = 'Jon Crall'
 modname = 'xdev'
 
-modpath = join(dirname(dirname(dirname(__file__))), 'xdev', '__init__.py')
+repo_dpath = dirname(dirname(dirname(__file__)))
+mod_dpath = join(repo_dpath, 'xdev')
+src_dpath = dirname(mod_dpath)
+modpath = join(mod_dpath, '__init__.py')
 release = parse_version(modpath)
 version = '.'.join(release.split('.')[0:2])
 
+# Hack to ensure the module is importable
+# sys.path.insert(0, os.path.abspath(src_dpath))
 
 # -- General configuration ---------------------------------------------------
 
@@ -146,6 +157,9 @@ napoleon_google_docstring = True
 napoleon_use_param = False
 napoleon_use_ivar = True
 
+#autoapi_type = 'python'
+#autoapi_dirs = [mod_dpath]
+
 autodoc_inherit_docstrings = False
 
 autodoc_member_order = 'bysource'
@@ -160,6 +174,9 @@ autoclass_content = 'both'
 # }
 # autoapi_dirs = [f'../../src/{modname}']
 # autoapi_keep_files = True
+
+# References:
+# https://stackoverflow.com/questions/21538983/specifying-targets-for-intersphinx-links-to-numpy-scipy-and-matplotlib
 
 intersphinx_mapping = {
     # 'pytorch': ('http://pytorch.org/docs/master/', None),
@@ -179,10 +196,20 @@ intersphinx_mapping = {
     'scriptconfig': ('https://scriptconfig.readthedocs.io/en/latest/', None),
     'rich': ('https://rich.readthedocs.io/en/latest/', None),
 
+    'numpy': ('https://numpy.org/doc/stable/', None),
+    'sympy': ('https://docs.sympy.org/latest/', None),
+    'scikit-learn': ('https://scikit-learn.org/stable/', None),
+    'pandas': ('https://pandas.pydata.org/docs/', None),
+    'matplotlib': ('https://matplotlib.org/stable/', None),
+
     'pytest': ('https://docs.pytest.org/en/latest/', None),
+    'platformdirs': ('https://platformdirs.readthedocs.io/en/latest/', None),
+
+    'timerit': ('https://timerit.readthedocs.io/en/latest/', None),
+    'progiter': ('https://progiter.readthedocs.io/en/latest/', None),
+    'dateutil': ('https://dateutil.readthedocs.io/en/latest/', None),
     # 'pytest._pytest.doctest': ('https://docs.pytest.org/en/latest/_modules/_pytest/doctest.html', None),
     # 'colorama': ('https://pypi.org/project/colorama/', None),
-    # 'numpy': ('http://docs.scipy.org/doc/numpy/', None),
     # 'cv2' : ('http://docs.opencv.org/2.4/', None),
     # 'h5py' : ('http://docs.h5py.org/en/latest/', None)
 }
@@ -328,15 +355,26 @@ from sphinx.domains.python import PythonDomain  # NOQA
 from typing import Any, List  # NOQA
 
 
+USE_TIMER = 0
+if USE_TIMER:
+    import ubelt  # NOQA
+    TIMER = ubelt.Timer()
+    TIMER.tic()
+
+
 class PatchedPythonDomain(PythonDomain):
     """
     References:
         https://github.com/sphinx-doc/sphinx/issues/3866
     """
     def resolve_xref(self, env, fromdocname, builder, typ, target, node, contnode):
-        # TODO: can use this to resolve references nicely
-        # if target.startswith('ub.'):
-        #     target = 'ubelt.' + target[3]
+        """
+        Helps to resolves cross-references
+        """
+        if target.startswith('ub.'):
+            target = 'ubelt.' + target[3]
+        if target.startswith('xdoc.'):
+            target = 'xdoctest.' + target[3]
         return_value = super(PatchedPythonDomain, self).resolve_xref(
             env, fromdocname, builder, typ, target, node, contnode)
         return return_value
@@ -403,7 +441,7 @@ class GoogleStyleDocstringProcessor:
             redone = new_text.split('\n')
             new_lines.extend(redone)
             # import ubelt as ub
-            # print('new_lines = {}'.format(ub.repr2(new_lines, nl=1)))
+            # print('new_lines = {}'.format(ub.urepr(new_lines, nl=1)))
             # new_lines.append('')
             return new_lines
 
@@ -530,7 +568,7 @@ class GoogleStyleDocstringProcessor:
         # print(f'name={name}')
         # print('BEFORE:')
         # import ubelt as ub
-        # print('lines = {}'.format(ub.repr2(lines, nl=1)))
+        # print('lines = {}'.format(ub.urepr(lines, nl=1)))
 
         self.process(lines)
 
@@ -543,8 +581,14 @@ class GoogleStyleDocstringProcessor:
         #     import xdev
         #     xdev.embed()
 
-        RENDER_IMAGES = 1
-        if RENDER_IMAGES:
+        render_doc_images = 0
+
+        # HACK TO PREVENT EXCESSIVE TIME.
+        # TODO: FIXME FOR REAL
+        if USE_TIMER and TIMER.toc() > 60 * 5:
+            render_doc_images = 0  # FIXME too slow on RTD
+
+        if render_doc_images:
             # DEVELOPING
             if any('REQUIRES(--show)' in line for line in lines):
                 # import xdev
@@ -606,7 +650,7 @@ class GoogleStyleDocstringProcessor:
                     lines[edit_slice] = new_lines
 
         # print('AFTER:')
-        # print('lines = {}'.format(ub.repr2(lines, nl=1)))
+        # print('lines = {}'.format(ub.urepr(lines, nl=1)))
 
         # if name == 'kwimage.Affine.translate':
         #     import sys
@@ -854,15 +898,41 @@ def create_doctest_figure(app, obj, name, lines):
             insert_index = end_index
         else:
             raise KeyError(INSERT_AT)
-        lines.insert(insert_index, '.. image:: {}'.format(rel_to_root_fpath))
+        lines.insert(insert_index, '.. image:: {}'.format('..' / rel_to_root_fpath))
+        # lines.insert(insert_index, '.. image:: {}'.format(rel_to_root_fpath))
         # lines.insert(insert_index, '.. image:: {}'.format(rel_to_static_fpath))
         lines.insert(insert_index, '')
+
+
+def postprocess_hyperlinks(app, doctree, docname):
+    """
+    Extension to fixup hyperlinks.
+    This should be connected to the Sphinx application's
+    "autodoc-process-docstring" event.
+    """
+    # Your hyperlink postprocessing logic here
+    from docutils import nodes
+    import pathlib
+    for node in doctree.traverse(nodes.reference):
+        if 'refuri' in node.attributes:
+            refuri = node.attributes['refuri']
+            if '.rst' in refuri:
+                if 'source' in node.document:
+                    fpath = pathlib.Path(node.document['source'])
+                    parent_dpath = fpath.parent
+                    if (parent_dpath / refuri).exists():
+                        node.attributes['refuri'] = refuri.replace('.rst', '.html')
+                else:
+                    raise AssertionError
 
 
 def setup(app):
     import sphinx
     app : sphinx.application.Sphinx = app
     app.add_domain(PatchedPythonDomain, override=True)
+
+    app.connect("doctree-resolved", postprocess_hyperlinks)
+
     docstring_processor = GoogleStyleDocstringProcessor()
     # https://stackoverflow.com/questions/26534184/can-sphinx-ignore-certain-tags-in-python-docstrings
     app.connect('autodoc-process-docstring', docstring_processor.process_docstring_callback)

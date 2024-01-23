@@ -5,3 +5,4 @@ xdev.format\_quotes module
    :members:
    :undoc-members:
    :show-inheritance:
+   :private-members:

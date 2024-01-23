@@ -30,7 +30,7 @@ TODO:
     - [ ] Automatically add custom defined names in this file to __all__
 """
 
-__version__ = '1.4.0'
+__version__ = '1.5.0'
 
 
 # __submodules__ = [
@@ -147,6 +147,7 @@ __getattr__ = lazy_import(
             'embed_on_exception',
             'embed_on_exception_context',
             'fix_embed_globals',
+            'snapshot',
         ],
         'format_quotes': [
             'format_quotes',

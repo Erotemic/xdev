@@ -230,7 +230,9 @@ def generate_typed_stubs(modpath):
         files=[os.fspath(p) for p in files],
         verbose=False,
         quiet=False,
-        export_less=True)
+        export_less=True,
+        include_docstrings=True,
+    )
     # generate_stubs(options)
 
     mypy_opts = stubgen.mypy_options(options)
@@ -331,7 +333,32 @@ def generate_typed_stubs(modpath):
                 print(f'generated target={target}')
             # with open(target, 'w') as file:
             #     file.write(text)
+
+    delete_unpaired_pyi_files(modpath)
     return generated
+
+
+def delete_unpaired_pyi_files(modpath):
+    """
+    Cleanup pyi files corresponding to renamed or removed py files.
+    """
+    import os
+    from xdev.cli import dirstats
+    walker = dirstats.DirectoryWalker(modpath, block_dnames=['__pycache__'])
+    walker._walk()
+    dangling_pyi_fpaths = []
+    for node in walker.graph.nodes():
+        if node.endswith('.pyi'):
+            pypath = ub.Path(os.fspath(node)[0:-1])
+            if not pypath.exists():
+                dangling_pyi_fpaths.append(node)
+
+    if dangling_pyi_fpaths:
+        from rich.prompt import Confirm
+        ans = Confirm.ask(f'Found {len(dangling_pyi_fpaths)} unpaired pyi files. Delete them?')
+        if ans:
+            for p in dangling_pyi_fpaths:
+                p.delete()
 
 
 def remove_duplicate_imports(text):
@@ -570,7 +597,8 @@ def common_unreferenced():
     try:
         import nptyping
         modname_to_refs['nptyping'] = ['NDArray', 'Shape', 'DType'] + list(set(nptyping.typing_.dtype_per_name.keys()) - {'Number'})
-    except ModuleNotFoundError:
+    except ModuleNotFoundError as ex:
+        print('Warning: ex = {}'.format(ub.urepr(ex, nl=1)))
         pass
 
     unref = [
@@ -616,13 +644,39 @@ def hacked_typing_info(type_name):
         add_typing_import('Union')
         add_import_line('from typing import {}\n'.format('Union'))
 
-    for typing_arg in ['Iterable', 'Callable', 'Dict',
-                       'List', 'Union', 'Type', 'Mapping',
-                       'Tuple', 'Optional', 'Sequence',
-                       'Iterator', 'Set', 'Dict']:
+    common_typing_types = [
+        'Iterable', 'Callable', 'Dict',
+        'List', 'Union', 'Type', 'Mapping',
+        'Tuple', 'Optional', 'Sequence',
+        'Iterator', 'Set', 'Dict'
+    ]
+
+    # See: https://github.com/python/typeshed/blob/main/stdlib/_typeshed/__init__.pyi
+    common_typeshed_types = [
+        'SupportsItems',
+        'SupportsKeysAndGetItem',
+        'SupportsGetItem',
+        'SupportsItemAccess',
+        'SupportsWrite',
+        'SupportsRead',
+        'SupportsReadline',
+        'SupportsNoArgReadline',
+        'HasFileno',
+        'FileDescriptor',
+        'FileDescriptorLike',
+        'FileDescriptorOrPath',
+
+    ]
+
+    for typing_arg in common_typing_types:
         if typing_arg in type_name:
             add_typing_import(typing_arg)
             add_import_line('from typing import {}\n'.format(typing_arg))
+
+    for typing_arg in common_typeshed_types:
+        if typing_arg in type_name:
+            add_typing_import(typing_arg)
+            add_import_line('from _typeshed import {}\n'.format(typing_arg))
 
     if 'Float32' in type_name:
         add_import_line('from nptyping import {}\n'.format('Float32'))
@@ -710,6 +764,11 @@ class ExtendedStubGenerator(StubGenerator):
     def _hack_for_info(self, info):
         type_name = info['type']
         if type_name is not None:
+
+            if type_name == 'NoParamType' and self.path == 'ubelt/util_const.py':
+                # hack: Ignore util const
+                return
+
             results = hacked_typing_info(type_name)
             for typing_arg in results['typing_imports']:
                 self.add_typing_import(typing_arg)
@@ -747,6 +806,8 @@ class ExtendedStubGenerator(StubGenerator):
         fullname = o.name
         if getattr(self, '_IN_CLASS', None) is not None:
             fullname = self._IN_CLASS + '.' + o.name
+
+        # TODO: Can we do this statically instead?
         parent_mod = ub.import_module_from_name(self.module)
         if DEBUG:
             print('fullname = {!r}'.format(fullname))
@@ -1036,6 +1097,26 @@ class ExtendedStubGenerator(StubGenerator):
         self.add(', '.join(args))
         self.add("){}: ...\n".format(retfield))
         self._state = FUNC
+
+    def process_decorator(self, o) -> None:
+        from mypy.stubgen import get_qualified_name
+        from mypy.nodes import CallExpr
+        parent_mod = ub.import_module_from_name(self.module)
+        for decorator in o.original_decorators:
+            if parent_mod.__name__ == 'kwarray.arrayapi':
+                # Very specific hacks that need better support
+                # This is for decorators that wrap functions in static methods.
+                # mypy doesn't handle this natively, but we can handle it in
+                # pyi files
+                HACKED_STATICMETHODS = {'_apimethod', '_torchmethod', '_numpymethod'}
+                if isinstance(decorator, CallExpr):
+                    qualname = decorator.callee.name
+                else:
+                    qualname = get_qualified_name(decorator)
+                    # print(f'qualname={qualname}')
+                if qualname in HACKED_STATICMETHODS:
+                    self.add_decorator('staticmethod', require_name=True)
+        super().process_decorator(o)
 
     def visit_class_def(self, o) -> None:
         # from mypy.stubgen import (

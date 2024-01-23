@@ -1,7 +1,8 @@
-xdev.profiler module
+xdev.cli.main module
 ====================
 
-.. automodule:: xdev.profiler
+.. automodule:: xdev.cli.main
    :members:
    :undoc-members:
    :show-inheritance:
+   :private-members:

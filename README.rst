@@ -19,7 +19,7 @@ This started as a project for myself to contain development related tools that
 I wouldn't want to ship with a package itself (where as `ubelt
 <https://github.com/Erotemic/ubelt>`_ contains the tools used in programs
 themselves). I've polished it up over the years, and it's become a reasonably
-useful package with tools I could see other's making use of.
+useful package with tools I could see others making use of.
 
 
 This is the CLI:

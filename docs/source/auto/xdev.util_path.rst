@@ -1,7 +1,8 @@
-xdev.tracebacks module
+xdev.util\_path module
 ======================
 
-.. automodule:: xdev.tracebacks
+.. automodule:: xdev.util_path
    :members:
    :undoc-members:
    :show-inheritance:
+   :private-members:

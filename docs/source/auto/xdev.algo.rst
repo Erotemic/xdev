@@ -1,7 +1,8 @@
-xdev.misc module
+xdev.algo module
 ================
 
-.. automodule:: xdev.misc
+.. automodule:: xdev.algo
    :members:
    :undoc-members:
    :show-inheritance:
+   :private-members:

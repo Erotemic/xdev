@@ -5,3 +5,4 @@ xdev.search\_replace module
    :members:
    :undoc-members:
    :show-inheritance:
+   :private-members:

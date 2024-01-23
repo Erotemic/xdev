@@ -1,13 +1,15 @@
 # xdev availpkg Levenshtein
 # xdev availpkg rapidfuzz
-Levenshtein>=0.20.3    ; python_version < '4.0'  and python_version >= '3.11'    # Python 3.11+
+Levenshtein>=0.23.0    ; python_version < '4.0'  and python_version >= '3.12'    # Python 3.12+
+Levenshtein>=0.20.3    ; python_version < '3.12' and python_version >= '3.11'    # Python 3.11
 Levenshtein>=0.18.2    ; python_version < '3.11' and python_version >= '3.10'    # Python 3.10
 Levenshtein>=0.18.0    ; python_version < '3.10' and python_version >= '3.9'     # Python 3.9
 Levenshtein>=0.18.0    ; python_version < '3.9'  and python_version >= '3.8'     # Python 3.8
 Levenshtein>=0.18.0    ; python_version < '3.8'  and python_version >= '3.7'     # Python 3.7
 Levenshtein>=0.18.0    ; python_version < '3.7'  and python_version >= '3.6'     # Python 3.6
 
-fire >= 0.4.0
+fire>=0.5.0     ; python_version >= '3.10' # Python 3.10+
+fire>=0.4.0     ; python_version < '3.10' # Python 3.9-
 
 # xdev availpkg line_profiler
 line_profiler>=4.1.0     ; python_version < '4.0'  and python_version >= '3.11'    # Python 3.11+

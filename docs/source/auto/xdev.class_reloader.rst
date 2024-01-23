@@ -5,3 +5,4 @@ xdev.class\_reloader module
    :members:
    :undoc-members:
    :show-inheritance:
+   :private-members:
