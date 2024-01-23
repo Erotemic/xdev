@@ -7,6 +7,7 @@ parse >= 1.19.0
 pyflakes >= 2.5.0
 scriptconfig >= 0.7.10
 
+lazy_loader>=0.1 ; python_version >= '3.7' 
 
 numpy>=1.26.0  ; python_version < '4.0'  and python_version >= '3.12'    # Python 3.12+
 numpy>=1.23.2  ; python_version < '3.12' and python_version >= '3.11'    # Python 3.11
