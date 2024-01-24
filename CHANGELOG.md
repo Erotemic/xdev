@@ -6,6 +6,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## Version 1.5.1 - Unreleased
 
+### Added
+
+* Add `parse` backend to Pattern
+
 ## Version 1.5.0 - Released 2024-01-23 
 
 ### Added

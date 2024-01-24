@@ -24,6 +24,14 @@ else:
     # sys.version_info[0:2] <= 3.6
     RE_Pattern = type(re.compile('.*'))
 
+try:
+    import parse
+except ImportError:
+    class FakeParseModule:
+        def Parser(self, *args, **kwargs):
+            raise ImportError('Unable to import parse')
+    parse = FakeParseModule()
+
 
 class PatternBase:
     """
@@ -97,17 +105,27 @@ class Pattern(PatternBase, ub.NiceRepr):
         .. [fnmatch_docs] https://docs.python.org/3/library/fnmatch.html
 
     Example:
+        >>> # Test Regex backend
         >>> repat = Pattern.coerce('foo.*', 'regex')
         >>> assert repat.match('foobar')
         >>> assert not repat.match('barfoo')
+        >>> match = repat.search('baz-biz-foobar')
+        >>> match = repat.match('baz-biz-foobar')
+        >>> # Test Glob backend
         >>> globpat = Pattern.coerce('foo*', 'glob')
         >>> assert globpat.match('foobar')
         >>> assert not globpat.match('barfoo')
         >>> globpat = Pattern.coerce('[foo|bar]', 'glob')
         >>> globpat.match('foo')
-        >>> repat = Pattern.coerce('foo.*', 'regex')
-        >>> match = repat.search('baz-biz-foobar')
-        >>> match = repat.match('baz-biz-foobar')
+
+    Example:
+        >>> # xdoctest: +REQUIRES(module:parse)
+        >>> # Test parse backend
+        >>> pattern1 = Pattern.coerce('A {adjective} pattern', 'parse')
+        >>> result1 = pattern1.match('A cool pattern')
+        >>> print(f'result.named = {ub.urepr(result.named, nl=1)}')
+        >>> pattern2 = pattern1.to_regex()
+        >>> result2 = pattern2.match('A cool pattern')
     """
 
     def __init__(self, pattern, backend):
@@ -116,6 +134,9 @@ class Pattern(PatternBase, ub.NiceRepr):
         if backend == 'regex':
             if isinstance(pattern, str):
                 pattern = re.compile(pattern)
+        elif backend == 'parse':
+            if isinstance(pattern, str):
+                pattern = parse.Parser(pattern)
         self.pattern = pattern
         self.backend = backend
 
@@ -125,6 +146,9 @@ class Pattern(PatternBase, ub.NiceRepr):
     def to_regex(self):
         """
         Returns an equivalent pattern with the regular expression backend
+
+        Returns:
+            Pattern
 
         Example:
             >>> globpat = Pattern.coerce('foo*', 'glob')
@@ -136,6 +160,9 @@ class Pattern(PatternBase, ub.NiceRepr):
         """
         if self.backend == 'regex':
             regex_pattern = self.pattern
+        elif self.backend == 'parse':
+            # regex_pattern = self.pattern._generate_expression()
+            regex_pattern = self.pattern._expression
         elif self.backend == 'glob':
             regex_pattern = fnmatch.translate(self.pattern)
         elif self.backend == 'strict':
@@ -224,6 +251,8 @@ class Pattern(PatternBase, ub.NiceRepr):
     def match(self, text):
         if self.backend == 'regex':
             return self.pattern.match(text)
+        elif self.backend == 'parse':
+            return self.pattern.parse(text)
         elif self.backend == 'glob':
             return fnmatch.fnmatch(text, self.pattern)
         elif self.backend == 'strict':
@@ -233,6 +262,8 @@ class Pattern(PatternBase, ub.NiceRepr):
 
     def search(self, text):
         if self.backend == 'regex':
+            return self.pattern.search(text)
+        elif self.backend == 'parse':
             return self.pattern.search(text)
         elif self.backend == 'glob':
             return fnmatch.fnmatch(text, '*{}*'.format(self.pattern))
@@ -253,6 +284,8 @@ class Pattern(PatternBase, ub.NiceRepr):
             return text  # make regex conform to the API
         if self.backend == 'regex':
             return self.pattern.sub(repl, text, count=max(0, count))
+        elif self.backend == 'parse':
+            raise NotImplementedError
         elif self.backend == 'glob':
             raise NotImplementedError
         elif self.backend == 'strict':
@@ -346,6 +379,9 @@ class MultiPattern(PatternBase, ub.NiceRepr):
                 use 'glob' if the input is a string and '*' is in the pattern,
                 otherwise we will use strict. Pattern inputs keep their
                 existing interpretation.
+
+        Returns:
+            MultiPattern
 
         Example:
             >>> pat = MultiPattern.coerce('foo*', 'glob')
