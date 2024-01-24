@@ -86,7 +86,7 @@ class Pattern(PatternBase, ub.NiceRepr):
     """
     Provides a common API to several common pattern matching syntaxes.
 
-    A general patterns class, which can be strict, regex, or glob.
+    A general patterns class, which can use a backend from BACKENDS
 
     Args:
         pattern (str | object):
@@ -94,12 +94,15 @@ class Pattern(PatternBase, ub.NiceRepr):
 
         backend (str):
             Code indicating what backend the pattern text should be
-            interpereted with. Current modes are: strict, regex, and glob.
+            interpereted with. See BACKENDS for available choices.
 
     Notes:
+        # BACKENDS
+
         The glob backend uses the :mod:`fnmatch` module [fnmatch_docs]_.
         The regex backend uses the Python :mod:`re` module.
         The strict backend uses the "==" string equality testing.
+        The parse backend uses the :mod:`parse` module.
 
     References:
         .. [fnmatch_docs] https://docs.python.org/3/library/fnmatch.html
@@ -249,6 +252,7 @@ class Pattern(PatternBase, ub.NiceRepr):
         return self
 
     def match(self, text):
+        # TODO standardize return value with a Result class.
         if self.backend == 'regex':
             return self.pattern.match(text)
         elif self.backend == 'parse':
