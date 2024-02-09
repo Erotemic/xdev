@@ -410,6 +410,50 @@ class DirectoryWalker:
                 prog.step()
         self._accum_stats()
 
+    def _update_stats2(self):
+
+        # Variant that uses parallel process boilerplate
+        def worker(fpath):
+            stats = parse_file_stats(fpath, parse_content=self.parse_content)
+            return stats
+
+        self._parallel_process_files(worker, 'Parse File Info')
+        self._accum_stats()
+
+    def _parallel_process_files(self, func, desc=None, max_workers=8, mode='thread'):
+        """
+        Applies a function to every node.
+        """
+        graph = self.graph
+
+        if desc is None:
+            desc = str(func)
+
+        # Get size stats for each file.
+        jobs = ub.JobPool(mode=mode, max_workers=max_workers)
+        pman = ProgressManager(backend='progiter')
+        submit_desc = 'Submit: ' + desc
+        collect_desc = 'Collect: ' + desc
+
+        with pman, jobs:
+            # Get the files from the graph first.
+            fpaths = [
+                path
+                for path, data in graph.nodes(data=True)
+                if data['isfile']
+            ]
+            prog = ub.ProgIter(fpaths, desc=submit_desc, total=len(fpaths),
+                               homogeneous=False)
+            for fpath in prog:
+                job = jobs.submit(func, fpath)
+                job.fpath = fpath
+
+            for job in ub.ProgIter(jobs.as_completed(), desc=collect_desc,
+                                   total=len(jobs)):
+                fpath = job.fpath
+                result = job.result()
+                yield fpath, result
+
     def _humanize_stats(self, stats, node_type, reduce_prefix=False):
         disp_stats = {}
         if reduce_prefix:
@@ -631,13 +675,15 @@ def parse_file_stats(fpath, parse_content=True):
     ext = fpath.suffix
     prefix = ext.lstrip('.') + '.'
     stats = {}
-    is_broken = 0
     try:
-        stats['size'] = fpath.stat().st_size
+        stat_obj = fpath.stat()
     except FileNotFoundError:
-        is_broken = 1
-        stats['broken_link'] = 1
+        is_broken = True
+        stats['broken_link'] = True
         stats['size'] = 0
+    else:
+        is_broken = False
+        stats['size'] = stat_obj.st_size
 
     stats['files'] = 1
 
