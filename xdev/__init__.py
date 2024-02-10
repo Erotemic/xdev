@@ -30,7 +30,7 @@ TODO:
     - [ ] Automatically add custom defined names in this file to __all__
 """
 
-__version__ = '1.5.0'
+__version__ = '1.5.1'
 
 
 # __submodules__ = [
@@ -177,7 +177,6 @@ __getattr__ = lazy_import(
             'Pattern',
             'PatternBase',
             'RE_Pattern',
-            'our_extended_regex_compile',
         ],
         'profiler': [
             'IS_PROFILING',
@@ -221,6 +220,9 @@ __getattr__ = lazy_import(
             'sidecar_glob',
             'tree',
         ],
+        'directory_walker': [
+            'DirectoryWalker'
+        ]
     },
 )
 
@@ -245,10 +247,10 @@ __all__ = ['AsciiDirectedGlyphs', 'AsciiUndirectedGlyphs', 'ChDir',
            'knapsack_iterative', 'knapsack_iterative_int',
            'knapsack_iterative_numpy', 'make_warnings_print_tracebacks',
            'misc', 'nested_type', 'number_of_decimals',
-           'our_extended_regex_compile', 'patterns', 'profile',
+           'patterns', 'profile',
            'profile_globals', 'profile_now', 'profiler', 'quantum_random',
            'regex_builder', 'reload_class', 'search_replace', 'sed', 'sedfile',
            'set_overlaps', 'sidecar_glob', 'startfile', 'take_column',
            'test_object_pickleability', 'tracebacks', 'tree', 'tree_repr',
            'util', 'util_networkx', 'util_path', 'view_directory',
-           'write_network_text']
+           'write_network_text', 'DirectoryWalker']

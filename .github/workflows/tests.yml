@@ -21,9 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4.1.1
     - name: Set up Python 3.11 for linting
-      uses: actions/setup-python@v4.7.1
+      uses: actions/setup-python@v5.0.0
       with:
         python-version: '3.11'
     - name: Install dependencies
@@ -48,9 +48,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4.1.1
     - name: Set up Python 3.11
-      uses: actions/setup-python@v4.7.1
+      uses: actions/setup-python@v5.0.0
       with:
         python-version: '3.11'
     - name: Upgrade pip
@@ -66,7 +66,7 @@ jobs:
         python -m build --sdist --outdir wheelhouse
     - name: Install sdist
       run: |-
-        ls -al ./wheelhouse
+        ls -al wheelhouse
         pip install --prefer-binary wheelhouse/xdev*.tar.gz -v
     - name: Test minimal loose sdist
       run: |-
@@ -97,11 +97,11 @@ jobs:
         echo "MOD_DPATH = $MOD_DPATH"
         python -m pytest --verbose --cov={self.mod_name} $MOD_DPATH ../tests
         cd ..
-    - name: Upload sdist artifact
-      uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4.3.1
+      name: Upload sdist artifact
       with:
-        name: wheels
-        path: ./wheelhouse/*.tar.gz
+        name: sdist_wheels
+        path: wheelhouse/*.tar.gz
   build_purepy_wheels:
     ##
     # Download and test the pure-python wheels that were build in the
@@ -110,23 +110,24 @@ jobs:
     name: ${{ matrix.python-version }} on ${{ matrix.os }}, arch=${{ matrix.arch }} with ${{ matrix.install-extras }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os:
         - ubuntu-latest
         python-version:
-        - '3.11'
+        - 3.11
         arch:
         - auto
     steps:
     - name: Checkout source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4.1.1
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
       if: runner.os == 'Linux' && matrix.arch != 'auto'
       with:
         platforms: all
     - name: Setup Python
-      uses: actions/setup-python@v4.7.1
+      uses: actions/setup-python@v5.0.0
       with:
         python-version: ${{ matrix.python-version }}
     - name: Build pure wheel
@@ -138,7 +139,7 @@ jobs:
     - name: Show built files
       shell: bash
       run: ls -la wheelhouse
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4.3.1
       name: Upload wheels artifact
       with:
         name: wheels
@@ -149,118 +150,40 @@ jobs:
     needs:
     - build_purepy_wheels
     strategy:
+      fail-fast: false
       matrix:
         # Xcookie generates an explicit list of environments that will be used
         # for testing instead of using the more concise matrix notation.
         include:
-        - python-version: '3.7'
+        - python-version: 3.7
           install-extras: tests-strict,runtime-strict
           os: ubuntu-latest
           arch: auto
-        - python-version: '3.7'
-          install-extras: tests-strict,runtime-strict
-          os: macOS-latest
-          arch: auto
-        - python-version: '3.7'
-          install-extras: tests-strict,runtime-strict
-          os: windows-latest
-          arch: auto
-        - python-version: '3.11'
+        - python-version: 3.11
           install-extras: tests-strict,runtime-strict,optional-strict
           os: ubuntu-latest
           arch: auto
-        - python-version: '3.11'
-          install-extras: tests-strict,runtime-strict,optional-strict
-          os: macOS-latest
-          arch: auto
-        - python-version: '3.11'
-          install-extras: tests-strict,runtime-strict,optional-strict
-          os: windows-latest
-          arch: auto
-        - python-version: '3.11'
-          install-extras: tests
-          os: windows-latest
-          arch: auto
-        - python-version: '3.11'
-          install-extras: tests
-          os: windows-latest
-          arch: auto
-        - python-version: '3.7'
+        - python-version: 3.7
           install-extras: tests,optional
-          os: windows-latest
+          os: ubuntu-latest
           arch: auto
-        - python-version: '3.8'
+        - python-version: 3.11
           install-extras: tests,optional
-          os: windows-latest
-          arch: auto
-        - python-version: '3.9'
-          install-extras: tests,optional
-          os: windows-latest
-          arch: auto
-        - python-version: '3.10'
-          install-extras: tests,optional
-          os: windows-latest
-          arch: auto
-        - python-version: '3.11'
-          install-extras: tests,optional
-          os: windows-latest
-          arch: auto
-        - python-version: '3.7'
-          install-extras: tests,optional
-          os: windows-latest
-          arch: auto
-        - python-version: '3.8'
-          install-extras: tests,optional
-          os: windows-latest
-          arch: auto
-        - python-version: '3.9'
-          install-extras: tests,optional
-          os: windows-latest
-          arch: auto
-        - python-version: '3.10'
-          install-extras: tests,optional
-          os: windows-latest
-          arch: auto
-        - python-version: '3.11'
-          install-extras: tests,optional
-          os: windows-latest
-          arch: auto
-        - python-version: '3.7'
-          install-extras: tests,optional
-          os: windows-latest
-          arch: auto
-        - python-version: '3.8'
-          install-extras: tests,optional
-          os: windows-latest
-          arch: auto
-        - python-version: '3.9'
-          install-extras: tests,optional
-          os: windows-latest
-          arch: auto
-        - python-version: '3.10'
-          install-extras: tests,optional
-          os: windows-latest
-          arch: auto
-        - python-version: '3.11'
-          install-extras: tests,optional
-          os: windows-latest
+          os: ubuntu-latest
           arch: auto
     steps:
     - name: Checkout source
-      uses: actions/checkout@v4
-    - name: Enable MSVC 64bit
-      uses: ilammy/msvc-dev-cmd@v1
-      if: matrix.os == 'windows-latest'
+      uses: actions/checkout@v4.1.1
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
       if: runner.os == 'Linux' && matrix.arch != 'auto'
       with:
         platforms: all
     - name: Setup Python
-      uses: actions/setup-python@v4.7.1
+      uses: actions/setup-python@v5.0.0
       with:
         python-version: ${{ matrix.python-version }}
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4.1.2
       name: Download wheels
       with:
         name: wheels
@@ -324,10 +247,11 @@ jobs:
         echo '### The cwd should now have a coverage.xml'
         ls -altr
         pwd
-    - uses: codecov/codecov-action@v3
+    - uses: codecov/codecov-action@v4.0.1
       name: Codecov Upload
       with:
         file: ./coverage.xml
+        token: ${{ secrets.CODECOV_TOKEN }}
   test_deploy:
     name: Uploading Test to PyPi
     runs-on: ubuntu-latest
@@ -338,11 +262,16 @@ jobs:
     - test_purepy_wheels
     steps:
     - name: Checkout source
-      uses: actions/checkout@v4
-    - uses: actions/download-artifact@v3
-      name: Download wheels and sdist
+      uses: actions/checkout@v4.1.1
+    - uses: actions/download-artifact@v4.1.2
+      name: Download wheels
       with:
         name: wheels
+        path: wheelhouse
+    - uses: actions/download-artifact@v4.1.2
+      name: Download sdist
+      with:
+        name: sdist_wheels
         path: wheelhouse
     - name: Show files to upload
       shell: bash
@@ -371,7 +300,33 @@ jobs:
         pip install urllib3 requests[security] twine
         GPG_KEYID=$(cat dev/public_gpg_key)
         echo "GPG_KEYID = '$GPG_KEYID'"
-        DO_GPG=True GPG_KEYID=$GPG_KEYID TWINE_REPOSITORY_URL=${TWINE_REPOSITORY_URL} TWINE_PASSWORD=$TWINE_PASSWORD TWINE_USERNAME=$TWINE_USERNAME GPG_EXECUTABLE=$GPG_EXECUTABLE DO_UPLOAD=True DO_TAG=False ./publish.sh
+        GPG_SIGN_CMD="$GPG_EXECUTABLE --batch --yes --detach-sign --armor --local-user $GPG_KEYID"
+        WHEEL_PATHS=(wheelhouse/*.whl)
+        WHEEL_PATHS_STR=$(printf '"%s" ' "${WHEEL_PATHS[@]}")
+        echo "$WHEEL_PATHS_STR"
+        for WHEEL_PATH in "${WHEEL_PATHS[@]}"
+        do
+            echo "------"
+            echo "WHEEL_PATH = $WHEEL_PATH"
+            $GPG_SIGN_CMD --output $WHEEL_PATH.asc $WHEEL_PATH
+            $GPG_EXECUTABLE --verify $WHEEL_PATH.asc $WHEEL_PATH  || echo "hack, the first run of gpg very fails"
+            $GPG_EXECUTABLE --verify $WHEEL_PATH.asc $WHEEL_PATH
+        done
+        ls -la wheelhouse
+        pip install opentimestamps-client
+        ots stamp wheelhouse/*.whl wheelhouse/*.asc
+        ls -la wheelhouse
+        twine upload --username __token__ --password "$TWINE_PASSWORD" --repository-url "$TWINE_REPOSITORY_URL" wheelhouse/*.whl wheelhouse/*.tar.gz --skip-existing --verbose || { echo "failed to twine upload" ; exit 1; }
+    - uses: actions/upload-artifact@v4.3.1
+      name: Upload deploy artifacts
+      with:
+        name: deploy_artifacts
+        path: |-
+          wheelhouse/*.whl
+          wheelhouse/*.zip
+          wheelhouse/*.tar.gz
+          wheelhouse/*.asc
+          wheelhouse/*.ots
   live_deploy:
     name: Uploading Live to PyPi
     runs-on: ubuntu-latest
@@ -382,11 +337,16 @@ jobs:
     - test_purepy_wheels
     steps:
     - name: Checkout source
-      uses: actions/checkout@v4
-    - uses: actions/download-artifact@v3
-      name: Download wheels and sdist
+      uses: actions/checkout@v4.1.1
+    - uses: actions/download-artifact@v4.1.2
+      name: Download wheels
       with:
         name: wheels
+        path: wheelhouse
+    - uses: actions/download-artifact@v4.1.2
+      name: Download sdist
+      with:
+        name: sdist_wheels
         path: wheelhouse
     - name: Show files to upload
       shell: bash
@@ -415,7 +375,71 @@ jobs:
         pip install urllib3 requests[security] twine
         GPG_KEYID=$(cat dev/public_gpg_key)
         echo "GPG_KEYID = '$GPG_KEYID'"
-        DO_GPG=True GPG_KEYID=$GPG_KEYID TWINE_REPOSITORY_URL=${TWINE_REPOSITORY_URL} TWINE_PASSWORD=$TWINE_PASSWORD TWINE_USERNAME=$TWINE_USERNAME GPG_EXECUTABLE=$GPG_EXECUTABLE DO_UPLOAD=True DO_TAG=False ./publish.sh
+        GPG_SIGN_CMD="$GPG_EXECUTABLE --batch --yes --detach-sign --armor --local-user $GPG_KEYID"
+        WHEEL_PATHS=(wheelhouse/*.whl)
+        WHEEL_PATHS_STR=$(printf '"%s" ' "${WHEEL_PATHS[@]}")
+        echo "$WHEEL_PATHS_STR"
+        for WHEEL_PATH in "${WHEEL_PATHS[@]}"
+        do
+            echo "------"
+            echo "WHEEL_PATH = $WHEEL_PATH"
+            $GPG_SIGN_CMD --output $WHEEL_PATH.asc $WHEEL_PATH
+            $GPG_EXECUTABLE --verify $WHEEL_PATH.asc $WHEEL_PATH  || echo "hack, the first run of gpg very fails"
+            $GPG_EXECUTABLE --verify $WHEEL_PATH.asc $WHEEL_PATH
+        done
+        ls -la wheelhouse
+        pip install opentimestamps-client
+        ots stamp wheelhouse/*.whl wheelhouse/*.asc
+        ls -la wheelhouse
+        twine upload --username __token__ --password "$TWINE_PASSWORD" --repository-url "$TWINE_REPOSITORY_URL" wheelhouse/*.whl wheelhouse/*.tar.gz --skip-existing --verbose || { echo "failed to twine upload" ; exit 1; }
+    - uses: actions/upload-artifact@v4.3.1
+      name: Upload deploy artifacts
+      with:
+        name: deploy_artifacts
+        path: |-
+          wheelhouse/*.whl
+          wheelhouse/*.zip
+          wheelhouse/*.tar.gz
+          wheelhouse/*.asc
+          wheelhouse/*.ots
+  release:
+    name: Create Github Release
+    if: github.event_name == 'push' && (startsWith(github.event.ref, 'refs/tags') || startsWith(github.event.ref, 'refs/heads/release'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    needs:
+    - live_deploy
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v4.1.1
+    - uses: actions/download-artifact@v4.1.2
+      name: Download artifacts
+      with:
+        name: deploy_artifacts
+        path: wheelhouse
+    - name: Show files to release
+      shell: bash
+      run: ls -la wheelhouse
+    - run: 'echo "Automatic Release Notes. TODO: improve" > ${{ github.workspace }}-CHANGELOG.txt'
+    - uses: softprops/action-gh-release@v1
+      name: Create Release
+      id: create_release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        body_path: ${{ github.workspace }}-CHANGELOG.txt
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body: Automatic Release
+        draft: true
+        prerelease: false
+        files: |-
+          wheelhouse/*.whl
+          wheelhouse/*.asc
+          wheelhouse/*.ots
+          wheelhouse/*.zip
+          wheelhouse/*.tar.gz
 
 
 ###
