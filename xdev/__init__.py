@@ -253,4 +253,4 @@ __all__ = ['AsciiDirectedGlyphs', 'AsciiUndirectedGlyphs', 'ChDir',
            'set_overlaps', 'sidecar_glob', 'startfile', 'take_column',
            'test_object_pickleability', 'tracebacks', 'tree', 'tree_repr',
            'util', 'util_networkx', 'util_path', 'view_directory',
-           'write_network_text']
+           'write_network_text', 'DirectoryWalker']

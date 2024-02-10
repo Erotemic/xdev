@@ -10,6 +10,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 * Add `parse` backend to Pattern
 
+### Changed
+
+* Moved `DirectoryWalker` to a top-level class
+* Changed `DirectoryWalker` `block_dnames` to `exclude_dnames`
+* Changed `DirectoryWalker` `block_fnames` to `exclude_fnames`
+
 ## Version 1.5.0 - Released 2024-01-23 
 
 ### Added

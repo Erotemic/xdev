@@ -348,6 +348,8 @@ class MultiPattern(PatternBase, ub.NiceRepr):
         return f'{self.predicate.__name__}({[str(p) for p in self.patterns]})'
 
     def match(self, text):
+        # TODO: when predictate is any, return the first truthy match object
+        # When it is all, not sure how to make that work nicely.
         return self.predicate(p.match(text) for p in self.patterns)
 
     def paths(self, cwd=None, recursive=False):
