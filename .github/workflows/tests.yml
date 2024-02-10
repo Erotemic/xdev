@@ -382,6 +382,8 @@ jobs:
         name: deploy_artifacts
         path: |-
           wheelhouse/*.whl
+          wheelhouse/*.zip
+          wheelhouse/*.tar.gz
           wheelhouse/*.asc
           wheelhouse/*.ots
   live_deploy:
@@ -436,8 +438,48 @@ jobs:
         name: deploy_artifacts
         path: |-
           wheelhouse/*.whl
+          wheelhouse/*.zip
+          wheelhouse/*.tar.gz
           wheelhouse/*.asc
           wheelhouse/*.ots
+  release:
+    name: Create Github Release
+    if: github.event_name == 'push' && (startsWith(github.event.ref, 'refs/tags') || startsWith(github.event.ref, 'refs/heads/release'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    needs:
+    - live_deploy
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v4
+    - uses: actions/download-artifact@v3
+      name: Download artifacts
+      with:
+        name: deploy_artifacts
+        path: wheelhouse
+    - name: Show files to release
+      shell: bash
+      run: ls -la wheelhouse
+    - run: 'echo "Automatic Release Notes. TODO: improve" > ${{ github.workspace }}-CHANGELOG.txt'
+    - uses: softprops/action-gh-release@v1
+      name: Create Release
+      id: create_release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        body_path: ${{ github.workspace }}-CHANGELOG.txt
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body: Automatic Release
+        draft: true
+        prerelease: false
+        files: |-
+          wheelhouse/*.whl
+          wheelhouse/*.asc
+          wheelhouse/*.ots
+          wheelhouse/*.zip
+          wheelhouse/*.tar.gz
 
 
 ###
