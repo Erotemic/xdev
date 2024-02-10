@@ -15,7 +15,7 @@ class DirectoryWalker:
     metadata we need to parse out of the filesystem.
 
     Ignore:
-        >>> from xdev.cli.dirstats import *  # NOQA
+        >>> from xdev.directory_walker import *  # NOQA
         >>> self = DirectoryWalker('.', exclude_dnames=['.*'])
         >>> self._walk()
         >>> self._update_labels()
@@ -650,7 +650,7 @@ def strip_comments_and_newlines(source):
         would be better if this was some sort of configurable minify API
 
     Example:
-        >>> from xdev.cli.dirstats import strip_comments_and_newlines
+        >>> from xdev.directory_walker import strip_comments_and_newlines
         >>> import ubelt as ub
         >>> fmtkw = dict(sss=chr(39) * 3, ddd=chr(34) * 3)
         >>> source = ub.codeblock(

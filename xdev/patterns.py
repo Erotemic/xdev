@@ -126,7 +126,7 @@ class Pattern(PatternBase, ub.NiceRepr):
         >>> # Test parse backend
         >>> pattern1 = Pattern.coerce('A {adjective} pattern', 'parse')
         >>> result1 = pattern1.match('A cool pattern')
-        >>> print(f'result.named = {ub.urepr(result.named, nl=1)}')
+        >>> print(f'result1.named = {ub.urepr(result1.named, nl=1)}')
         >>> pattern2 = pattern1.to_regex()
         >>> result2 = pattern2.match('A cool pattern')
     """

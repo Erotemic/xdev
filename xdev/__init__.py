@@ -220,7 +220,7 @@ __getattr__ = lazy_import(
             'sidecar_glob',
             'tree',
         ],
-        'cli.dirstats': [
+        'directory_walker': [
             'DirectoryWalker'
         ]
     },
