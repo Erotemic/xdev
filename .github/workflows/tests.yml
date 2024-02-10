@@ -21,9 +21,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4.1.1
     - name: Set up Python 3.11 for linting
-      uses: actions/setup-python@v4.7.1
+      uses: actions/setup-python@v5.0.0
       with:
         python-version: '3.11'
     - name: Install dependencies
@@ -48,9 +48,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4.1.1
     - name: Set up Python 3.11
-      uses: actions/setup-python@v4.7.1
+      uses: actions/setup-python@v5.0.0
       with:
         python-version: '3.11'
     - name: Upgrade pip
@@ -120,14 +120,14 @@ jobs:
         - auto
     steps:
     - name: Checkout source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4.1.1
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
       if: runner.os == 'Linux' && matrix.arch != 'auto'
       with:
         platforms: all
     - name: Setup Python
-      uses: actions/setup-python@v4.7.1
+      uses: actions/setup-python@v5.0.0
       with:
         python-version: ${{ matrix.python-version }}
     - name: Build pure wheel
@@ -139,7 +139,7 @@ jobs:
     - name: Show built files
       shell: bash
       run: ls -la wheelhouse
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4.3.1
       name: Upload wheels artifact
       with:
         name: wheels
@@ -249,7 +249,7 @@ jobs:
           arch: auto
     steps:
     - name: Checkout source
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4.1.1
     - name: Enable MSVC 64bit
       uses: ilammy/msvc-dev-cmd@v1
       if: matrix.os == 'windows-latest'
@@ -259,10 +259,10 @@ jobs:
       with:
         platforms: all
     - name: Setup Python
-      uses: actions/setup-python@v4.7.1
+      uses: actions/setup-python@v5.0.0
       with:
         python-version: ${{ matrix.python-version }}
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4.1.2
       name: Download wheels
       with:
         name: wheels
@@ -326,7 +326,7 @@ jobs:
         echo '### The cwd should now have a coverage.xml'
         ls -altr
         pwd
-    - uses: codecov/codecov-action@v3
+    - uses: codecov/codecov-action@v4.0.1
       name: Codecov Upload
       with:
         file: ./coverage.xml
@@ -340,8 +340,8 @@ jobs:
     - test_purepy_wheels
     steps:
     - name: Checkout source
-      uses: actions/checkout@v4
-    - uses: actions/download-artifact@v3
+      uses: actions/checkout@v4.1.1
+    - uses: actions/download-artifact@v4.1.2
       name: Download wheels and sdist
       with:
         name: wheels
@@ -376,7 +376,7 @@ jobs:
         pip install opentimestamps-client
         ots stamp wheelhouse/*.whl wheelhouse/*.asc
         twine upload --username __token__ --password "$TWINE_PASSWORD" --repository-url "$TWINE_REPOSITORY_URL" wheelhouse/* --skip-existing --verbose || { echo "failed to twine upload" ; exit 1; }
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4.3.1
       name: Upload deploy artifacts
       with:
         name: deploy_artifacts
@@ -396,8 +396,8 @@ jobs:
     - test_purepy_wheels
     steps:
     - name: Checkout source
-      uses: actions/checkout@v4
-    - uses: actions/download-artifact@v3
+      uses: actions/checkout@v4.1.1
+    - uses: actions/download-artifact@v4.1.2
       name: Download wheels and sdist
       with:
         name: wheels
@@ -432,7 +432,7 @@ jobs:
         pip install opentimestamps-client
         ots stamp wheelhouse/*.whl wheelhouse/*.asc
         twine upload --username __token__ --password "$TWINE_PASSWORD" --repository-url "$TWINE_REPOSITORY_URL" wheelhouse/* --skip-existing --verbose || { echo "failed to twine upload" ; exit 1; }
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4.3.1
       name: Upload deploy artifacts
       with:
         name: deploy_artifacts
@@ -452,8 +452,8 @@ jobs:
     - live_deploy
     steps:
     - name: Checkout source
-      uses: actions/checkout@v4
-    - uses: actions/download-artifact@v3
+      uses: actions/checkout@v4.1.1
+    - uses: actions/download-artifact@v4.1.2
       name: Download artifacts
       with:
         name: deploy_artifacts
