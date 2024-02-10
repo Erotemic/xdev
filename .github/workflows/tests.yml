@@ -97,8 +97,8 @@ jobs:
         echo "MOD_DPATH = $MOD_DPATH"
         python -m pytest --verbose --cov={self.mod_name} $MOD_DPATH ../tests
         cd ..
-    - name: Upload sdist artifact
-      uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4.3.1
+      name: Upload sdist artifact
       with:
         name: wheels
         path: ./wheelhouse/*.tar.gz
@@ -251,6 +251,7 @@ jobs:
       name: Codecov Upload
       with:
         file: ./coverage.xml
+        token: ${{ secrets.CODECOV_TOKEN }}
   test_deploy:
     name: Uploading Test to PyPi
     runs-on: ubuntu-latest
@@ -306,8 +307,10 @@ jobs:
             $GPG_EXECUTABLE --verify $WHEEL_PATH.asc $WHEEL_PATH  || echo "hack, the first run of gpg very fails"
             $GPG_EXECUTABLE --verify $WHEEL_PATH.asc $WHEEL_PATH
         done
+        ls -la wheelhouse
         pip install opentimestamps-client
         ots stamp wheelhouse/*.whl wheelhouse/*.asc
+        ls -la wheelhouse
         twine upload --username __token__ --password "$TWINE_PASSWORD" --repository-url "$TWINE_REPOSITORY_URL" wheelhouse/*.whl wheelhouse/*.tar.gz --skip-existing --verbose || { echo "failed to twine upload" ; exit 1; }
     - uses: actions/upload-artifact@v4.3.1
       name: Upload deploy artifacts
@@ -374,8 +377,10 @@ jobs:
             $GPG_EXECUTABLE --verify $WHEEL_PATH.asc $WHEEL_PATH  || echo "hack, the first run of gpg very fails"
             $GPG_EXECUTABLE --verify $WHEEL_PATH.asc $WHEEL_PATH
         done
+        ls -la wheelhouse
         pip install opentimestamps-client
         ots stamp wheelhouse/*.whl wheelhouse/*.asc
+        ls -la wheelhouse
         twine upload --username __token__ --password "$TWINE_PASSWORD" --repository-url "$TWINE_REPOSITORY_URL" wheelhouse/*.whl wheelhouse/*.tar.gz --skip-existing --verbose || { echo "failed to twine upload" ; exit 1; }
     - uses: actions/upload-artifact@v4.3.1
       name: Upload deploy artifacts
