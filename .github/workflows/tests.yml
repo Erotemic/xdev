@@ -101,7 +101,7 @@ jobs:
       name: Upload sdist artifact
       with:
         name: sdist_wheels
-        path: '{wheelhouse_dpath}/*.tar.gz'
+        path: wheelhouse/*.tar.gz
   build_purepy_wheels:
     ##
     # Download and test the pure-python wheels that were build in the
