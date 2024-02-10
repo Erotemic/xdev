@@ -115,7 +115,7 @@ jobs:
         os:
         - ubuntu-latest
         python-version:
-        - '3.11'
+        - 3.11
         arch:
         - auto
     steps:
@@ -155,104 +155,25 @@ jobs:
         # Xcookie generates an explicit list of environments that will be used
         # for testing instead of using the more concise matrix notation.
         include:
-        - python-version: '3.7'
+        - python-version: 3.7
           install-extras: tests-strict,runtime-strict
           os: ubuntu-latest
           arch: auto
-        #- python-version: '3.7'
-        #  install-extras: tests-strict,runtime-strict
-        #  os: macOS-latest
-        #  arch: auto
-        #- python-version: '3.7'
-        #  install-extras: tests-strict,runtime-strict
-        #  os: windows-latest
-        #  arch: auto
-        #- python-version: '3.11'
-        #  install-extras: tests-strict,runtime-strict,optional-strict
-        #  os: ubuntu-latest
-        #  arch: auto
-        #- python-version: '3.11'
-        #  install-extras: tests-strict,runtime-strict,optional-strict
-        #  os: macOS-latest
-        #  arch: auto
-        #- python-version: '3.11'
-        #  install-extras: tests-strict,runtime-strict,optional-strict
-        #  os: windows-latest
-        #  arch: auto
-        #- python-version: '3.11'
-        #  install-extras: tests
-        #  os: windows-latest
-        #  arch: auto
-        #- python-version: '3.11'
-        #  install-extras: tests
-        #  os: windows-latest
-        #  arch: auto
-        #- python-version: '3.7'
-        #  install-extras: tests,optional
-        #  os: windows-latest
-        #  arch: auto
-        #- python-version: '3.8'
-        #  install-extras: tests,optional
-        #  os: windows-latest
-        #  arch: auto
-        #- python-version: '3.9'
-        #  install-extras: tests,optional
-        #  os: windows-latest
-        #  arch: auto
-        #- python-version: '3.10'
-        #  install-extras: tests,optional
-        #  os: windows-latest
-        #  arch: auto
-        #- python-version: '3.11'
-        #  install-extras: tests,optional
-        #  os: windows-latest
-        #  arch: auto
-        #- python-version: '3.7'
-        #  install-extras: tests,optional
-        #  os: windows-latest
-        #  arch: auto
-        #- python-version: '3.8'
-        #  install-extras: tests,optional
-        #  os: windows-latest
-        #  arch: auto
-        #- python-version: '3.9'
-        #  install-extras: tests,optional
-        #  os: windows-latest
-        #  arch: auto
-        #- python-version: '3.10'
-        #  install-extras: tests,optional
-        #  os: windows-latest
-        #  arch: auto
-        #- python-version: '3.11'
-        #  install-extras: tests,optional
-        #  os: windows-latest
-        #  arch: auto
-        #- python-version: '3.7'
-        #  install-extras: tests,optional
-        #  os: windows-latest
-        #  arch: auto
-        #- python-version: '3.8'
-        #  install-extras: tests,optional
-        #  os: windows-latest
-        #  arch: auto
-        #- python-version: '3.9'
-        #  install-extras: tests,optional
-        #  os: windows-latest
-        #  arch: auto
-        #- python-version: '3.10'
-        #  install-extras: tests,optional
-        #  os: windows-latest
-        #  arch: auto
-        - python-version: '3.11'
+        - python-version: 3.11
+          install-extras: tests-strict,runtime-strict,optional-strict
+          os: ubuntu-latest
+          arch: auto
+        - python-version: 3.7
           install-extras: tests,optional
-          os: windows-latest
+          os: ubuntu-latest
+          arch: auto
+        - python-version: 3.11
+          install-extras: tests,optional
+          os: ubuntu-latest
           arch: auto
     steps:
     - name: Checkout source
       uses: actions/checkout@v4.1.1
-    - name: Enable MSVC 64bit
-      uses: ilammy/msvc-dev-cmd@v1
-      if: matrix.os == 'windows-latest'
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
       if: runner.os == 'Linux' && matrix.arch != 'auto'
@@ -387,7 +308,7 @@ jobs:
         done
         pip install opentimestamps-client
         ots stamp wheelhouse/*.whl wheelhouse/*.asc
-        twine upload --username __token__ --password "$TWINE_PASSWORD" --repository-url "$TWINE_REPOSITORY_URL" wheelhouse/* --skip-existing --verbose || { echo "failed to twine upload" ; exit 1; }
+        twine upload --username __token__ --password "$TWINE_PASSWORD" --repository-url "$TWINE_REPOSITORY_URL" wheelhouse/*.whl wheelhouse/*.tar.gz --skip-existing --verbose || { echo "failed to twine upload" ; exit 1; }
     - uses: actions/upload-artifact@v4.3.1
       name: Upload deploy artifacts
       with:
@@ -455,7 +376,7 @@ jobs:
         done
         pip install opentimestamps-client
         ots stamp wheelhouse/*.whl wheelhouse/*.asc
-        twine upload --username __token__ --password "$TWINE_PASSWORD" --repository-url "$TWINE_REPOSITORY_URL" wheelhouse/* --skip-existing --verbose || { echo "failed to twine upload" ; exit 1; }
+        twine upload --username __token__ --password "$TWINE_PASSWORD" --repository-url "$TWINE_REPOSITORY_URL" wheelhouse/*.whl wheelhouse/*.tar.gz --skip-existing --verbose || { echo "failed to twine upload" ; exit 1; }
     - uses: actions/upload-artifact@v4.3.1
       name: Upload deploy artifacts
       with:
