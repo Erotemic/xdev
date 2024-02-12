@@ -42,6 +42,8 @@ def tree_repr(cwd: None | str | PathLike = None,
               pathstyle: str = 'name',
               max_depth: Incomplete | None = ...,
               with_type: bool = ...,
+              abs_root_label: bool = True,
+              ignore_dotprefix: bool = ...,
               colors: bool = ...):
     ...
 

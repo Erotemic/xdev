@@ -5,6 +5,12 @@ from collections.abc import Generator
 RE_Pattern: Incomplete
 
 
+class FakeParseModule:
+
+    def Parser(self, *args, **kwargs) -> None:
+        ...
+
+
 class PatternBase:
 
     def match(self, text) -> None:
@@ -17,10 +23,6 @@ class PatternBase:
         ...
 
 
-def our_extended_regex_compile() -> None:
-    ...
-
-
 class Pattern(PatternBase, ub.NiceRepr):
     pattern: Incomplete
     backend: Incomplete
@@ -28,10 +30,10 @@ class Pattern(PatternBase, ub.NiceRepr):
     def __init__(self, pattern, backend) -> None:
         ...
 
-    def __nice__(self):
+    def __nice__(self) -> str:
         ...
 
-    def to_regex(self):
+    def to_regex(self) -> Pattern:
         ...
 
     @classmethod
@@ -51,6 +53,10 @@ class Pattern(PatternBase, ub.NiceRepr):
     def coerce_backend(cls, data, hint: str = ...):
         ...
 
+    @classmethod
+    def coerce(cls, data, hint: str = 'auto'):
+        ...
+
     def match(self, text):
         ...
 
@@ -58,10 +64,6 @@ class Pattern(PatternBase, ub.NiceRepr):
         ...
 
     def sub(self, repl: str, text: str, count: int = ...):
-        ...
-
-    @classmethod
-    def coerce(cls, data, hint: str = ...):
         ...
 
     def paths(self,
@@ -89,5 +91,8 @@ class MultiPattern(PatternBase, ub.NiceRepr):
         ...
 
     @classmethod
-    def coerce(cls, data, hint: str = ..., predicate: str = ...):
+    def coerce(cls,
+               data,
+               hint: str = 'auto',
+               predicate: str = ...) -> MultiPattern:
         ...

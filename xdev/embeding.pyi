@@ -1,3 +1,4 @@
+from os import PathLike
 from _typeshed import Incomplete
 
 
@@ -6,6 +7,19 @@ def embed(parent_locals: Incomplete | None = ...,
           exec_lines: Incomplete | None = ...,
           remove_pyqt_hook: bool = ...,
           n: int = ...) -> None:
+    ...
+
+
+def breakpoint():
+    ...
+
+
+def load_snapshot(fpath: str | PathLike,
+                  parent_globals: dict | None = None) -> None:
+    ...
+
+
+def snapshot(parent_ns: dict | None = None, n: int = 0) -> None:
     ...
 
 
