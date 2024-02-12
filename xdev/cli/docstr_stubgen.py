@@ -343,8 +343,8 @@ def delete_unpaired_pyi_files(modpath):
     Cleanup pyi files corresponding to renamed or removed py files.
     """
     import os
-    from xdev.cli import dirstats
-    walker = dirstats.DirectoryWalker(modpath, block_dnames=['__pycache__'])
+    import xdev
+    walker = xdev.DirectoryWalker(modpath, exclude_dnames=['__pycache__'])
     walker._walk()
     dangling_pyi_fpaths = []
     for node in walker.graph.nodes():
