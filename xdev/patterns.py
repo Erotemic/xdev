@@ -348,9 +348,27 @@ class MultiPattern(PatternBase, ub.NiceRepr):
         return f'{self.predicate.__name__}({[str(p) for p in self.patterns]})'
 
     def match(self, text):
-        # TODO: when predictate is any, return the first truthy match object
-        # When it is all, not sure how to make that work nicely.
-        return self.predicate(p.match(text) for p in self.patterns)
+        """
+        Example:
+            >>> import xdev
+            >>> self = xdev.MultiPattern.coerce([
+            >>>     xdev.Pattern.coerce('pattern-a-{key1}', hint='parse'),
+            >>>     xdev.Pattern.coerce('pattern-b-{key2}', hint='parse'),
+            >>> ])
+            >>> result1 = self.match('pattern-a-foo')
+            >>> result2 = self.match('pattern-b-foo')
+            >>> assert 'key1' in result1
+            >>> assert 'key2' in result2
+        """
+        if self.predicate is any:
+            # Hack: when predictate is any, return the first truthy match object
+            # When it is all, not sure how to make that work nicely.
+            for p in self.patterns:
+                result = p.match(text)
+                if result:
+                    return result
+        else:
+            return self.predicate(p.match(text) for p in self.patterns)
 
     def paths(self, cwd=None, recursive=False):
         groups = (p.paths(cwd=cwd, recursive=recursive) for p in self.patterns)
