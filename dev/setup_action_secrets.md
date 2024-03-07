@@ -104,7 +104,7 @@ is assumed that you have a file `secret_loader.sh` that looks like this
 and then a secret file that looks like this
 
 ```bash
-    #!/bin/bash
+    #!/usr/bin/env bash
     echo /some/secret/file 
 
     export TWINE_USERNAME=<pypi-username>

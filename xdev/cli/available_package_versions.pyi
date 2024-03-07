@@ -52,6 +52,24 @@ def summarize_package_availability(package_name):
     ...
 
 
+class PythonVersions:
+    latest: Incomplete
+    cp_codes: Incomplete
+    table: Incomplete
+    python_vstrings: Incomplete
+    python_version_rows: Incomplete
+
+    def __init__(self) -> None:
+        ...
+
+    def resolve_pyversion(self, pyver, maximize: bool = ...):
+        ...
+
+
+def build_package_table(package_name, refresh: bool = ...):
+    ...
+
+
 def minimum_cross_python_versions(package_name,
                                   request_min: Incomplete | None = ...,
                                   refresh: bool = ...):

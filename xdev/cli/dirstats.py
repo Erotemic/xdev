@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 import scriptconfig as scfg
 import ubelt as ub
+import os
+
+if not os.environ.get('_ARGCOMPLETE', ''):
+    # Hack for backwards compat
+    from xdev.directory_walker import DirectoryWalker  # NOQA
 
 
 class DirectoryStatsCLI(scfg.DataConfig):
