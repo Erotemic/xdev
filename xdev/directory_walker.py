@@ -195,6 +195,9 @@ class DirectoryWalker:
         # rich.print('stats = {}'.format(ub.urepr(disp_stats, nl=1)))
 
     def build(self):
+        """
+        Build the internal graph structure with requested metadata
+        """
         self._walk()
         self._update_stats()
         self._update_labels()
