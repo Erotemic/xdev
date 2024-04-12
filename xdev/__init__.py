@@ -117,6 +117,8 @@ __getattr__ = lazy_import(
         'util',
         'util_networkx',
         'util_path',
+        'util_time',
+        'util_random',
     },
     submod_attrs={
         'algo': [
@@ -205,6 +207,13 @@ __getattr__ = lazy_import(
             'bubbletext',
             'conj_phrase',
             'take_column',
+        ],
+        'util_time': [
+            'datetime',
+            'timedelta',
+        ],
+        'util_random': [
+            'ensure_rng',
         ],
         'util_networkx': [
             'AsciiDirectedGlyphs',

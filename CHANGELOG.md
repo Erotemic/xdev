@@ -7,6 +7,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## Version 1.5.2 - Unreleased 
 
+### Added
+* Ported `kwutil.datetime`, `kwutil.timedelta`, and `kwutil.ensure_rng`
+
 
 ## Version 1.5.1 - Released 2024-02-10 
 

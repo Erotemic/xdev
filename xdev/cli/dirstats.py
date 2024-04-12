@@ -90,7 +90,7 @@ def main(cmdline=1, **kwargs):
         kwargs = {'dpath': ub.modname_to_modpath('kwarray')}
     rich.print('config = ' + ub.urepr(config, nl=1))
 
-    from xdev.directory_walker import DirectoryWalker
+    from xdev.directory_walker import DirectoryWalker  # NOQA
     kwargs = ub.udict(config) & {
         'dpath', 'exclude_dnames', 'exclude_fnames', 'include_dnames',
         'include_fnames', 'max_walk_depth', 'parse_content', 'max_files'
