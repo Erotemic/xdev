@@ -412,7 +412,7 @@ class XdevCLI(ModalCLI):
         """
         __command__ = 'freshpyenv'
         __default__ = {
-            'image': scfg.Value('__default__', help='The docker image to use')
+            'image': scfg.Value('__default__', help='The docker image to use. (e.g. --image=python:3.12)')
         }
 
         @classmethod
