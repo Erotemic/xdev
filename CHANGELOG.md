@@ -9,6 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 * Ported `kwutil.datetime`, `kwutil.timedelta`, and `kwutil.ensure_rng`
+* Added features to pyversion CLI
 
 
 ## Version 1.5.1 - Released 2024-02-10 
