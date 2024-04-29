@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# PYTHON_ARGCOMPLETE_OK
 import scriptconfig as scfg
 import ubelt as ub
 
@@ -26,8 +28,11 @@ class PyVersionCLI(scfg.DataConfig):
     xdev pyversion cv2
     xdev pyversion opencv-python-headless
 
+    # For more verbose information add the verbose flag
+    xdev pyversion opencv-python-headless --verbose
+
     xdev pyversion xdev --backend=import
-    xdev pyversion xdev --backend=pkg_resources
+    xdev pyversion xdev --backend=importlib
     """
     __command__ = 'pyversion'
     __alias__ = ['modversion']
@@ -38,9 +43,9 @@ class PyVersionCLI(scfg.DataConfig):
         '''
         The method to lookup the version. The core methods are 'import'
         which imports the module and looks for a ``__version__`` attribute
-        or 'pkg_resources', which uses pip metadata. Can also be 'auto'
+        or 'importlib', which uses pip metadata. Can also be 'auto'
         which tries to find the first one that works.
-        '''), choices=['auto', 'import', 'pkg_resources'])
+        '''), choices=['auto', 'import', 'importlib', 'pkg_resources'])
 
     verbose = scfg.Value(False, isflag=True, help='if 1 prints out more info')
 
@@ -65,19 +70,32 @@ class PyVersionCLI(scfg.DataConfig):
                 version = module.__version__
                 if args.verbose:
                     one_liner = ub.codeblock(
-                        '''
+                        f'''
                         python -c "import {modname}; print({modname}.__version__)"
                         '''
                     )
                     print('One Liner:')
                     print(one_liner)
+            elif backend == 'importlib':
+                # import importlib.resources
+                import importlib.metadata
+                version = importlib.metadata.distribution(modname).version
+                if args.verbose:
+                    one_liner = ub.codeblock(
+                        f'''
+                        python -c "import importlib.metadata; print(importlib.metadata.distribution({modname!r}).version)"
+                        '''
+                    )
+                    print('One Liner:')
+                    print(one_liner)
             elif backend == 'pkg_resources':
+                # pkg resources is deprecated.
                 import pkg_resources
                 version = pkg_resources.get_distribution(modname).version
                 if args.verbose:
                     one_liner = ub.codeblock(
-                        '''
-                        python -c "import pkg_resources; print(pkg_resources.get_distribution(modname).version)"
+                        f'''
+                        python -c "import pkg_resources; print(pkg_resources.get_distribution({modname!r}).version)"
                         '''
                     )
                     print('One Liner:')
@@ -92,9 +110,11 @@ class PyVersionCLI(scfg.DataConfig):
                 version = _getversion(modname, backend)
             except KeyError:
                 raise
-            except Exception:
+            except Exception as ex:
                 if args.verbose:
                     print(f'Unable to use backend {backend}')
+                    if args.verbose > 1:
+                        print(f'ex = {ub.urepr(ex, nl=1)}')
             else:
                 if args.verbose:
                     print(f'Used backend {backend}')
