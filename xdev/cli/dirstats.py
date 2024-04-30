@@ -26,7 +26,7 @@ class DirectoryStatsCLI(scfg.DataConfig):
     include_dnames = scfg.Value(None, help='A coercable multi-pattern. Only directory names matching this pattern will be considered', nargs='+')
     include_fnames = scfg.Value(None, help='A coercable multi-pattern. Only file names matching this pattern will be considered', nargs='+')
 
-    parse_content = scfg.Value(True, isflag=True, help='if True parse stats about the content of each file')
+    parse_content = scfg.Value(False, isflag=True, help='if True parse stats about the content of each file')
     max_files = scfg.Value(None)
     # parse_meta_stats = scfg.Value(True, isflag=True, help='if True parse stats about the content of each file')
 

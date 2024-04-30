@@ -11,6 +11,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 * Ported `kwutil.datetime`, `kwutil.timedelta`, and `kwutil.ensure_rng`
 * Added features to pyversion CLI
 
+### Changed
+* Change default of dirstats `parse_content` to False.
+
 
 ## Version 1.5.1 - Released 2024-02-10 
 
