@@ -30,6 +30,7 @@ class datetime(datetime_cls):
     An enriched datetime class
 
     Example:
+        >>> # xdoctest: +REQUIRES(module:pint)
         >>> import xdev
         >>> self = xdev.util_time.datetime.random()
         >>> print(f'self = {self!s}')
@@ -152,6 +153,7 @@ class timedelta(datetime_mod.timedelta):
             pint.util.Quantity
 
         Example:
+            >>> # xdoctest: +REQUIRES(module:pint)
             >>> import xdev
             >>> self = xdev.timedelta.random()
             >>> quantity = self.to_pint()
@@ -202,6 +204,7 @@ def isoformat(dt, sep='T', timespec='seconds', pathsafe=True):
         :func:`ubelt.timestamp`
 
     Example:
+        >>> # xdoctest: +REQUIRES(module:pint)
         >>> from xdev.util_time import *  # NOQA
         >>> items = []
         >>> dt = datetime_cls.now()
@@ -298,6 +301,7 @@ def coerce_datetime(data, default_timezone='utc', nan_policy='return-None',
         datetime_mod.datetime | None
 
     Example:
+        >>> # xdoctest: +REQUIRES(module:pint)
         >>> from xdev.util_time import *  # NOQA
         >>> assert coerce_datetime(None) is None
         >>> assert coerce_datetime(float('nan')) is None
@@ -388,6 +392,7 @@ def coerce_timedelta(delta, nan_policy='raise', none_policy='raise'):
         datetime_mod.timedelta | None
 
     Example:
+        >>> # xdoctest: +REQUIRES(module:pint)
         >>> from xdev.util_time import *  # NOQA
         >>> variants = [
         >>>     ['year', 'y'],
@@ -426,6 +431,7 @@ def coerce_timedelta(delta, nan_policy='raise', none_policy='raise'):
         >>> print(coerce_timedelta('1us'))
 
     Example:
+        >>> # xdoctest: +REQUIRES(module:pint)
         >>> # xdoctest: +REQUIRES(module:numpy)
         >>> from xdev.util_time import *  # NOQA
         >>> import numpy as np
@@ -559,6 +565,7 @@ def ensure_timezone(dt, default='utc'):
         datetime_mod.datetime
 
     Example:
+        >>> # xdoctest: +REQUIRES(module:pint)
         >>> from xdev.util_time import *  # NOQA
         >>> dt = ensure_timezone(datetime_cls.now(), datetime_mod.timezone(datetime_mod.timedelta(hours=+5)))
         >>> print('dt = {!r}'.format(dt))
@@ -663,6 +670,7 @@ def format_timedelta(delta, resolution=None, unit=None, precision=None):
         xdoctest -m xdev.util_time format_timedelta
 
     Example:
+        >>> # xdoctest: +REQUIRES(module:pint)
         >>> from xdev.util_time import *  # NOQA
         >>> resolution = coerce_timedelta('year')
         >>> resolution = 'year'
