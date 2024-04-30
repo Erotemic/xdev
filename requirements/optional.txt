@@ -25,3 +25,5 @@ autoflake >= 1.5.0
 
 parso>=0.8.3 ; python_version < '4.0'  and python_version >= '3.11'    # Python 3.11+
 parso>=0.8.0 ; python_version < '3.11'    # <Python 3.11
+
+pint >= 0.18
