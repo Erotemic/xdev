@@ -38,8 +38,9 @@ Ignore:
 """
 
 try:
-    from mypy.stubgen import (StubGenerator, find_self_initializers, FUNC, EMPTY,
+    from mypy.stubgen import (ASTStubGenerator, find_self_initializers, FUNC, EMPTY,
                               METHODS_WITH_RETURN_VALUE,)
+    from mypy.stubgen import (is_none_expr)
     from mypy.nodes import (
         # Expression, IntExpr, UnaryExpr, StrExpr, BytesExpr, NameExpr, FloatExpr, MemberExpr,
         # TupleExpr, ListExpr, ComparisonExpr, CallExpr, IndexExpr, EllipsisExpr,
@@ -65,7 +66,7 @@ try:
         has_yield_expression
     )
 except Exception:
-    StubGenerator = object
+    ASTStubGenerator = object
     FuncDef = None
     METHODS_WITH_RETURN_VALUE = []
 
@@ -218,6 +219,7 @@ def generate_typed_stubs(modpath):
     options = stubgen.Options(
         pyversion=defaults.PYTHON3_VERSION,
         no_import=True,
+        inspect=False,
         doc_dir='',
         search_path=[],
         interpreter=sys.executable,
@@ -236,7 +238,7 @@ def generate_typed_stubs(modpath):
     # generate_stubs(options)
 
     mypy_opts = stubgen.mypy_options(options)
-    py_modules, c_modules = stubgen.collect_build_targets(options, mypy_opts)
+    py_modules, pyc_modules, c_modules = stubgen.collect_build_targets(options, mypy_opts)
 
     # Collect info from docs (if given):
     sigs = class_sigs = None  # type: Optional[Dict[str, str]]
@@ -268,16 +270,17 @@ def generate_typed_stubs(modpath):
         # print(f'target={target}')
         files.append(target)
         with stubgen.generate_guarded(mod.module, target, options.ignore_errors, options.verbose):
-            stubgen.generate_stub_from_ast(mod, target, options.parse_only,
-                                           # options.pyversion,
-                                           options.include_private,
-                                           options.export_less)
+            # stubgen.generate_stub_from_ast(mod, target, options.parse_only,
+            #                                # options.pyversion,
+            #                                options.include_private,
+            #                                options.export_less)
 
             gen = ExtendedStubGenerator(mod.runtime_all,
                                         # pyversion=options.pyversion,
                                         include_private=options.include_private,
                                         analyzed=not options.parse_only,
                                         export_less=options.export_less)
+            gen.module = mod.module
             assert mod.ast is not None, "This function must be used only with analyzed modules"
             mod.ast.accept(gen)
             # print('gen.import_tracker.required_names = {!r}'.format(gen.import_tracker.required_names))
@@ -459,8 +462,7 @@ def postprocess_hacks(text, mod):
         text,
         filename='<stdin>',
         style_config=style,
-        lines=None,
-        verify=False)
+        lines=None)
     # print(text)
     return text
 
@@ -759,7 +761,7 @@ def hacked_typing_info(type_name):
     return result
 
 
-class ExtendedStubGenerator(StubGenerator):
+class ExtendedStubGenerator(ASTStubGenerator):
 
     def _hack_for_info(self, info):
         type_name = info['type']
@@ -771,7 +773,10 @@ class ExtendedStubGenerator(StubGenerator):
 
             results = hacked_typing_info(type_name)
             for typing_arg in results['typing_imports']:
-                self.add_typing_import(typing_arg)
+                # FIXME: mypy removed this API
+                # self.add_typing_import(typing_arg)
+                ...
+
             for line in results['import_lines']:
                 self.add_import_line(line)
             for hack in results['hacks']:
@@ -956,7 +961,8 @@ class ExtendedStubGenerator(StubGenerator):
                         doctype_str = info['type'].replace(' ', '')
                         if all(n not in doctype_str for n in {'None', 'Optional'}):
                             info['type'] = info['type'] + ' | None'
-                            self.add_typing_import('Union')
+                            # FIXME: mypy removed this API
+                            # self.add_typing_import('Union')
         # ------------------------------------------
 
         args: List[str] = []
@@ -1024,6 +1030,8 @@ class ExtendedStubGenerator(StubGenerator):
                             annotation += '={!r}'.format(arg_.initializer.value)
                         elif isinstance(arg_.initializer, mypy.nodes.NameExpr):
                             annotation += '={}'.format(arg_.initializer.name)
+                        elif isinstance(arg_.initializer, mypy.nodes.UnaryExpr):
+                            annotation += '={}'.format(arg_.initializer.expr.value)
                         else:
                             # fallback, unhandled default
                             print(f'todo: Unhandled arg_.initializer={type(arg_.initializer)}')
@@ -1054,21 +1062,24 @@ class ExtendedStubGenerator(StubGenerator):
             try:
                 self.add_abc_import('Generator')
             except AttributeError:
-                self.add_typing_import('Generator')
+                # FIXME: mypy removed this API
+                # self.add_typing_import('Generator')
+                ...
             yield_name = 'None'
             send_name = 'None'
             return_name = 'None'
             for expr, in_assignment in all_yield_expressions(o):
-                if expr.expr is not None and not self.is_none_expr(expr.expr):
-                    self.add_typing_import('Any')
+                if expr.expr is not None and not is_none_expr(expr.expr):
+                    # self.add_typing_import('Any')  # fixme
                     yield_name = 'Any'
                 if in_assignment:
-                    self.add_typing_import('Any')
+                    # self.add_typing_import('Any')  # fixme
                     send_name = 'Any'
             if has_return_statement(o):
-                self.add_typing_import('Any')
+                # self.add_typing_import('Any')  # fixme
                 return_name = 'Any'
-            generator_name = self.typing_name('Generator')
+            # generator_name = self.typing_name('Generator')
+            generator_name = "collections.abc.Generator"
             if return_parsed_docstr_info is not None:
                 yield_name = return_parsed_docstr_info[1]
             retname = f'{generator_name}[{yield_name}, {send_name}, {return_name}]'
