@@ -31,6 +31,7 @@ class datetime(datetime_cls):
 
     Example:
         >>> # xdoctest: +REQUIRES(module:pint)
+        >>> # xdoctest: +REQUIRES(module:pytimeparse)
         >>> import xdev
         >>> self = xdev.util_time.datetime.random()
         >>> print(f'self = {self!s}')
@@ -393,6 +394,7 @@ def coerce_timedelta(delta, nan_policy='raise', none_policy='raise'):
 
     Example:
         >>> # xdoctest: +REQUIRES(module:pint)
+        >>> # xdoctest: +REQUIRES(module:pytimeparse)
         >>> from xdev.util_time import *  # NOQA
         >>> variants = [
         >>>     ['year', 'y'],
@@ -433,6 +435,7 @@ def coerce_timedelta(delta, nan_policy='raise', none_policy='raise'):
     Example:
         >>> # xdoctest: +REQUIRES(module:pint)
         >>> # xdoctest: +REQUIRES(module:numpy)
+        >>> # xdoctest: +REQUIRES(module:pytimeparse)
         >>> from xdev.util_time import *  # NOQA
         >>> import numpy as np
         >>> print(coerce_timedelta(int(30)))
