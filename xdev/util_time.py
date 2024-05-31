@@ -303,6 +303,7 @@ def coerce_datetime(data, default_timezone='utc', nan_policy='return-None',
 
     Example:
         >>> # xdoctest: +REQUIRES(module:pint)
+        >>> # xdoctest: +REQUIRES(module:dateutil)
         >>> from xdev.util_time import *  # NOQA
         >>> assert coerce_datetime(None) is None
         >>> assert coerce_datetime(float('nan')) is None
