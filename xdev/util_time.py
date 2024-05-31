@@ -96,6 +96,8 @@ class timedelta(datetime_mod.timedelta):
     An enriched timedelta class
 
     Example:
+        >>> # xdoctest: +REQUIRES(module:pint)
+        >>> # xdoctest: +REQUIRES(module:pytimeparse)
         >>> import xdev
         >>> self = xdev.timedelta.random()
         >>> print(f'self={self}')
@@ -136,6 +138,8 @@ class timedelta(datetime_mod.timedelta):
             Self | float | None
 
         Example:
+            >>> # xdoctest: +REQUIRES(module:pint)
+            >>> # xdoctest: +REQUIRES(module:pytimeparse)
             >>> from xdev.util_time import *  # NOQA
             >>> data = '3.141592653589793 years'
             >>> cls = timedelta
@@ -155,6 +159,7 @@ class timedelta(datetime_mod.timedelta):
 
         Example:
             >>> # xdoctest: +REQUIRES(module:pint)
+            >>> # xdoctest: +REQUIRES(module:pytimeparse)
             >>> import xdev
             >>> self = xdev.timedelta.random()
             >>> quantity = self.to_pint()

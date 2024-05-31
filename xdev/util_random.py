@@ -11,7 +11,7 @@ import random
 try:
     import numpy as np
 except ImportError:
-    np = None
+    np = None  # type: ignore
 
 _SEED_MAX = int(2 ** 32 - 1)
 

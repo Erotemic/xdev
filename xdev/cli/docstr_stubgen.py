@@ -1206,11 +1206,3 @@ def modpath_coerce(modpath_coercable):
         raise TypeError('{}'.format(type(modpath_coercable)))
     modpath = ub.util_import.normalize_modpath(modpath)
     return modpath
-
-if __name__ == '__main__':
-    """
-    CommandLine:
-        python -m xdev.cli.gen_typed_stubs
-    """
-    from xdev.cli.docstr_stubgen import DocstrStubgenCLI
-    DocstrStubgenCLI.main()
