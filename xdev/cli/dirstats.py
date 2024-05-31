@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 import scriptconfig as scfg
 import ubelt as ub
+import os
+
+if not os.environ.get('_ARGCOMPLETE', ''):
+    # Hack for backwards compat
+    from xdev.directory_walker import DirectoryWalker  # NOQA
 
 
 class DirectoryStatsCLI(scfg.DataConfig):
@@ -21,7 +26,7 @@ class DirectoryStatsCLI(scfg.DataConfig):
     include_dnames = scfg.Value(None, help='A coercable multi-pattern. Only directory names matching this pattern will be considered', nargs='+')
     include_fnames = scfg.Value(None, help='A coercable multi-pattern. Only file names matching this pattern will be considered', nargs='+')
 
-    parse_content = scfg.Value(True, isflag=True, help='if True parse stats about the content of each file')
+    parse_content = scfg.Value(False, isflag=True, help='if True parse stats about the content of each file')
     max_files = scfg.Value(None)
     # parse_meta_stats = scfg.Value(True, isflag=True, help='if True parse stats about the content of each file')
 
@@ -85,7 +90,7 @@ def main(cmdline=1, **kwargs):
         kwargs = {'dpath': ub.modname_to_modpath('kwarray')}
     rich.print('config = ' + ub.urepr(config, nl=1))
 
-    from xdev.directory_walker import DirectoryWalker
+    from xdev.directory_walker import DirectoryWalker  # NOQA
     kwargs = ub.udict(config) & {
         'dpath', 'exclude_dnames', 'exclude_fnames', 'include_dnames',
         'include_fnames', 'max_walk_depth', 'parse_content', 'max_files'

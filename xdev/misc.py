@@ -382,7 +382,7 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
 
     walker = dirstats.DirectoryWalker(
         cwd,
-        block_dnames=dirblocklist,
+        exclude_dnames=dirblocklist,
         max_files=max_files,
         abs_root_label=abs_root_label,
         pathstyle=pathstyle,

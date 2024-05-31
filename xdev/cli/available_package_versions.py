@@ -313,7 +313,7 @@ def grab_pypi_items(package_name, refresh=False):
                 item['os'] = platinfo['os']
                 item['arch'] = platinfo['arch']
 
-            python_version = item['python_version']
+            # python_version = item['python_version']
 
             flat_table.append(item)
     table = pd.DataFrame(flat_table)
@@ -577,7 +577,6 @@ def build_package_table(package_name, refresh=False):
 
                 min_pyver = python_versions.cp_codes.get(row['python_version'], row['python_version'])
                 max_pyver = python_versions.cp_codes.get(row['python_version'], row['python_version'])
-
 
             upload_time = ub.timeparse(row['upload_time_iso_8601'])
             flags = [upload_time >= t for t in python_version_table['release_date']]

@@ -174,10 +174,30 @@ class DirectoryWalker:
             rich.print(disp_piv[-1:])
         print('root_node = {}'.format(ub.urepr(root_node, nl=1)))
 
+        if 0:
+            # Feature to show most recently modified files in a tree?
+            table = []
+            for node, node_data in self.graph.nodes(data=True):
+                node_data['path_stat'] = node.stat()
+                node_data['path'] = node
+                table.append(node_data)
+
+            table = sorted(table, key=lambda r: r['path_stat'].st_mtime)
+            for row in table:
+                import xdev
+                time = xdev.datetime.coerce(row['path_stat'].st_mtime)
+                if 'dev' in str(row['path']):
+                    print(time, row['path'])
+
+            [r['path'] for r in table]
+
         # disp_stats = self._humanize_stats(stats, 'dir', reduce_prefix=True)
         # rich.print('stats = {}'.format(ub.urepr(disp_stats, nl=1)))
 
     def build(self):
+        """
+        Build the internal graph structure with requested metadata
+        """
         self._walk()
         self._update_stats()
         self._update_labels()

@@ -39,6 +39,7 @@ def sed(regexpr: str | Pattern,
         dpath: str | None = None,
         include: str | List[str] | MultiPattern | None = None,
         exclude: str | List[str] | MultiPattern | None = None,
+        dirblocklist: str | List[str] | MultiPattern | None = None,
         recursive: bool = True,
         dry: bool = False,
         verbose: int = 1) -> None:

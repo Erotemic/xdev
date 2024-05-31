@@ -22,7 +22,7 @@ OPTIONS
          Defaults to 'start'. Can also be 'images'
 
      -i, --image=IMAGE_NAME
-          The docker image to use
+         The docker image to use (e.g. --image=python:3.12)
 
      -v, --version
             print the version information

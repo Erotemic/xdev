@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Install dependency packages
 pip install -r requirements.txt
 

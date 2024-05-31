@@ -23,7 +23,7 @@ numpy>=1.12.0,<2.0    ; python_version < '3.7' and python_version >= '3.6'    # 
 # -e https://github.com/pyutils/line_profiler/tarball/master#egg=line_profiler
 
 
-networkx>=2.8.8     ; python_version < '4.0'  and python_version >= '3.11'    # Python 3.11+
+networkx>=2.8       ; python_version < '4.0'  and python_version >= '3.11'    # Python 3.11+
 networkx>=2.7       ; python_version < '3.11' and python_version >= '3.10'    # Python 3.10
 networkx>=2.5.1     ; python_version < '3.10' and python_version >= '3.9'     # Python 3.9
 networkx>=2.7       ; python_version < '3.9'  and python_version >= '3.8'     # Python 3.8

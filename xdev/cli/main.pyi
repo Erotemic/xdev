@@ -116,6 +116,18 @@ class XdevCLI(ModalCLI):
         def main(cls, cmdline: bool = ..., **kwargs) -> None:
             ...
 
+    class RegexCLI(scfg.DataConfig):
+        __command__: str
+        backend: Incomplete
+
+        @classmethod
+        def main(cls, cmdline: bool = ..., **kwargs) -> None:
+            ...
+
+
+def rprint(*args) -> None:
+    ...
+
 
 def main() -> None:
     ...
