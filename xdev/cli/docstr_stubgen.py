@@ -1,4 +1,4 @@
-#  type: ignore
+# mypy: ignore-errors
 """
 Script for auto-generating pyi type extension files from google-style
 docstrings.
