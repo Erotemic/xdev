@@ -1,3 +1,4 @@
+#  type: ignore
 """
 Script for auto-generating pyi type extension files from google-style
 docstrings.
@@ -5,6 +6,9 @@ docstrings.
 This is a work in progress, but ultimately the goal is to be able to express
 concise typing information in docstrings and then explicitly expose that to
 Python.
+
+It seems that mypy updates break this code extremely frequently. It is hard to
+keep this maintained.
 
 Requirements:
     pip install mypy autoflake yapf
@@ -36,6 +40,7 @@ Ignore:
     lib.add_static(name, modpath)
     print(lib.current_sourcecode())
 """
+
 
 try:
     from mypy.stubgen import (ASTStubGenerator, find_self_initializers, FUNC, EMPTY,
