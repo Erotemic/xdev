@@ -439,8 +439,12 @@ def summarize_package_availability(package_name):
             counts = df.value_counts(['pkg_version', 'abi_tag', 'os', 'arch']).to_frame('count').reset_index()
         except KeyError:
             counts = []
+
         if len(counts):
-            counts = counts.sort_values('abi_tag')
+            try:
+                counts = counts.iloc[ub.argsort(counts['abi_tag'], key=cp_sorter)]
+            except Exception:
+                counts = counts.sort_values('abi_tag')
             piv = counts.pivot(
                 index=['pkg_version'],
                 columns=['abi_tag', 'os', 'arch'],
@@ -454,15 +458,15 @@ def summarize_package_availability(package_name):
 
     vec_ver = vectorize(Version)
     # vec_sorter(['cp310', 'cp27'])
-    vec_sorter(df.abi_tag)
+    # vec_sorter(df.abi_tag)
     try:
         piv = piv.sort_values('os', axis=1, dtype=str)
     except Exception:
         ...
-    try:
-        piv = piv.sort_values('abi_tag', axis=1, key=vec_sorter, dtype=str)
-    except Exception:
-        ...
+    # try:
+    #     piv = piv.sort_values('abi_tag', axis=1, key=vec_sorter, dtype=str)
+    # except Exception:
+    #     ...
     try:
         piv = piv.sort_values('pkg_version', key=vec_ver, dtype=str)
     except Exception:
@@ -470,6 +474,12 @@ def summarize_package_availability(package_name):
     import rich
     rich.print('')
     rich.print('package_name = {}'.format(ub.repr2(package_name, nl=1)))
+
+    # abi_tags = piv.columns.levels[0]
+    # sorted(abi_tags, key=cp_sorter)
+    # vec_sorter('cp310')
+    # list(map(vec_sorter, abi_tags))
+
     rich.print(piv.to_string())
 
 
