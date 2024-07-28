@@ -405,7 +405,7 @@ def summarize_package_availability(package_name):
     # def vec_ver(vs):
     #     return [Version(v) for v in vs]
 
-    vec_sorter = vectorize(cp_sorter)
+    # vec_sorter = vectorize(cp_sorter)
 
     flags = (df['packagetype'] != 'sdist')
     if not np.any(flags):
@@ -429,7 +429,8 @@ def summarize_package_availability(package_name):
         abi_blocklist = {
             # 'cp36m',
             'cp26m', 'cp26mu', 'cp27m', 'cp27mu', 'cp32m', 'cp33m', 'cp34m', 'cp35m',
-            'pypy36_pp73', 'pypy37_pp73', 'pypy38_pp73', 'pypy_73', 'pypy_41'
+            'pypy36_pp73', 'pypy37_pp73', 'pypy38_pp73', 'pypy_73', 'pypy_41',
+            'cp36m', 'cp37m',
         }
         flags = df['abi_tag'].apply(lambda x: x in abi_blocklist)
         if np.any(~flags):
