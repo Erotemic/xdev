@@ -8,6 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## Version 1.5.3 - Unreleased
 
 
+### Fixed:
+* Pandas deprecation
+
+### Changed:
+* Remove 3.6 and 3.7 from availpkg tables
+
 ## Version 1.5.2 - Released 2024-05-31 
 
 ### Added

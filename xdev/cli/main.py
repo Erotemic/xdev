@@ -42,8 +42,8 @@ class XdevCLI(ModalCLI):
         """
         Remove indentation from text.
 
-        Useful for writing subscripts (e.g. python -c code) in shell files without
-        having to resort to ugly indentation.
+        Useful for writing subscripts (e.g. python -c code) in shell files
+        without having to resort to ugly indentation.
         """
         __command__ = 'codeblock'
         __epilog__ = """
@@ -54,6 +54,16 @@ class XdevCLI(ModalCLI):
             import pathlib
             print(list(pathlib.Path('.').glob('*')))
             ")"
+
+        Note: it may be better to just use the "if 1" trick instead..
+
+        python -c "if 1:
+            import pathlib
+            print(list(pathlib.Path('.').glob('*')))
+            "
+
+        And in future versions of Python this may not be necessary at all
+        https://github.com/python/cpython/pull/103998
         """
         text = scfg.Value('', type=str, position=1,
                           help='text to remove indentation from (i.e. dedent)')
