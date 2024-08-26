@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## Version 1.5.3 - Unreleased
 
+### Added:
+* Pint CLI can now handle "GB", "GiB" for gigabytes and gibibytes as well as other short common byte aliases.
 
 ### Fixed:
 * Pandas deprecation
