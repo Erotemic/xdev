@@ -618,7 +618,7 @@ def build_package_table(package_name, refresh=False):
                 abi_tag = str(row['abi_tag'])
                 if abi_tag.startswith('cp'):
                     # Specific ABI, be restrictive
-                    max_pyver = row['abi_tag'].replace('m', '').replace('u', '')
+                    max_pyver = row['abi_tag'].replace('m', '').replace('u', '').replace('t', '')
                     ...
                 if abi_tag == 'abi3':
                     # General ABI Be permissive here.
