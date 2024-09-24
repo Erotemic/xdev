@@ -89,12 +89,14 @@ class datetime(datetime_cls):
         if end is not None:
             max_dt = coerce_datetime(end)
         if min_dt is None:
-            min_dt = datetime_cls(1, 1, 2, 0, 0)
-            min_dt = min_dt.replace(tzinfo=datetime_mod.timezone.utf)  # work around win32 issue
+            # min_dt = datetime_cls(1, 1, 2, 0, 0)
+            # min_dt = min_dt.replace(tzinfo=datetime_mod.timezone.utf)  # work around win32 issue
+            min_dt = coerce_datetime('1980-01-01')
         if max_dt is None:
-            max_dt = cls.max
+            # max_dt = cls.max
             # https://stackoverflow.com/questions/71680355/oserror-errno-22-invalid-argument-when-using-datetime-strptime
-            max_dt = max_dt.replace(tzinfo=datetime_mod.timezone.utf)  # work around win32 issue
+            # max_dt = max_dt.replace(tzinfo=datetime_mod.timezone.utf)  # work around win32 issue
+            max_dt = coerce_datetime('2980-01-01')
         try:
             min_ts = min_dt.timestamp()
             max_ts = max_dt.timestamp()
