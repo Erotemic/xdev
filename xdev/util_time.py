@@ -89,9 +89,13 @@ class datetime(datetime_cls):
         if end is not None:
             max_dt = coerce_datetime(end)
         if min_dt is None:
-            min_dt = datetime_cls(1, 1, 2, 0, 0)
+            # min_dt = datetime_cls(1, 1, 2, 0, 0)
+            # Using more reasonable bounds for windows?
+            min_dt = datetime_cls(1880, 1, 2, 1, 1)
         if max_dt is None:
-            max_dt = cls.max
+            # max_dt = cls.max
+            # Using more reasonable bounds for windows?
+            max_dt = datetime_cls(2880, 1, 2, 1, 1)
         try:
             min_ts = min_dt.timestamp()
             max_ts = max_dt.timestamp()
