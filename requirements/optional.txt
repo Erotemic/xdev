@@ -28,3 +28,4 @@ parso>=0.8.0 ; python_version < '3.11'    # <Python 3.11
 
 pint >= 0.18
 python_dateutil>=2.8.2
+pytimeparse>=1.1.8

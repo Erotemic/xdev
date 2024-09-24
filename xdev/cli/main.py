@@ -42,8 +42,8 @@ class XdevCLI(ModalCLI):
         """
         Remove indentation from text.
 
-        Useful for writing subscripts (e.g. python -c code) in shell files without
-        having to resort to ugly indentation.
+        Useful for writing subscripts (e.g. python -c code) in shell files
+        without having to resort to ugly indentation.
         """
         __command__ = 'codeblock'
         __epilog__ = """
@@ -54,6 +54,16 @@ class XdevCLI(ModalCLI):
             import pathlib
             print(list(pathlib.Path('.').glob('*')))
             ")"
+
+        Note: it may be better to just use the "if 1" trick instead..
+
+        python -c "if 1:
+            import pathlib
+            print(list(pathlib.Path('.').glob('*')))
+            "
+
+        And in future versions of Python this may not be necessary at all
+        https://github.com/python/cpython/pull/103998
         """
         text = scfg.Value('', type=str, position=1,
                           help='text to remove indentation from (i.e. dedent)')
@@ -166,10 +176,11 @@ class XdevCLI(ModalCLI):
         See Also
         --------
         The apt-installable tree command
+        xdev dirstats .
 
         Example
         -------
-        xdev tree
+        xdev tree .
         """
         __command__ = 'tree'
 
@@ -194,42 +205,51 @@ class XdevCLI(ModalCLI):
         """
         Converts one type of unit to another via the pint library.
 
-        Notes:
-
         See Also
         --------
-        The pint-convert tool comes pre-installed with pint but isn't as useful for
-        in-bash computation unless you munge the output. The idea here is that when
-        something like GDAL wants an environ in bytes, we can specify it in
-        megabytes.
+        The pint-convert tool comes pre-installed with pint but isn't as useful
+        for in-bash computation unless you munge the output. The idea here is
+        that when something like GDAL wants an environ in bytes, we can specify
+        it in megabytes.
 
         Example Usage
         -------------
         xdev pint "10 megabytes" "bytes" --precision=0
-
+        xdev pint "12345 megabytes" "gb" --precision=2
+        xdev pint "12345 megabytes" "GB" --precision=2
+        xdev pint "12345 megabytes" "GiB" --precision=2
+        xdev pint "12345 megabytes" "gib" --precision=2
         """
         __command__ = 'pint'
         __alias__ = ['convert_unit']
         __default__ = {
             'input_expr': scfg.Value(None, position=1, help='A parsable pint expression with magnitude and units'),
             'output_unit': scfg.Value(None, position=2, help='The output unit to convert to'),
-            'precision': scfg.Value(0, type=int, help='number of decimal places to use'),
+            'precision': scfg.Value(2, type=int, help='number of decimal places to use', short_alias=['p']),
         }
 
         @classmethod
         def main(cls, cmdline=False, **kwargs):
+            args = cls.cli(cmdline=cmdline, data=kwargs)
             import pint
             ureg = pint.UnitRegistry()
-            args = cls.cli(cmdline=cmdline, data=kwargs)
+            ureg.define('gb = 1 * gigabyte = _ = GB')
+            ureg.define('mb = 1 * megabyte = _ = MB')
+            ureg.define('kb = 1 * kilobyte = _ = KB')
+            ureg.define('gib = 1 * gibibyte = _ = GiB')
+            ureg.define('mib = 1 * mebibyte = _ = MiB')
+            ureg.define('kib = 1 * kibibyte = _ = KiB')
             input = ureg.parse_expression(args['input_expr'])
             output_unit = args['output_unit']
             if output_unit is None:
                 output_unit = input.unit
             output = input.to(output_unit)
-            if args['precision'] == 0:
+            if args['precision'] is None:
+                print(output.magnitude)
+            elif args['precision'] == 0:
                 print(int(output.magnitude))
             else:
-                print(output.magnitude)
+                print(round(output.magnitude, args['precision']))
 
     class PyfileCLI(scfg.DataConfig):
         """

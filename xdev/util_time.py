@@ -82,8 +82,30 @@ class datetime(datetime_cls):
         """
         from xdev.util_random import ensure_rng
         rng = ensure_rng(rng)
-        min_ts = (coerce_datetime(start) or datetime_cls(1, 1, 2, 0, 0)).timestamp()
-        max_ts = (coerce_datetime(end) or cls.max).timestamp()
+        min_dt = None
+        max_dt = None
+        if start is not None:
+            min_dt = coerce_datetime(start)
+        if end is not None:
+            max_dt = coerce_datetime(end)
+        if min_dt is None:
+            # min_dt = datetime_cls(1, 1, 2, 0, 0)
+            # min_dt = min_dt.replace(tzinfo=datetime_mod.timezone.utf)  # work around win32 issue
+            min_dt = coerce_datetime('1980-01-01')
+        if max_dt is None:
+            # max_dt = cls.max
+            # https://stackoverflow.com/questions/71680355/oserror-errno-22-invalid-argument-when-using-datetime-strptime
+            # max_dt = max_dt.replace(tzinfo=datetime_mod.timezone.utf)  # work around win32 issue
+            max_dt = coerce_datetime('2980-01-01')
+        try:
+            min_ts = min_dt.timestamp()
+            max_ts = max_dt.timestamp()
+        except Exception as ex:
+            print(f'min_dt: {type(min_dt)} = {min_dt}')
+            print(f'max_dt: {type(max_dt)} = {max_dt}')
+            print(f'ex={ex}')
+            raise
+
         ts = rng.randint(int(min_ts), int(max_ts))
         default_timezone = 'utc'
         tz = coerce_timezone(default_timezone)

@@ -17,7 +17,7 @@ def test_xdev_cli():
         ...
     else:
         info = ub.cmd(f'{py_exe} -m xdev pint 10gigabytes megabytes', verbose=3)
-        assert info['out'].strip() == '10000'
+        assert float(info['out'].strip()) == 10000
 
     info = ub.cmd(f'{py_exe} -m xdev info', verbose=3)
     assert info['ret'] == 0

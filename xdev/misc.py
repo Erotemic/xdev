@@ -61,7 +61,7 @@ def byte_str(num, unit='auto', precision=2):
 
     Example:
         >>> num_list = [1, 100, 1024,  1048576, 1073741824, 1099511627776]
-        >>> result = ub.repr2(list(map(byte_str, num_list)), nl=0)
+        >>> result = ub.urepr(list(map(byte_str, num_list)), nl=0)
         >>> print(result)
         ['0.00 KB', '0.10 KB', '1.00 KB', '1.00 MB', '1.00 GB', '1.00 TB']
     """
@@ -105,7 +105,7 @@ def byte_str(num, unit='auto', precision=2):
         num_unit = num / (2.0 ** 80)
     else:
         raise ValueError('unknown num={!r} unit={!r}'.format(num, unit))
-    return ub.repr2(num_unit, precision=precision) + ' ' + unit
+    return ub.urepr(num_unit, precision=precision) + ' ' + unit
 
 
 def set_overlaps(set1, set2, s1='s1', s2='s2'):

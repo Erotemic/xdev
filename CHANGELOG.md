@@ -5,7 +5,18 @@ We are currently working on porting this changelog to the specifications in
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Version 1.5.2 - Unreleased 
+## Version 1.5.3 - Unreleased
+
+### Added:
+* Pint CLI can now handle "GB", "GiB" for gigabytes and gibibytes as well as other short common byte aliases.
+
+### Fixed:
+* Pandas deprecation
+
+### Changed:
+* Remove 3.6 and 3.7 from availpkg tables
+
+## Version 1.5.2 - Released 2024-05-31 
 
 ### Added
 * Ported `kwutil.datetime`, `kwutil.timedelta`, and `kwutil.ensure_rng`

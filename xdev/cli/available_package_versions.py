@@ -405,7 +405,7 @@ def summarize_package_availability(package_name):
     # def vec_ver(vs):
     #     return [Version(v) for v in vs]
 
-    vec_sorter = vectorize(cp_sorter)
+    # vec_sorter = vectorize(cp_sorter)
 
     flags = (df['packagetype'] != 'sdist')
     if not np.any(flags):
@@ -429,7 +429,8 @@ def summarize_package_availability(package_name):
         abi_blocklist = {
             # 'cp36m',
             'cp26m', 'cp26mu', 'cp27m', 'cp27mu', 'cp32m', 'cp33m', 'cp34m', 'cp35m',
-            'pypy36_pp73', 'pypy37_pp73', 'pypy38_pp73', 'pypy_73', 'pypy_41'
+            'pypy36_pp73', 'pypy37_pp73', 'pypy38_pp73', 'pypy_73', 'pypy_41',
+            'cp36m', 'cp37m',
         }
         flags = df['abi_tag'].apply(lambda x: x in abi_blocklist)
         if np.any(~flags):
@@ -439,8 +440,12 @@ def summarize_package_availability(package_name):
             counts = df.value_counts(['pkg_version', 'abi_tag', 'os', 'arch']).to_frame('count').reset_index()
         except KeyError:
             counts = []
+
         if len(counts):
-            counts = counts.sort_values('abi_tag')
+            try:
+                counts = counts.iloc[ub.argsort(counts['abi_tag'], key=cp_sorter)]
+            except Exception:
+                counts = counts.sort_values('abi_tag')
             piv = counts.pivot(
                 index=['pkg_version'],
                 columns=['abi_tag', 'os', 'arch'],
@@ -454,15 +459,15 @@ def summarize_package_availability(package_name):
 
     vec_ver = vectorize(Version)
     # vec_sorter(['cp310', 'cp27'])
-    vec_sorter(df.abi_tag)
+    # vec_sorter(df.abi_tag)
     try:
         piv = piv.sort_values('os', axis=1, dtype=str)
     except Exception:
         ...
-    try:
-        piv = piv.sort_values('abi_tag', axis=1, key=vec_sorter, dtype=str)
-    except Exception:
-        ...
+    # try:
+    #     piv = piv.sort_values('abi_tag', axis=1, key=vec_sorter, dtype=str)
+    # except Exception:
+    #     ...
     try:
         piv = piv.sort_values('pkg_version', key=vec_ver, dtype=str)
     except Exception:
@@ -470,6 +475,12 @@ def summarize_package_availability(package_name):
     import rich
     rich.print('')
     rich.print('package_name = {}'.format(ub.repr2(package_name, nl=1)))
+
+    # abi_tags = piv.columns.levels[0]
+    # sorted(abi_tags, key=cp_sorter)
+    # vec_sorter('cp310')
+    # list(map(vec_sorter, abi_tags))
+
     rich.print(piv.to_string())
 
 
@@ -607,7 +618,7 @@ def build_package_table(package_name, refresh=False):
                 abi_tag = str(row['abi_tag'])
                 if abi_tag.startswith('cp'):
                     # Specific ABI, be restrictive
-                    max_pyver = row['abi_tag'].replace('m', '').replace('u', '')
+                    max_pyver = row['abi_tag'].replace('m', '').replace('u', '').replace('t', '')
                     ...
                 if abi_tag == 'abi3':
                     # General ABI Be permissive here.

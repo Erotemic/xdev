@@ -144,6 +144,7 @@ class DirectoryWalker:
 
             totals = piv.sum(axis=0)
             disp_totals = totals.copy()
+            disp_totals = disp_totals.astype(object)
             disp_totals['size'] = byte_str(totals['size'])
             disp_piv = piv.copy()
             disp_piv['size'] = piv['size'].apply(byte_str)

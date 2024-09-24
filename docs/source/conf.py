@@ -17,7 +17,7 @@ Notes:
     # need to edit the conf.py
 
     cd ~/code/xdev/docs
-    sphinx-apidoc --private --separate -f -o ~/code/xdev/docs/source/auto ~/code/xdev/xdev
+    sphinx-apidoc --private --separate --force --output-dir ~/code/xdev/docs/source/auto ~/code/xdev/xdev
 
     # Note: the module should importable before running this
     # (e.g. install it in developer mode or munge the PYTHONPATH)

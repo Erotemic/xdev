@@ -24,6 +24,73 @@ def get_stack_frame(N=0, strict=True):
     return frame_cur
 
 
+# if False:
+#     import sys
+#     import os
+
+#     if hasattr(sys, "_getframe"):
+#         def currentframe():
+#             return sys._getframe(1)
+#     else:  # pragma: no cover
+#         def currentframe():
+#             """Return the frame object for the caller's stack frame."""
+#             try:
+#                 raise Exception
+#             except Exception:
+#                 return sys.exc_info()[2].tb_frame.f_back
+#     #
+#     # _srcfile is used when walking the stack to check when we've got the first
+#     # caller stack frame, by skipping frames whose filename is that of this
+#     # module's source. It therefore should contain the filename of this module's
+#     # source file.
+#     #
+#     # Ordinarily we would use __file__ for this, but frozen modules don't always
+#     # have __file__ set, for some reason (see Issue #21736). Thus, we get the
+#     # filename from a handy code object from a function defined in this module.
+#     # (There's no particular reason for picking addLevelName.)
+#     #
+
+#     _srcfile = os.path.normcase(currentframe.__code__.co_filename)
+
+#     # _srcfile is only used in conjunction with sys._getframe().
+#     # Setting _srcfile to None will prevent findCaller() from being called. This
+#     # way, you can avoid the overhead of fetching caller information.
+
+#     # The following is based on warnings._is_internal_frame. It makes sure that
+#     # frames of the import mechanism are skipped when logging at module level and
+#     # using a stacklevel value greater than one.
+#     def _is_internal_frame(frame):
+#         """Signal whether the frame is a CPython or logging module internal."""
+#         filename = os.path.normcase(frame.f_code.co_filename)
+#         return filename == _srcfile or (
+#             "importlib" in filename and "_bootstrap" in filename
+#         )
+
+#     def get_stack_frame2(stacklevel=1):
+#         """
+#         Based on findCaller code in stdlib logging
+#         """
+#         f = currentframe()
+#         #On some versions of IronPython, currentframe() returns None if
+#         #IronPython isn't run with -X:Frames.
+#         if f is None:
+#             return "(unknown file)", 0, "(unknown function)", None
+#         while stacklevel > 0:
+#             next_f = f.f_back
+#             if next_f is None:
+#                 ## We've got options here.
+#                 ## If we want to use the last (deepest) frame:
+#                 break
+#                 ## If we want to mimic the warnings module:
+#                 #return ("sys", 1, "(unknown function)", None)
+#                 ## If we want to be pedantic:
+#                 #raise ValueError("call stack is not deep enough")
+#             f = next_f
+#             if not _is_internal_frame(f):
+#                 stacklevel -= 1
+#         return f
+
+
 def distext(obj):
     """
     Like dis.dis, but returns the text
