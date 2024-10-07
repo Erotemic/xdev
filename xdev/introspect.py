@@ -279,3 +279,34 @@ def test_object_pickleability(obj):
                     if objid not in seen_:
                         seen_.add(objid)
                         stack.append((value, path))
+
+
+def gen_docstr_from_context(keys, lut):
+    """
+    Ignore:
+        keys = 'true_dets, pred_dets, iou_lookup, isvalid_lookup, cx_to_matchable_txs, bg_weight, prioritize, iou_thresh_, pdist_priority, cx_to_ancestors, bg_cidx, ignore_classes, max_dets, multiple_assignment'.split(', ')
+        lut = globals()
+    """
+    for key in keys:
+        value = lut[key]
+        typestr = generate_typeannot(value)
+        print(f'{key} ({typestr}): ')
+
+
+def generate_typeannot(value):
+    import ubelt as ub
+    if isinstance(value, (set, list)):
+        unique_val_types = ub.group_items(value, key=type)
+        T1 = type(value).__name__
+        VT = '|'.join([generate_typeannot(vs[0]) for t, vs in unique_val_types.items()])
+        typestr = f'{T1}[{VT}]'
+    elif isinstance(value, dict):
+        unique_key_types = ub.group_items(value.keys(), key=type)
+        unique_val_types = ub.group_items(value.values(), key=type)
+        # Oversimplification
+        kt = '|'.join([generate_typeannot(vs[0]) for t, vs  in unique_key_types.items()])
+        vt = '|'.join([generate_typeannot(vs[0]) for t, vs in unique_val_types.items()])
+        typestr = f'Dict[{kt}, {vt}]'
+    else:
+        typestr = type(value).__name__
+    return typestr
