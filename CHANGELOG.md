@@ -5,7 +5,10 @@ We are currently working on porting this changelog to the specifications in
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Version 1.5.3 - Unreleased
+## Version 1.5.4 - Unreleased
+
+
+## Version 1.5.3 - Released 2024-09-23
 
 ### Added:
 * Pint CLI can now handle "GB", "GiB" for gigabytes and gibibytes as well as other short common byte aliases.
