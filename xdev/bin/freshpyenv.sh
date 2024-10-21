@@ -87,6 +87,7 @@ inside_docker_setup(){
     chmod -R g+rw $PIP_CACHE_DIR
     USER=$(whoami)
     chown -R "$USER" $PIP_CACHE_DIR
+    git config --global --add safe.directory /io/.git
     git clone /io "$HOME"/repo
 
     cd "$HOME"/repo
