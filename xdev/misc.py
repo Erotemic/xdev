@@ -108,11 +108,31 @@ def byte_str(num, unit='auto', precision=2):
     return ub.urepr(num_unit, precision=precision) + ' ' + unit
 
 
+def _resolve_set(items, name='items'):
+    """
+    Ignore:
+        items = [1, 1, 1, 2, 3, 4, 4, 5]
+    """
+    unique_items = set(items)
+    if not isinstance(items, set):
+        try:
+            n_total = len(items)
+        except TypeError:
+            items = list(items)
+            n_total = len(items)
+        dup_counts = ub.udict(ub.find_duplicates(items)).map_values(len)
+    else:
+        dup_counts = {}
+        n_total = len(unique_items)
+    return unique_items, n_total, dup_counts
+
+
 def set_overlaps(set1, set2, s1='s1', s2='s2'):
     """
     Return sizes about set overlaps.
 
-    If the inputs are not sets, they will be cast to sets.
+    If the inputs are not sets, they will be cast to sets, and if there are
+    duplicate they will be counted.
 
     Args:
         set1 (Iterable): the first set of items
@@ -138,9 +158,18 @@ def set_overlaps(set1, set2, s1='s1', s2='s2'):
             'first5 - vowels': 3,
             'vowels - first5': 3,
         }
+
+    Example:
+        >>> import ubelt as ub
+        >>> from xdev.misc import set_overlaps
+        >>> set1 = [1, 1, 2, 3, 3, 3, 4, 5,]
+        >>> set2 = [2, 2, 2, 3]
+        >>> result = set_overlaps(set1, set2)
+        >>> print(f'result = {ub.urepr(result, nl=1)}')
     """
-    set1 = set(set1)
-    set2 = set(set2)
+    set1, n_total1, dup_counts1 = _resolve_set(set1)
+    set2, n_total2, dup_counts2 = _resolve_set(set2)
+
     overlaps = {
         s1: len(set1),
         s2: len(set2),
@@ -149,6 +178,18 @@ def set_overlaps(set1, set2, s1='s1', s2='s2'):
         f'{s1} - {s2}': len(set1.difference(set2)),
         f'{s2} - {s1}': len(set2.difference(set1)),
     }
+    if dup_counts1:
+        overlaps[f'{s1} dupliates'] = sum(dup_counts1.values())
+    if dup_counts2:
+        overlaps[f'{s2} dupliates'] = sum(dup_counts2.values())
+    if dup_counts1:
+        overlaps[f'{s1} unique dupliates'] = len(dup_counts1)
+    if dup_counts2:
+        overlaps[f'{s2} unique dupliates'] = len(dup_counts2)
+    if dup_counts1:
+        overlaps[f'{s1} total'] = n_total1
+    if dup_counts2:
+        overlaps[f'{s2} total'] = n_total2
     return overlaps
 
 

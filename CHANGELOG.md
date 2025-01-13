@@ -7,6 +7,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## Version 1.5.4 - Unreleased
 
+### Added:
+* `set_overlaps` will now count duplicate values if non-sets are given as input
+
 
 ## Version 1.5.3 - Released 2024-09-23
 
