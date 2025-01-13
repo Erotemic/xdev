@@ -110,40 +110,45 @@ def byte_str(num, unit='auto', precision=2):
 
 def set_overlaps(set1, set2, s1='s1', s2='s2'):
     """
-    Return sizes about set overlaps
+    Return sizes about set overlaps.
+
+    If the inputs are not sets, they will be cast to sets.
 
     Args:
-        set1 (Iterable):
-        set2 (Iterable):
+        set1 (Iterable): the first set of items
+        set2 (Iterable): the second set of items
         s1 (str): name for set1
         s2 (str): name for set2
 
     Returns:
         Dict[str, int]: sizes of sets intersections unions and differences
 
-    Notes:
-        This function needs a rename. Possible candidates brainstorm:
-            * set_analysis
-            * set_binary_analysis
-            * set_binary_describe
-            * set_relationships
-            * describe_sets
-            * describe_relations
-            * describe_set_relations
-            * sets_summary
-            * sumarize_sets
-            * sumerset
+    Example:
+        >>> import ubelt as ub
+        >>> from xdev.misc import set_overlaps
+        >>> set1 = {'a', 'b', 'c', 'd', 'e'}
+        >>> set2 = {'a', 'e', 'i', 'o', 'u'}
+        >>> result = set_overlaps(set1, set2, 'first5', 'vowels')
+        >>> print(f'result = {ub.urepr(result, nl=1)}')
+        result = {
+            'first5': 5,
+            'vowels': 5,
+            'isect': 2,
+            'union': 8,
+            'first5 - vowels': 3,
+            'vowels - first5': 3,
+        }
     """
     set1 = set(set1)
     set2 = set(set2)
-    overlaps = ub.odict([
-        (s1, len(set1)),
-        (s2, len(set2)),
-        ('isect', len(set1.intersection(set2))),
-        ('union', len(set1.union(set2))),
-        ('%s - %s' % (s1, s2), len(set1.difference(set2))),
-        ('%s - %s' % (s2, s1), len(set2.difference(set1))),
-    ])
+    overlaps = {
+        s1: len(set1),
+        s2: len(set2),
+        'isect': len(set1.intersection(set2)),
+        'union': len(set1.union(set2)),
+        f'{s1} - {s2}': len(set1.difference(set2)),
+        f'{s2} - {s1}': len(set2.difference(set1)),
+    }
     return overlaps
 
 
