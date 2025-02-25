@@ -64,17 +64,19 @@ class DirectoryWalker:
         if 'block_fnames' in kwargs:
             ub.schedule_deprecation(
                 'xdev', 'DirectoryWalker block_fnames', 'arg',
-                migration='Use exclude_fnames instead'
+                migration='Use exclude_fnames instead',
+                deprecate='now',
             )
-            if exclude_fnames is None:
+            if exclude_fnames is not None:
                 raise ValueError('mutex with block_fnames')
             exclude_fnames = kwargs.pop('block_fnames')
         if 'block_dnames' in kwargs:
             ub.schedule_deprecation(
                 'xdev', 'DirectoryWalker block_dnames', 'arg',
-                migration='Use exclude_dnames instead'
+                migration='Use exclude_dnames instead',
+                deprecate='now',
             )
-            if exclude_dnames is None:
+            if exclude_dnames is not None:
                 raise ValueError('mutex with block_dnames')
             exclude_dnames = kwargs.pop('block_dnames')
 
