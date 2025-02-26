@@ -1,3 +1,5 @@
+### TODO: remove, write-network-text is now widely available.
+
 import sys
 from collections import defaultdict
 import networkx as nx
