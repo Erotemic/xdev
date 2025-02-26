@@ -645,6 +645,7 @@ def parse_file_stats(fpath, parse_content=True):
                     stats['code_lines'] = code_lines
 
                 try:
+                    # TODO: this belongs more in the pypackage summarizer
                     # from xdoctest.core import package_calldefs
                     from xdoctest.static_analysis import TopLevelVisitor
                     self = TopLevelVisitor.parse(text)
