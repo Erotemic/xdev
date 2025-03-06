@@ -121,7 +121,7 @@ def _stop_rich_live_contexts():
 
 
 def embed(parent_locals=None, parent_globals=None, exec_lines=None,
-          remove_pyqt_hook=True, n=0):
+          remove_pyqt_hook=True, n=0, debug=False):
     """
     Starts interactive session. Similar to keyboard command in matlab.
     Wrapper around IPython.embed.
@@ -138,10 +138,22 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         _stop_rich_live_contexts()
     import os
 
+    parent_frame = None
+
     if parent_globals is None:
-        parent_globals = get_parent_frame(n=n).f_globals
+        if parent_frame is None:
+            parent_frame = get_parent_frame(n=n)
+        parent_globals = parent_frame.f_globals
     if parent_locals is None:
-        parent_locals = get_parent_frame(n=n).f_locals
+        if parent_frame is None:
+            parent_frame = get_parent_frame(n=n)
+        parent_locals = parent_frame.f_locals
+
+    if debug:
+        import ubelt as ub
+        print(f'parent_globals.keys = {ub.urepr(parent_globals.keys(), nl=1)}')
+        print(f'parent_locals.keys = {ub.urepr(parent_locals.keys(), nl=1)}')
+        print(f'parent_frame = {ub.urepr(parent_frame, nl=1)}')
 
     stackdepth = n  # NOQA
     getframe = partial(get_parent_frame, n=n)  # NOQA
@@ -232,7 +244,6 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
 
         try:
             embed2()
-            # IPython.embed()
         except RuntimeError as ex:
             print('ex = {!r}'.format(ex))
             print('Failed to open ipython')
