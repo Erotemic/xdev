@@ -240,10 +240,10 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         #IPython.embed(config=c)
         parent_ns = parent_globals.copy()
         parent_ns.update(parent_locals)
-        locals().update(parent_ns)
+        # locals().update(parent_ns)
 
         try:
-            embed2()
+            embed2(user_ns=parent_ns)
         except RuntimeError as ex:
             print('ex = {!r}'.format(ex))
             print('Failed to open ipython')
