@@ -13,14 +13,17 @@ class CodeAnalyzer(ast.NodeVisitor):
         https://chat.deepseek.com/a/chat/s/12ab67dd-5350-46f1-b560-f28532be743d
 
     Ignore:
+        >>> # xdoctest: +REQUIRES(module:networkx)
         >>> from xdev.cli.pypackage_summary import *  # NOQA
         >>> from xdev.cli import pypackage_summary
         >>> import networkx as nx
         >>> fpath = pypackage_summary.__file__
         >>> self = CodeAnalyzer.parse_file(fpath)
+        >>> import networkx as nx
         >>> nx.write_network_text(self.graph)
 
     Example:
+        >>> # xdoctest: +REQUIRES(module:networkx)
         >>> from xdev.cli.pypackage_summary import *  # NOQA
         >>> import ubelt as ub
         >>> text = ub.codeblock(
@@ -43,6 +46,7 @@ class CodeAnalyzer(ast.NodeVisitor):
         ...     ''')
         >>> self = CodeAnalyzer(modname='testmod')
         >>> self.parse(text)
+        >>> import networkx as nx
         >>> nx.write_network_text(self.graph)
         ╟── os
         ╟── math.sqrt
