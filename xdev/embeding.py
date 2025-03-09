@@ -437,7 +437,7 @@ def embed_if_requested(n=0):
         xdev.embed(n=n + 1)
 
 
-class EmbedOnException(object):
+class EmbedOnException:
     """
     Context manager which embeds in ipython if an exception is thrown
 

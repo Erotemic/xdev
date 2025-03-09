@@ -13,7 +13,7 @@ __all__ = ['InteractiveIter']
 INDEXABLE_TYPES = (list, tuple, np.ndarray)
 
 
-class InteractiveIter(object):
+class InteractiveIter:
     """
     Choose next value interactively
 
