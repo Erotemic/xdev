@@ -22,14 +22,14 @@ jobs:
     steps:
     - name: Checkout source
       uses: actions/checkout@v4.1.1
-    - name: Set up Python 3.12 for linting
+    - name: Set up Python 3.13 for linting
       uses: actions/setup-python@v5.1.1
       with:
-        python-version: '3.12'
+        python-version: '3.13'
     - name: Install dependencies
       run: |-
-        python -m pip install pip -U
-        python -m pip install flake8
+        python -m pip install pip uv -U
+        python -m uv pip install flake8
     - name: Lint with flake8
       run: |-
         # stop the build if there are Python syntax errors or undefined names
@@ -50,26 +50,26 @@ jobs:
     steps:
     - name: Checkout source
       uses: actions/checkout@v4.1.1
-    - name: Set up Python 3.12
+    - name: Set up Python 3.13
       uses: actions/setup-python@v5.1.1
       with:
-        python-version: '3.12'
+        python-version: '3.13'
     - name: Upgrade pip
       run: |-
-        python -m pip install pip -U
-        python -m pip install --prefer-binary -r requirements/tests.txt
-        python -m pip install --prefer-binary -r requirements/runtime.txt
+        python -m pip install pip uv -U
+        python -m uv pip install -r requirements/tests.txt
+        python -m uv pip install -r requirements/runtime.txt
     - name: Build sdist
       shell: bash
       run: |-
-        python -m pip install pip -U
-        python -m pip install setuptools>=0.8 wheel build twine
+        python -m pip install pip uv -U
+        python -m uv pip install setuptools>=0.8 wheel build twine
         python -m build --sdist --outdir wheelhouse
         python -m twine check ./wheelhouse/xdev*.tar.gz
     - name: Install sdist
       run: |-
         ls -al wheelhouse
-        python -m pip install --prefer-binary wheelhouse/xdev*.tar.gz -v
+        python -m uv pip install wheelhouse/xdev*.tar.gz -v
     - name: Test minimal loose sdist
       run: |-
         pwd
@@ -117,7 +117,7 @@ jobs:
         os:
         - ubuntu-latest
         python-version:
-        - '3.12'
+        - '3.13'
         arch:
         - auto
     steps:
@@ -135,8 +135,8 @@ jobs:
     - name: Build pure wheel
       shell: bash
       run: |-
-        python -m pip install pip -U
-        python -m pip install setuptools>=0.8 wheel build twine
+        python -m pip install pip uv -U
+        python -m uv pip install setuptools>=0.8 wheel build twine
         python -m build --wheel --outdir wheelhouse
         python -m twine check ./wheelhouse/xdev*.whl
     - name: Show built files
@@ -159,42 +159,38 @@ jobs:
         # Xcookie generates an explicit list of environments that will be used
         # for testing instead of using the more concise matrix notation.
         include:
-        - python-version: '3.7'
+        - python-version: '3.8'
           install-extras: tests-strict,runtime-strict
-          os: ubuntu-22.04
+          os: ubuntu-latest
           arch: auto
-        - python-version: '3.7'
+        - python-version: '3.8'
           install-extras: tests-strict,runtime-strict
-          os: macos-13
+          os: macOS-latest
           arch: auto
-        - python-version: '3.7'
+        - python-version: '3.8'
           install-extras: tests-strict,runtime-strict
           os: windows-latest
           arch: auto
-        - python-version: '3.12'
+        - python-version: '3.13'
           install-extras: tests-strict,runtime-strict,optional-strict
           os: ubuntu-latest
           arch: auto
-        - python-version: '3.12'
+        - python-version: '3.13'
           install-extras: tests-strict,runtime-strict,optional-strict
           os: macOS-latest
           arch: auto
-        - python-version: '3.12'
+        - python-version: '3.13'
           install-extras: tests-strict,runtime-strict,optional-strict
           os: windows-latest
           arch: auto
-        - python-version: '3.12'
+        - python-version: '3.13'
           install-extras: tests
           os: macOS-latest
           arch: auto
-        - python-version: '3.12'
+        - python-version: '3.13'
           install-extras: tests
           os: windows-latest
           arch: auto
-        - python-version: '3.7'
-          install-extras: tests,optional
-          os: ubuntu-22.04
-          arch: auto
         - python-version: '3.8'
           install-extras: tests,optional
           os: ubuntu-latest
@@ -215,9 +211,9 @@ jobs:
           install-extras: tests,optional
           os: ubuntu-latest
           arch: auto
-        - python-version: '3.7'
+        - python-version: '3.13'
           install-extras: tests,optional
-          os: macos-13
+          os: ubuntu-latest
           arch: auto
         - python-version: '3.8'
           install-extras: tests,optional
@@ -239,9 +235,9 @@ jobs:
           install-extras: tests,optional
           os: macOS-latest
           arch: auto
-        - python-version: '3.7'
+        - python-version: '3.13'
           install-extras: tests,optional
-          os: windows-latest
+          os: macOS-latest
           arch: auto
         - python-version: '3.8'
           install-extras: tests,optional
@@ -260,6 +256,10 @@ jobs:
           os: windows-latest
           arch: auto
         - python-version: '3.12'
+          install-extras: tests,optional
+          os: windows-latest
+          arch: auto
+        - python-version: '3.13'
           install-extras: tests,optional
           os: windows-latest
           arch: auto
@@ -292,9 +292,9 @@ jobs:
         echo "Finding the path to the wheel"
         ls wheelhouse || echo "wheelhouse does not exist"
         echo "Installing helpers"
-        python -m pip install pip -U
-        python -m pip install setuptools>=0.8 setuptools_scm wheel build -U
-        python -m pip install tomli pkginfo
+        python -m pip install pip uv -U
+        python -m uv pip install setuptools>=0.8 setuptools_scm wheel build -U
+        python -m uv pip install tomli pkginfo
         export WHEEL_FPATH=$(python -c "if 1:
             import pathlib
             dist_dpath = pathlib.Path('wheelhouse')
@@ -312,7 +312,7 @@ jobs:
         echo "WHEEL_FPATH=$WHEEL_FPATH"
         echo "INSTALL_EXTRAS=$INSTALL_EXTRAS"
         echo "MOD_VERSION=$MOD_VERSION"
-        python -m pip install --prefer-binary "xdev[$INSTALL_EXTRAS]==$MOD_VERSION" -f wheelhouse
+        python -m uv pip install "xdev[$INSTALL_EXTRAS]==$MOD_VERSION" -f wheelhouse
         echo "Install finished."
     - name: Test wheel ${{ matrix.install-extras }}
       shell: bash
@@ -409,7 +409,7 @@ jobs:
         $GPG_EXECUTABLE --list-keys  || echo "first invocation of gpg creates directories and returns 1"
         $GPG_EXECUTABLE --list-keys
         VERSION=$(python -c "import setup; print(setup.VERSION)")
-        python -m pip install pip -U
+        python -m pip install pip uv -U
         python -m pip install packaging twine -U
         python -m pip install urllib3 requests[security]
         GPG_KEYID=$(cat dev/public_gpg_key)
@@ -485,7 +485,7 @@ jobs:
         $GPG_EXECUTABLE --list-keys  || echo "first invocation of gpg creates directories and returns 1"
         $GPG_EXECUTABLE --list-keys
         VERSION=$(python -c "import setup; print(setup.VERSION)")
-        python -m pip install pip -U
+        python -m pip install pip uv -U
         python -m pip install packaging twine -U
         python -m pip install urllib3 requests[security]
         GPG_KEYID=$(cat dev/public_gpg_key)
