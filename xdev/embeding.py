@@ -487,6 +487,8 @@ def fix_embed_globals():
 
     Solves the following issue:
 
+    .. code:: python
+
         def foo():
             x = 5
             # You embed here
