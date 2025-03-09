@@ -9,6 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added:
 * `set_overlaps` will now count duplicate values if non-sets are given as input
+* Add `WarningsWithTracebacks`. 
 
 ### Fix:
 * Handle embed with PEP667 changes in Python 3.13

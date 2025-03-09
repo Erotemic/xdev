@@ -343,6 +343,9 @@ class DirectoryWalker:
                     child_data = g.nodes[child]
                     child_stats = child_data.get('stats', {})
                     for key, stat_value in child_stats.items():
+                        # a collections.Counter might be more efficient
+                        # but we probably want to serialize to dictionary
+                        # after.
                         if key not in accum_stats:
                             accum_stats[key] = 0
                         accum_stats[key] += stat_value
