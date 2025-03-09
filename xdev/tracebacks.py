@@ -86,7 +86,6 @@ class WarningsWithTracebacks:
             warnings.formatwarning = self._orig_formatwarning
 
     def _monkeypatch_formatwarning_tb(self, *args, **kwargs):
-        print("MONKEY MONKEY MONKEY")
         import traceback
         s = self._orig_formatwarning(*args, **kwargs)
         if len(s.strip()):
