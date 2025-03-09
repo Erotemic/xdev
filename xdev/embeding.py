@@ -471,8 +471,10 @@ class EmbedOnException(object):
             # Hack to bring back names that we clobber
             if '__self' in __trace_ns:
                 __self = __trace_ns['__self']
+
+            # Note: this definately does nothing on 3.13+
             locals().update(__trace_ns)  # I don't think this does anything
-            embed()
+            embed(parent_locals=__trace_locals, parent_globals=__trace_globals)
 
 
 def fix_embed_globals():
@@ -514,3 +516,20 @@ def fix_embed_globals():
 
 embed_on_exception_context = EmbedOnException()
 embed_on_exception = embed_on_exception_context
+
+
+if __name__ == '__main__':
+    """
+    CommandLine:
+        python ~/code/xdev/xdev/embeding.py
+    """
+
+    def test_embed_traceback():
+        import xdev
+        x = 1
+        # xdev.embed()
+        with xdev.EmbedOnException():
+            print(x)
+            raise Exception
+
+    test_embed_traceback()
