@@ -42,6 +42,27 @@ def _coerce_editable_fpath(target):
         raise TypeError(f"Unable to coerce {target} into a file path")
 
     if fpath is None:
+        # Is it a package name?
+        import pkg_resources
+        try:
+            distribution = pkg_resources.get_distribution(target)
+            top_level_names = list(distribution.get_metadata_lines("top_level.txt"))
+            if len(top_level_names) == 0:
+                raise AssertionError('is this possible? I hope not')
+            elif len(top_level_names) > 1:
+                import warnings
+                warnings.warn(
+                    'Multiple top-level names were installed for this package, only choosing the first')
+            name = top_level_names[0]
+            fpath = ub.modname_to_modpath(name)
+            if fpath is not None:
+                fpath = ub.Path(fpath)
+        except pkg_resources.DistributionNotFound:
+            ...
+        else:
+            ...
+
+    if fpath is None:
         raise Exception(f"Unable to interpret {target} as a module name or file path")
 
     # Resolve a pyc file to a py file if possible.

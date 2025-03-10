@@ -13,7 +13,7 @@ __all__ = ['InteractiveIter']
 INDEXABLE_TYPES = (list, tuple, np.ndarray)
 
 
-class InteractiveIter(object):
+class InteractiveIter:
     """
     Choose next value interactively
 
@@ -118,7 +118,7 @@ class InteractiveIter(object):
                 yield item
             return
             # raise StopIteration()
-        assert isinstance(iiter.iterable, INDEXABLE_TYPES), 'input is not iterable'
+        # assert isinstance(iiter.iterable, INDEXABLE_TYPES), 'input is not iterable'
         iiter.num_items = len(iiter.iterable)
         if iiter.verbose:
             print('[IITER] Begin interactive iteration: %r items\n' % (iiter.num_items))

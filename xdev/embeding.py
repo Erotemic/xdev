@@ -121,7 +121,7 @@ def _stop_rich_live_contexts():
 
 
 def embed(parent_locals=None, parent_globals=None, exec_lines=None,
-          remove_pyqt_hook=True, n=0):
+          remove_pyqt_hook=True, n=0, debug=False):
     """
     Starts interactive session. Similar to keyboard command in matlab.
     Wrapper around IPython.embed.
@@ -138,10 +138,22 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         _stop_rich_live_contexts()
     import os
 
+    parent_frame = None
+
     if parent_globals is None:
-        parent_globals = get_parent_frame(n=n).f_globals
+        if parent_frame is None:
+            parent_frame = get_parent_frame(n=n)
+        parent_globals = parent_frame.f_globals
     if parent_locals is None:
-        parent_locals = get_parent_frame(n=n).f_locals
+        if parent_frame is None:
+            parent_frame = get_parent_frame(n=n)
+        parent_locals = parent_frame.f_locals
+
+    if debug:
+        import ubelt as ub
+        print(f'parent_globals.keys = {ub.urepr(parent_globals.keys(), nl=1)}')
+        print(f'parent_locals.keys = {ub.urepr(parent_locals.keys(), nl=1)}')
+        print(f'parent_frame = {ub.urepr(parent_frame, nl=1)}')
 
     stackdepth = n  # NOQA
     getframe = partial(get_parent_frame, n=n)  # NOQA
@@ -228,11 +240,10 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         #IPython.embed(config=c)
         parent_ns = parent_globals.copy()
         parent_ns.update(parent_locals)
-        locals().update(parent_ns)
+        # locals().update(parent_ns)
 
         try:
-            embed2()
-            # IPython.embed()
+            embed2(user_ns=parent_ns)
         except RuntimeError as ex:
             print('ex = {!r}'.format(ex))
             print('Failed to open ipython')
@@ -426,7 +437,7 @@ def embed_if_requested(n=0):
         xdev.embed(n=n + 1)
 
 
-class EmbedOnException(object):
+class EmbedOnException:
     """
     Context manager which embeds in ipython if an exception is thrown
 
@@ -460,8 +471,10 @@ class EmbedOnException(object):
             # Hack to bring back names that we clobber
             if '__self' in __trace_ns:
                 __self = __trace_ns['__self']
+
+            # Note: this definately does nothing on 3.13+
             locals().update(__trace_ns)  # I don't think this does anything
-            embed()
+            embed(parent_locals=__trace_locals, parent_globals=__trace_globals)
 
 
 def fix_embed_globals():
@@ -473,6 +486,8 @@ def fix_embed_globals():
         https://github.com/ipython/ipython/issues/62
 
     Solves the following issue:
+
+    .. code:: python
 
         def foo():
             x = 5
@@ -503,3 +518,20 @@ def fix_embed_globals():
 
 embed_on_exception_context = EmbedOnException()
 embed_on_exception = embed_on_exception_context
+
+
+if __name__ == '__main__':
+    """
+    CommandLine:
+        python ~/code/xdev/xdev/embeding.py
+    """
+
+    def test_embed_traceback():
+        import xdev
+        x = 1
+        # xdev.embed()
+        with xdev.EmbedOnException():
+            print(x)
+            raise Exception
+
+    test_embed_traceback()

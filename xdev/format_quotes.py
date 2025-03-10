@@ -15,6 +15,9 @@ CommandLine:
 
 TODO:
     * rope: https://github.com/python-rope/rope or parso
+    * Make tool that fixes specific classes of issues, this handles quotes, but we should also hand:
+
+        * Spaces between operators and commas: `autopep8 --select E225,E226,E231 --in-place <fpath>`
 """
 import ubelt as ub
 import re

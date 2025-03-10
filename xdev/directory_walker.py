@@ -33,6 +33,7 @@ class DirectoryWalker:
                  parse_content=False,
                  show_progress=True,
                  ignore_empty_dirs=False,
+                 fs=None,
                  **kwargs):
         """
         Args:
@@ -59,22 +60,27 @@ class DirectoryWalker:
             parse_content (bool):
                 if True, include content analysis
 
+            fs (fsspec.spec.AbstractFileSystem):
+                experimental: an fsspec filesystem
+
             **kwargs : passed to label options
         """
         if 'block_fnames' in kwargs:
             ub.schedule_deprecation(
                 'xdev', 'DirectoryWalker block_fnames', 'arg',
-                migration='Use exclude_fnames instead'
+                migration='Use exclude_fnames instead',
+                deprecate='now',
             )
-            if exclude_fnames is None:
+            if exclude_fnames is not None:
                 raise ValueError('mutex with block_fnames')
             exclude_fnames = kwargs.pop('block_fnames')
         if 'block_dnames' in kwargs:
             ub.schedule_deprecation(
                 'xdev', 'DirectoryWalker block_dnames', 'arg',
-                migration='Use exclude_dnames instead'
+                migration='Use exclude_dnames instead',
+                deprecate='now',
             )
-            if exclude_dnames is None:
+            if exclude_dnames is not None:
                 raise ValueError('mutex with block_dnames')
             exclude_dnames = kwargs.pop('block_dnames')
 
@@ -104,6 +110,7 @@ class DirectoryWalker:
         if kwargs:
             raise ValueError(f'Unhandled kwargs {kwargs}')
 
+        self.fs = fs
         self.graph = None
         self._topo_order = None
         self._type_to_path = {}
@@ -232,7 +239,16 @@ class DirectoryWalker:
             if self.max_walk_depth is not None:
                 start_depth = str(self.dpath).count(os.path.sep)
 
-            for root, dnames, fnames in self.dpath.walk():
+            if self.fs is None:
+                walkgen = self.dpath.walk()
+            else:
+                walkgen = self.fs.walk(os.fspath(dpath))
+
+            for root, dnames, fnames in walkgen:
+
+                if self.fs is not None:
+                    root = ub.Path(root)
+
                 prog.step()
 
                 root_attrs = {}
@@ -327,12 +343,16 @@ class DirectoryWalker:
                     child_data = g.nodes[child]
                     child_stats = child_data.get('stats', {})
                     for key, stat_value in child_stats.items():
+                        # a collections.Counter might be more efficient
+                        # but we probably want to serialize to dictionary
+                        # after.
                         if key not in accum_stats:
                             accum_stats[key] = 0
                         accum_stats[key] += stat_value
 
     def _update_stats(self):
         g = self.graph
+        fs = self.fs
 
         # Get size stats for each file.
         pman = ProgressManager()
@@ -341,7 +361,7 @@ class DirectoryWalker:
             for fpath, node_data in g.nodes(data=True):
                 if node_data['type'] == 'file':
                     stats = parse_file_stats(fpath,
-                                             parse_content=self.parse_content)
+                                             parse_content=self.parse_content, fs=fs)
                     node_data['stats'] = stats
                 prog.step()
         self._accum_stats()
@@ -407,7 +427,8 @@ class DirectoryWalker:
         elif node_type == 'file':
             disp_stats = {k.split('.', 1)[1]: v for k, v in _stats.items()}
             disp_stats.pop('files', None)
-            disp_stats['size'] = byte_str(disp_stats['size'])
+            if 'size' in disp_stats:
+                disp_stats['size'] = byte_str(disp_stats['size'])
         else:
             raise KeyError(node_type)
         return disp_stats
@@ -471,6 +492,7 @@ class DirectoryWalker:
         Update how each node will be displayed
         """
         from os.path import relpath
+        from rich.markup import escape
 
         label_options = self.label_options
         pathstyle = label_options['pathstyle']
@@ -557,6 +579,7 @@ class DirectoryWalker:
                     target_richlink = False
 
                 if colors:
+                    targetrep = escape(targetrep)
                     if target_richlink:
                         import urllib.parse
                         encoded_target = 'file://' + urllib.parse.quote(os.fspath(target))
@@ -566,6 +589,7 @@ class DirectoryWalker:
             if colors:
                 if richlink:
                     import urllib.parse
+                    pathrep = escape(pathrep)
                     encoded_path = 'file://' + urllib.parse.quote(os.fspath(path))
                     pathrep = f'[link={encoded_path}]{pathrep}[/link]'
                 pathrep = f'[{color}]{pathrep}[/{color}]'
@@ -603,7 +627,7 @@ class DirectoryWalker:
         self.graph = new
 
 
-def parse_file_stats(fpath, parse_content=True):
+def parse_file_stats(fpath, parse_content=True, fs=None):
     """
     Get information about a file, including things like number of code lines /
     documentation lines, if that sort of information is available.
@@ -612,14 +636,19 @@ def parse_file_stats(fpath, parse_content=True):
     prefix = ext.lstrip('.') + '.'
     stats = {}
     try:
-        stat_obj = fpath.stat()
+        if fs is None:
+            stat_obj = fpath.stat()
+            size = stat_obj.st_size
+        else:
+            stat_obj = fs.stat(os.fspath(fpath))
+            size = stat_obj['size']
     except FileNotFoundError:
         is_broken = True
         stats['broken_link'] = True
         stats['size'] = 0
     else:
         is_broken = False
-        stats['size'] = stat_obj.st_size
+        stats['size'] = size
 
     stats['files'] = 1
 
@@ -643,6 +672,7 @@ def parse_file_stats(fpath, parse_content=True):
                     stats['code_lines'] = code_lines
 
                 try:
+                    # TODO: this belongs more in the pypackage summarizer
                     # from xdoctest.core import package_calldefs
                     from xdoctest.static_analysis import TopLevelVisitor
                     self = TopLevelVisitor.parse(text)

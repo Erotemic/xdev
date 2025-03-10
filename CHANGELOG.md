@@ -5,7 +5,17 @@ We are currently working on porting this changelog to the specifications in
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Version 1.5.3 - Unreleased
+## Version 1.5.4 - Unreleased
+
+### Added:
+* `set_overlaps` will now count duplicate values if non-sets are given as input
+* Add `WarningsWithTracebacks`. 
+
+### Fix:
+* Handle embed with PEP667 changes in Python 3.13
+
+
+## Version 1.5.3 - Released 2024-09-23
 
 ### Added:
 * Pint CLI can now handle "GB", "GiB" for gigabytes and gibibytes as well as other short common byte aliases.

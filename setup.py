@@ -32,7 +32,10 @@ def static_parse(varname, fpath):
         def visit_Assign(self, node):
             for target in node.targets:
                 if getattr(target, "id", None) == varname:
-                    self.static_value = node.value.s
+                    try:
+                        self.static_value = node.value.value
+                    except AttributeError:
+                        self.static_value = node.value.s
 
     visitor = StaticVisitor()
     visitor.visit(pt)
@@ -70,7 +73,7 @@ def parse_requirements(fname="requirements.txt", versions=False):
 
     Args:
         fname (str): path to requirements file
-        versions (bool | str, default=False):
+        versions (bool | str):
             If true include version specs.
             If strict, then pin to the minimum version.
 
@@ -106,7 +109,7 @@ def parse_requirements(fname="requirements.txt", versions=False):
                 info["package"] = line.split("#egg=")[1]
             else:
                 if "--find-links" in line:
-                    # setuptools doesnt seem to handle find links
+                    # setuptools does not seem to handle find links
                     line = line.split("--find-links")[0]
                 if ";" in line:
                     pkgpart, platpart = line.split(";")
@@ -159,7 +162,8 @@ def parse_requirements(fname="requirements.txt", versions=False):
                     if plat_deps is not None:
                         parts.append(";" + plat_deps)
                 item = "".join(parts)
-                yield item
+                if item:
+                    yield item
 
     packages = list(gen_packages_items())
     return packages
@@ -198,7 +202,6 @@ def parse_requirements(fname="requirements.txt", versions=False):
 NAME = "xdev"
 INIT_PATH = "xdev/__init__.py"
 VERSION = parse_version(INIT_PATH)
-
 if __name__ == "__main__":
     setupkw = {}
 
@@ -207,8 +210,10 @@ if __name__ == "__main__":
     )
     setupkw["extras_require"] = {
         "all": parse_requirements("requirements.txt", versions="loose"),
+        "runtime": parse_requirements("requirements/runtime.txt", versions="loose"),
         "tests": parse_requirements("requirements/tests.txt", versions="loose"),
         "optional": parse_requirements("requirements/optional.txt", versions="loose"),
+        "docs": parse_requirements("requirements/docs.txt", versions="loose"),
         "all-strict": parse_requirements("requirements.txt", versions="strict"),
         "runtime-strict": parse_requirements(
             "requirements/runtime.txt", versions="strict"
@@ -217,8 +222,8 @@ if __name__ == "__main__":
         "optional-strict": parse_requirements(
             "requirements/optional.txt", versions="strict"
         ),
+        "docs-strict": parse_requirements("requirements/docs.txt", versions="strict"),
     }
-
     setupkw["name"] = NAME
     setupkw["version"] = VERSION
     setupkw["author"] = "Jon Crall"
@@ -229,20 +234,21 @@ if __name__ == "__main__":
     setupkw["long_description_content_type"] = "text/x-rst"
     setupkw["license"] = "Apache 2"
     setupkw["packages"] = find_packages(".")
-    setupkw["python_requires"] = ">=3.7"
+    setupkw["python_requires"] = ">=3.8"
     setupkw["classifiers"] = [
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Utilities",
         "License :: OSI Approved :: Apache Software License",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
-        # "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
     ]
+    setupkw["package_data"] = {"": ["requirements/*.txt"]}
     setupkw["entry_points"] = {
         "console_scripts": [
             "xdev = xdev.__main__:main",
@@ -251,35 +257,4 @@ if __name__ == "__main__":
     setupkw["scripts"] = [
         "xdev/bin/freshpyenv.sh",
     ]
-    # setupkw['package_data'] = {"xdev": ["bash_completion.d/xdev-complete", "py.typed"]}
-    # setupkw['include_package_data'] = True
-    # setupkw['data_files'] = [('bash-completion', [
-    #     'xdev/share/bash-completion/xdev-complete.sh'
-    # ])]
     setup(**setupkw)
-
-"""
-# https://github.com/kislyuk/argcomplete/blob/develop/setup.py
-
-
-mkdir -p $HOME/code/xdev/xdev/bash_completion.d
-register-python-argcomplete xdev --external-argcomplete-script xdev-complete > $HOME/code/xdev/xdev/bash_completion.d/xdev-complete
-
-# Notes on bash completion:
-# https://unix.stackexchange.com/questions/416185/where-to-install-bash-completion-scripts-for-out-of-tree-packages
-
-# https://github.com/scop/bash-completion#faq
-# Put them in the completions subdir of $BASH_COMPLETION_USER_DIR (
-#     defaults to $XDG_DATA_HOME/bash-completion or
-#     ~/.local/share/bash-completion if $XDG_DATA_HOME is not set) to have them
-# loaded automatically on demand when the respective command is being completed.
-
-
-From JFC:
-When installing within the system python, the user scheme will be used. See [1][2]
-
-I think listing you file as data file will do it.
-
-[1] https://packaging.python.org/en/latest/guides/installing-using-linux-tools/
-[2] https://pip.pypa.io/en/stable/user_guide/#user-installs
-"""
