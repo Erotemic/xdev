@@ -30,7 +30,7 @@ TODO:
     - [ ] Automatically add custom defined names in this file to __all__
 """
 
-__version__ = '1.5.4'
+__version__ = '1.5.5'
 
 
 # __submodules__ = [
