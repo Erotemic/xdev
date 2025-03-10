@@ -9,12 +9,12 @@ scriptconfig >= 0.7.10
 
 lazy_loader>=0.3
 
-numpy>=2.1.0     ; python_version < '4.0'  and python_version >= '3.13'    # Python 3.13+
-numpy>=1.26.0    ; python_version < '3.13' and python_version >= '3.12'    # Python 3.12
+numpy>=2.1.0     ; python_version < '4.0'  and python_version >= '3.13'  # Python 3.13+
+numpy>=1.26.0    ; python_version < '3.13' and python_version >= '3.12'  # Python 3.12
 numpy>=1.23.2  ; python_version < '3.12' and python_version >= '3.11'    # Python 3.11
-numpy>=1.21.6  ; python_version < '3.11' and python_version >= '3.10'  # Python 3.10
-numpy>=1.19.3  ; python_version < '3.10' and python_version >= '3.9'   # Python 3.9
-numpy>=1.19.3  ; python_version < '3.9' and python_version >= '3.8'    # Python 3.8
+numpy>=1.21.6  ; python_version < '3.11' and python_version >= '3.10'    # Python 3.10
+numpy>=1.21.0  ; python_version < '3.10' and python_version >= '3.9'     # Python 3.9
+numpy>=1.21.0  ; python_version < '3.9' and python_version >= '3.8'      # Python 3.8
 
 # xdev availpkg line_profiler
 
@@ -22,10 +22,10 @@ numpy>=1.19.3  ; python_version < '3.9' and python_version >= '3.8'    # Python 
 # -e https://github.com/pyutils/line_profiler/tarball/master#egg=line_profiler
 
 
-networkx>=2.8       ; python_version < '4.0'  and python_version >= '3.11'    # Python 3.11+
-networkx>=2.8       ; python_version < '3.11' and python_version >= '3.10'    # Python 3.10
-networkx>=2.8       ; python_version < '3.10' and python_version >= '3.9'     # Python 3.9
-networkx>=2.8       ; python_version < '3.9'  and python_version >= '3.8'     # Python 3.8
+networkx>=3.1       ; python_version < '4.0'  and python_version >= '3.11'    # Python 3.11+
+networkx>=3.1       ; python_version < '3.11' and python_version >= '3.10'    # Python 3.10
+networkx>=3.1       ; python_version < '3.10' and python_version >= '3.9'     # Python 3.9
+networkx>=3.1       ; python_version < '3.9'  and python_version >= '3.8'     # Python 3.8
 
 rich>=12.3.0
 
