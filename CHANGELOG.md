@@ -5,7 +5,10 @@ We are currently working on porting this changelog to the specifications in
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Version 1.5.4 - Unreleased
+## Version 1.5.5 - Unreleased
+
+
+## Version 1.5.4 - Released 2025-03-09
 
 ### Added:
 * `set_overlaps` will now count duplicate values if non-sets are given as input
