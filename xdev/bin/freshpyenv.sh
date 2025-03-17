@@ -103,8 +103,18 @@ inside_docker_setup(){
     # Make a virtualenv
     PYVER=$("$PYEXE" -c "import sys; print('{}{}'.format(*sys.version_info[0:2]))")
     export PYVER
-    "$PYEXE" -m pip install virtualenv
-    "$PYEXE" -m virtualenv "venv$PYVER"
+
+    PIP_BACKEND=uv
+    if [[ "$PIP_BACKEND" == pip ]]; then
+         # USE PIP
+        "$PYEXE" -m pip install virtualenv
+        "$PYEXE" -m virtualenv "venv$PYVER"
+    elif [[ "$PIP_BACKEND" == uv ]]; then
+        # USE UV
+        "$PYEXE" -m pip install uv
+        "$PYEXE" -m uv venv "venv$PYVER" --seed
+    fi
+
 
     set +x
 
@@ -112,6 +122,9 @@ inside_docker_setup(){
     # the interactive session starts
     echo "source \"venv$PYVER/bin/activate\"" >> "$HOME"/.bashrc
 
+    if [[ "$PIP_BACKEND" == uv ]]; then
+        pip install uv
+    fi
     #pip install pip -U
     #pip install pip setuptools -U
 
@@ -122,16 +135,16 @@ You can now run some variant to install your repo. For example typical
 xcookie-style repos can be installed via. E.g.
 
 # FULL STRICT VARIANT
-pip install -e .[all-strict] -v
+uv pip install -e .[all-strict] -v
 
 # FULL LOOSE VARIANT
-pip install -e .[all] -v
+uv pip install -e .[all] -v
 
 # MINIMAL STRICT VARIANT
-pip install -e .[runtime-strict,tests-strict] -v
+uv pip install -e .[runtime-strict,tests-strict] -v
 
 # MINIMAL LOOSE VARIANT
-pip install -e .[tests] -v
+uv pip install -e .[tests] -v
 
 
 # OR

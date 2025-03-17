@@ -257,7 +257,7 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         #IPython.embed(config=config)
         #IPython.embed(module=module)
         # Exit python immediately if specifed
-        if vars().get('EXIT_NOW', False) or vars().get('qqq', False):
+        if parent_ns.get('EXIT_NOW', False) or parent_ns.get('qqq', False):
             print('[xdev.embed] EXIT_NOW specified')
             sys.exit(1)
 
