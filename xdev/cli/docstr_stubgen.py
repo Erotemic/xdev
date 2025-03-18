@@ -487,7 +487,7 @@ def stdlib_names():
 @ub.memoize
 def common_module_names():
     """
-    fpath = ub.grabdata('https://raw.githubusercontent.com/hugovk/top-pypi-packages/main/top-pypi-packages-30-days.json', expires=86400)
+    fpath = ub.grabdata('https://raw.githubusercontent.com/hugovk/top-pypi-packages/main/top-pypi-packages.json', expires=86400)
     fpath = ub.Path(fpath)
     import json
     data = json.loads(fpath.read_text())
