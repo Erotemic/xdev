@@ -115,6 +115,13 @@ class DirectoryWalker:
         self._topo_order = None
         self._type_to_path = {}
 
+    @property
+    def root(self):
+        """
+        Alias for ``self.dpath``
+        """
+        return self.dpath
+
     def write_network_text(self, **kwargs):
         nx.write_network_text(self.graph, rich.print, end='', **kwargs)
 
@@ -868,3 +875,103 @@ def _null_coerce(cls, arg, **kwargs):
         return arg
     else:
         return cls.coerce(arg, **kwargs)
+
+
+class DirectoryDiff:
+    """
+    Given two directory walkers (that walk over what should be similar
+    directories), compare the state of them both.
+
+    Ignore:
+        from xdev.directory_walker import *  # NOQA
+        walker1 = DirectoryWalker('.')
+        walker2 = DirectoryWalker('.')
+        walker1.build()
+        walker2.build()
+        self = DirectoryDiff(walker1, walker2).build()
+        self.write_report()
+    """
+    def __init__(self, walker1, walker2):
+        self.walker1 = walker1
+        self.walker2 = walker2
+
+    def build(self):
+        rel_paths1 = {p.relative_to(self.walker1.dpath) for p in self.walker1.graph.nodes}
+        rel_paths2 = {p.relative_to(self.walker2.dpath) for p in self.walker2.graph.nodes}
+        self.root1 = self.walker1.dpath
+        self.root2 = self.walker2.dpath
+        self.common_paths = rel_paths1 & rel_paths2
+        self.unique_paths1 = rel_paths1 - rel_paths2
+        self.unique_paths2 = rel_paths2 - rel_paths1
+
+        common_table = []
+        for rel_path in self.common_paths:
+            path1 = self.root1 / rel_path
+            path2 = self.root2 / rel_path
+            row = {
+                'rel_path': rel_path,
+                'type': None,
+                'hash': None,
+                'num_errors': 0,
+            }
+            data1 = self.walker1.graph.nodes[path1]
+            data2 = self.walker2.graph.nodes[path2]
+
+            to_compare = {
+                'item1': {'type': data1['type']},
+                'item2': {'type': data2['type']},
+            }
+            type1 = data1['type']
+            type2 = data2['type']
+            if type1 == type2:
+                if data1['isfile']:
+                    # TODO: control what is compared.
+                    to_compare['item1']['hash'] = ub.hash_file(path1)
+                    to_compare['item2']['hash'] = ub.hash_file(path2)
+
+                    stat1 = path1.stat()
+                    stat2 = path2.stat()
+                    to_compare['item1']['st_mode'] = stat1.st_mode
+                    to_compare['item2']['st_mode'] = stat2.st_mode
+                    to_compare['item1']['st_mtime'] = stat1.st_mtime
+                    to_compare['item2']['st_mtime'] = stat2.st_mtime
+                    to_compare['item1']['st_ctime'] = stat1.st_ctime
+                    to_compare['item2']['st_ctime'] = stat2.st_ctime
+                    to_compare['item1']['st_gid'] = stat1.st_gid
+                    to_compare['item2']['st_gid'] = stat2.st_gid
+                    to_compare['item1']['st_uid'] = stat1.st_uid
+                    to_compare['item2']['st_uid'] = stat2.st_uid
+
+                to_compare['item1']['stats'] = data2['stats']
+                to_compare['item2']['stats'] = data2['stats']
+
+            compare1 = to_compare['item1']
+            compare2 = to_compare['item2']
+            for k in compare1.keys():
+                v1 = compare1[k]
+                v2 = compare2[k]
+                if v1 != v2:
+                    row[k] = f'MISMATCH: {v1} {v2}'
+                    row['num_errors'] += 1
+                else:
+                    row[k] = v1
+            common_table.append(row)
+
+        self.common_table = common_table
+        return self
+
+    def summary(self):
+        from collections import Counter
+        error_hist = Counter({0: 0, 1: 0})
+        error_hist.update(r['num_errors'] for r in self.common_table)
+        summary = {
+            'n_common_paths': len(self.common_paths),
+            'n_unique_paths1': len(self.unique_paths1),
+            'n_unique_paths2': len(self.unique_paths2),
+            'error_hist': error_hist,
+        }
+        return summary
+
+    def write_report(self):
+        summary = self.summary()
+        print(f'summary = {ub.urepr(summary, nl=1)}')
