@@ -142,6 +142,21 @@ class RegexBuilder:
         return self.special['nongreedy_zero_or_more']
 
     @property
+    def integer(self):
+        """
+        Pattern to match an integer.
+
+        Example:
+            >>> from xdev.regex_builder import *  # NOQA
+            >>> b = PythonRegexBuilder()
+            >>> pat = re.compile('^' + b.integer + '$')
+            >>> assert pat.match('3')
+            >>> assert pat.match('+3')
+            >>> assert pat.match('-32')
+        """
+        return '[-+]?[0-9]+'
+
+    @property
     def number(self):
         """
         Can match a generic floating point number

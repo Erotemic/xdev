@@ -127,7 +127,7 @@ def _resolve_set(items, name='items'):
     return unique_items, n_total, dup_counts
 
 
-def set_overlaps(set1, set2, s1='s1', s2='s2'):
+def set_overlaps(set1, set2, s1='s1', s2='s2', n_samples=None):
     """
     Return sizes about set overlaps.
 
@@ -139,9 +139,11 @@ def set_overlaps(set1, set2, s1='s1', s2='s2'):
         set2 (Iterable): the second set of items
         s1 (str): name for set1
         s2 (str): name for set2
+        n_samples (int | None): provide up to n examples from each set.
 
     Returns:
-        Dict[str, int]: sizes of sets intersections unions and differences
+        Dict[str, int] | Dict[str, int | Dict]:
+            sizes of sets intersections unions and differences
 
     Example:
         >>> import ubelt as ub
@@ -190,6 +192,19 @@ def set_overlaps(set1, set2, s1='s1', s2='s2'):
         overlaps[f'{s1} total'] = n_total1
     if dup_counts2:
         overlaps[f'{s2} total'] = n_total2
+
+    if n_samples:
+        # If requested provide samples of the parts.
+        raw_samples = {
+            's1': set1,
+            's2': set2,
+            'isect': set1.intersection(set2),
+            'union': set1.union(set2),
+            f'{s1} - {s2}': set1.difference(set2),
+            f'{s2} - {s1}': set2.difference(set1),
+        }
+        from itertools import islice
+        overlaps['samples'] = {k: list(islice(v, n_samples)) for k, v in raw_samples.items()}
     return overlaps
 
 
