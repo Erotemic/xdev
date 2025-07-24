@@ -457,21 +457,65 @@ def summarize_package_availability(package_name):
                 columns=['requires_python'],
                 values='count')
 
+    if 1:
+        # Handle at least one case of sorting by simple requires python versions
+        # TODO: could probably generalize and make more elegant
+        try:
+            if piv.columns.name == 'requires_python':
+                import re
+                columns = piv.columns
+                version_items = []
+                non_version_items = []
+                ge_version_pat = re.compile(r'>=\s*([0-9]+(?:\.[0-9]+)*[a-zA-Z0-9.\-+]*)\b')
+
+                for idx, col in enumerate(columns):
+                    if isinstance(col, str):
+                        match = ge_version_pat.match(col)
+                        if match:
+                            ver_str = match.group(1)
+                            try:
+                                version = Version(ver_str)
+                                version_items.append((idx, version))
+                                continue  # Skip to next item
+                            except Exception:
+                                pass
+                    non_version_items.append(idx)
+
+                # Sort the versioned items by Version object
+                version_items_sorted = sorted(version_items, key=lambda x: x[1])
+                version_indices = [idx for idx, _ in version_items_sorted]
+                # Combine sorted version indices + original-order non-version indices
+                final_order = version_indices + non_version_items
+                piv = piv.iloc[:, final_order]
+        except Exception:
+            ...
+
     vec_ver = vectorize(Version)
     # vec_sorter(['cp310', 'cp27'])
     # vec_sorter(df.abi_tag)
     try:
+        piv = piv.sort_values('os', axis=1)
+    except Exception:
+        ...
+    try:
         piv = piv.sort_values('os', axis=1, dtype=str)
     except Exception:
         ...
+
     # try:
     #     piv = piv.sort_values('abi_tag', axis=1, key=vec_sorter, dtype=str)
     # except Exception:
     #     ...
     try:
+        piv = piv.sort_values('pkg_version', key=vec_ver)
+    except Exception:
+        ...
+    try:
+        # Looks like they removed the dtype argument?
         piv = piv.sort_values('pkg_version', key=vec_ver, dtype=str)
     except Exception:
         ...
+
     import rich
     rich.print('')
     rich.print('package_name = {}'.format(ub.repr2(package_name, nl=1)))
