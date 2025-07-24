@@ -60,7 +60,7 @@ class PyVersionCLI(scfg.DataConfig):
         modname = args['modname']
 
         if args['backend'] == 'auto':
-            candidate_backends  = ['import', 'pkg_resources']
+            candidate_backends  = ['importlib', 'import', 'pkg_resources']
         else:
             candidate_backends = [args['backend']]
 
