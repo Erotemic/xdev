@@ -33,6 +33,7 @@ class DirectoryWalker:
                  parse_content=False,
                  show_progress=True,
                  ignore_empty_dirs=False,
+                 sort=False,
                  fs=None,
                  **kwargs):
         """
@@ -59,6 +60,10 @@ class DirectoryWalker:
 
             parse_content (bool):
                 if True, include content analysis
+
+            sort (bool):
+                if True, sort files and directories before adding them to the
+                graph.
 
             fs (fsspec.spec.AbstractFileSystem):
                 experimental: an fsspec filesystem
@@ -94,6 +99,7 @@ class DirectoryWalker:
         self.max_files = max_files
         self.show_progress = show_progress
         self.ignore_empty_dirs = ignore_empty_dirs
+        self.sort = sort
 
         kwargs = ub.udict(kwargs)
 
@@ -290,6 +296,11 @@ class DirectoryWalker:
                 )
                 # if root != dpath:
                 #     g.add_edge(root.parent, root)
+
+                if self.sort:
+                    # TODO: good API to customize sorting
+                    fnames = sorted(fnames)
+                    dnames = sorted(dnames)
 
                 if not too_many_files:
                     for f in fnames:
