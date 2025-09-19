@@ -116,8 +116,11 @@ def _stop_rich_live_contexts():
     if 'rich' in sys.modules:
         import rich
         console = rich.get_console()
-        if console._live is not None:
-            console._live.__exit__(None, None, None)
+        try:
+            if console._live is not None:
+                console._live.__exit__(None, None, None)
+        except AttributeError:
+            print('FIXME: Failed to handle rich live context. Probably due to a rich version bump')
 
 
 def embed(parent_locals=None, parent_globals=None, exec_lines=None,

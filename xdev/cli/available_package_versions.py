@@ -13,6 +13,10 @@ CommandLine:
     xdev availpkg networkx
     xdev availpkg fsspec
     xdev availpkg coverage
+
+
+    #Triggers bdist dumb case
+    xdev availpkg flex
 """
 import scriptconfig as scfg
 import ubelt as ub
@@ -303,6 +307,18 @@ def grab_pypi_items(package_name, refresh=False):
                     common2 = ub.dict_subset(wheel_info, common)
                     assert common1 == common2
                     item.update(wheel_info)
+            elif packagetype == 'bdist_dumb':
+                # Attempt to extract platform info from filename
+                # Examples: 'foo-1.0.win32.zip', 'bar-2.3.linux-x86_64.tar.gz'
+                fname = item['filename']
+                import re
+                match = re.match(r'^(?P<name>[^-]+)-(?P<version>[^.]+)\.(?P<platform>[^.]+)\.(zip|tar\.gz|tar\.bz2|tar\.xz)$', fname)
+                if match:
+                    platform_tag = match.group('platform')
+                    item['platform_tag'] = platform_tag
+                    platinfo = parse_platform_tag(platform_tag)
+                    item['os'] = platinfo.get('os')
+                    item['arch'] = platinfo.get('arch')
             else:
                 raise KeyError(f'{packagetype} for {package_name}')
             item['pkg_version'] = version

@@ -132,6 +132,37 @@ class DirectoryWalker:
         nx.write_network_text(self.graph, rich.print, end='', **kwargs)
 
     def write_report(self, **nxtxt_kwargs):
+        """
+        Args:
+            **nxtxt_kwargs:
+                path : string or file or callable or None
+                   Filename or file handle for data output.
+                   if a function, then it will be called for each generated line.
+                   if None, this will default to "sys.stdout.write"
+
+                with_labels : bool | str
+                    If True will use the "label" attribute of a node to display if it
+                    exists otherwise it will use the node value itself. If given as a
+                    string, then that attribute name will be used instead of "label".
+                    Defaults to True.
+
+                sources : List
+                    Specifies which nodes to start traversal from. Note: nodes that are not
+                    reachable from one of these sources may not be shown. If unspecified,
+                    the minimal set of nodes needed to reach all others will be used.
+
+                max_depth : int | None
+                    The maximum depth to traverse before stopping. Defaults to None.
+
+                ascii_only : Boolean
+                    If True only ASCII characters are used to construct the visualization
+
+                end : string
+                    The line ending character
+
+                vertical_chains : Boolean
+                    If True, chains of nodes will be drawn vertically when possible.
+        """
         import pandas as pd
         try:
             self.write_network_text(**nxtxt_kwargs)
