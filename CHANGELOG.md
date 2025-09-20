@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 * `set_overlaps` now has an `n_samples` keyword argument.
 * Add `integer` pattern to regex builder
 * Add CLI formatter.
+* Add CSV formatter.
 
 
 ### Change
