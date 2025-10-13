@@ -447,6 +447,8 @@ class XdevCLI(ModalCLI):
             b = RegexBuilder.coerce(config.backend)
             rprint(f'b.constructs = {ub.urepr(b.constructs, nl=1, sk=1, align=":")}')
 
+    from xdev.cli.cli_formatter import CLIFormatterCLI
+
 
 def rprint(*args):
     try:

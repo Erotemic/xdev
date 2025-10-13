@@ -31,11 +31,13 @@ import scriptconfig as scfg
 import ubelt as ub
 
 
-class CliFormatterCLI(scfg.DataConfig):
+class CLIFormatterCLI(scfg.DataConfig):
     """
     The idea is that we can ingest a dictionary, argv list, or a command line
     string and convert between any of these formats.
     """
+    __command__ = "cli_formatter"
+
     input = scfg.Value(None, type=str, help='the input', position=1)
 
     input_type = scfg.Value('auto', help='attempt to infer what type the input is')
@@ -50,7 +52,7 @@ class CliFormatterCLI(scfg.DataConfig):
             >>> from cli_formatter import *  # NOQA
             >>> cmdline = 0
             >>> kwargs = dict()
-            >>> cls = CliFormatterCLI
+            >>> cls = CLIFormatterCLI
             >>> cls.main(cmdline=cmdline, **kwargs)
         """
         config = cls.cli(cmdline=cmdline, data=kwargs, strict=True, verbose='auto')
@@ -71,7 +73,7 @@ class CliFormatterCLI(scfg.DataConfig):
             if print_output_type:
                 print(f'\nOutput Type ({output_type}):')
             if output_type == 'dict':
-                print(config_dict)
+                print(f'config_dict = {ub.urepr(config_dict, nl=1)}')
             if output_type == 'yaml':
                 print(kwutil.Yaml.dumps(config_dict))
             if output_type == 'argv':
@@ -94,8 +96,10 @@ def parse_cli_config(text, input_type='auto'):
 
     Example:
         >>> from xdev.cli.cli_formatter import *  # NOQA
+        >>> from xdev.cli.cli_formatter import _InputFormatGuesser
         >>> cases = [
         >>>      '--foo=bar --bar',
+        >>>      '--foo=bar --bar -- pos args',
         >>>     '{foo: bar, baz: true}',
         >>>     '{"foo": "bar", "baz": True}'
         >>> ]
@@ -115,7 +119,7 @@ def parse_cli_config(text, input_type='auto'):
     elif input_type == 'yaml':
         config_dict = kwutil.Yaml.coerce(text)
     elif input_type == 'argv':
-        config_dict = parse_argv_as_config_dict(text)
+        config_dict = parse_argv_as_config_dict(text, with_positional=True)
     else:
         raise KeyError(input_type)
     return config_dict
@@ -324,7 +328,7 @@ def pretty_argjoin(args):
     return text
 
 
-def parse_argv_as_config_dict(text):
+def parse_argv_as_config_dict(text, with_positional=False):
     """
     Converts argv text into a config dictionary.
 
@@ -344,6 +348,10 @@ def parse_argv_as_config_dict(text):
         >>> config = parse_argv_as_config_dict(text)
         >>> print(f'config = {ub.urepr(config, nl=1)}')
         >>> #
+        >>> text = '--foo=bar --bar 1 --baz -- pos args'
+        >>> config = parse_argv_as_config_dict(text, with_positional=True)
+        >>> print(f'config = {ub.urepr(config, nl=1)}')
+        >>> #
         >>> text = '--foo bar baz biz --key=value --flag1 --flag2 -- pos1 pos2'
         >>> config = parse_argv_as_config_dict(text)
         >>> print(f'config = {ub.urepr(config, nl=1)}')
@@ -352,7 +360,9 @@ def parse_argv_as_config_dict(text):
     config = {}
     for item in components:
         if item['type'] == 'positional':
-            continue
+            if with_positional:
+                config.setdefault('__positional__', [])
+                config['__positional__'].append(item['value'])
         if item['type'] == 'separator':
             # no more key/value to parse
             break
@@ -511,7 +521,7 @@ def parse_bash_invocation(bash_text, with_tokens=False):
     return components
 
 
-__cli__ = CliFormatterCLI
+__cli__ = CLIFormatterCLI
 main = __cli__.main
 
 if __name__ == '__main__':

@@ -256,6 +256,22 @@ class DirectoryWalker:
         self._sort()
         return self
 
+    def stats(self, typed=False, root=None):
+        """
+        Return stats about the directories starting at the root.
+        Requires walker has been built. If root unspecified uses walker root
+        """
+        node = self.graph.nodes[self.root]
+        stats = node['stats']
+        # node_type = node['type']
+        if typed:
+            _stats = stats
+        else:
+            _stats = self._reduce_stats(stats)
+        return _stats
+        # self._humanize_stats(stats, node_type)
+        # disp_stats = self._humanize_stats(_stats, node_type)
+
     def _inplace_filter_dnames(self, dnames):
         if self.include_dnames is not None:
             dnames[:] = [d for d in dnames if self.include_dnames.match(d)]
@@ -459,12 +475,21 @@ class DirectoryWalker:
                 result = job.result()
                 yield fpath, result
 
-    def _humanize_stats(self, stats, node_type, reduce_prefix=False):
+    @classmethod
+    def _reduce_stats(cls, stats):
+        """
+        Combines stats over the a prefix
+        """
+        suffixes = [k.split('.', 1)[1] for k in stats.keys()]
+        _stats = ub.udict(ub.group_items(stats.values(), suffixes)).map_values(sum)
+        # _stats.update({k: v for k, v in stats.items() if k.endswith('.files')})
+        return _stats
+
+    @classmethod
+    def _humanize_stats(cls, stats, node_type, reduce_prefix=False):
         disp_stats = {}
         if reduce_prefix:
-            suffixes = [k.split('.', 1)[1] for k in stats.keys()]
-            _stats = ub.udict(ub.group_items(stats.values(), suffixes)).map_values(sum)
-            # _stats.update({k: v for k, v in stats.items() if k.endswith('.files')})
+            _stats = cls._reduce_stats(stats)
         else:
             _stats = stats
         if node_type == 'dir':
