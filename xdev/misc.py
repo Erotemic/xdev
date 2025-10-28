@@ -277,16 +277,26 @@ def nested_type(obj, unions=False):
 
 
 def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
-             colored=False):
+             colored=False, style='ndiff', fromfile='', tofile=''):
     r"""
     Uses difflib to return a difference string between two similar texts
 
     Args:
         text1 (str): old text
+
         text2 (str): new text
+
         context_lines (int): number of lines of unchanged context
+
         ignore_whitespace (bool):
+
         colored (bool): if true highlight the diff
+
+        style (str): can be ndiff or unified (git style)
+
+        fromfile (str): unified diff "old" header label
+
+        tofile (str): unified diff "new" header label
 
     Returns:
         str: formatted difference text message
@@ -307,18 +317,53 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
 
     Example:
         >>> # build test data
+        >>> from xdev.misc import *  # NOQA
         >>> text1 = 'one\ntwo\nthree\n3.1\n3.14\n3.1415\npi\n3.4\n3.5\n4'
         >>> text2 = 'one\ntwo\nfive\n3.1\n3.14\n3.1415\npi\n3.4\n4'
         >>> # execute function
         >>> context_lines = 1
         >>> result = difftext(text1, text2, context_lines, colored=True)
-        >>> # verify results
         >>> print(result)
+        >>> #
+        >>> result = difftext(text1, text2, context_lines, colored=True, style='unified')
+        >>> print(result)
+
+    Example:
+        >>> # build test data for a git-apply-able unified patch
+        >>> from xdev.misc import *  # NOQA
+        >>> text1 = 'alpha\nbeta\ngamma\n'
+        >>> text2 = 'alpha\nbeta\nGAMMA\ndelta\n'
+        >>> patch = difftext(text1, text2, context_lines=3, style='unified', colored=True,
+        ...                  fromfile='a/example.txt', tofile='b/example.txt')
+        >>> print(patch)  # doctest: +ELLIPSIS
+        >>> assert patch.startswith('--- a/example.txt\\n+++ b/example.txt\\n@@')
     """
     import ubelt as ub
     import difflib
     text1 = ub.ensure_unicode(text1)
     text2 = ub.ensure_unicode(text2)
+
+    if style == 'unified':
+        # difflib.unified_diff expects an integer for n (context lines)
+        n = 3 if (context_lines is None) else int(context_lines)
+
+        text1_lines = text1.splitlines(True)
+        text2_lines = text2.splitlines(True)
+
+        # NOTE: lineterm='\n' avoids extra blank lines and matches typical patches
+        diff_iter = difflib.unified_diff(
+            text1_lines, text2_lines,
+            fromfile=fromfile, tofile=tofile,
+            n=n, lineterm='\n'
+        )
+        text = ''.join(diff_iter)
+        if colored:
+            text = ub.highlight_code(text, lexer_name='diff')
+        # For git patches, never colorize the output (would break `git apply`)
+        return text
+
+    assert style == 'ndiff'
+
     text1_lines = text1.splitlines()
     text2_lines = text2.splitlines()
     if ignore_whitespace:
@@ -328,6 +373,7 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
                         charjunk=difflib.IS_CHARACTER_JUNK)
     else:
         ndiff_kw = {}
+
     all_diff_lines = list(difflib.ndiff(text1_lines, text2_lines, **ndiff_kw))
 
     if context_lines is None:

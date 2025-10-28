@@ -449,6 +449,8 @@ class XdevCLI(ModalCLI):
 
     from xdev.cli.cli_formatter import CLIFormatterCLI
 
+    from xdev.cli.expand_import_star import ExpandImportStarCLI as expand_import_star
+
 
 def rprint(*args):
     try:
@@ -462,8 +464,9 @@ def main():
     import xdev
     cli = XdevCLI()
     cli.version = xdev.__version__
-    XDEV_LOOSE_CLI = os.environ.get('XDEV_LOOSE_CLI', '')
-    cli.main(strict=not XDEV_LOOSE_CLI)
+    # XDEV_LOOSE_CLI = os.environ.get('XDEV_LOOSE_CLI', '')
+    # cli.main(strict=not XDEV_LOOSE_CLI)
+    cli.main(strict=True)
 
 
 if __name__ == '__main__':

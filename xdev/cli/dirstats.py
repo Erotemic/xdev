@@ -33,8 +33,8 @@ class DirectoryStatsCLI(scfg.DataConfig):
     max_walk_depth = scfg.Value(None, short_alias=['L'], help='maximum depth to walk')
     max_display_depth = scfg.Value(None, short_alias=['D'], help='maximum depth to display')
 
-    verbose = scfg.Value(0, isflag=True, short_alias=['-v'])
-    version = scfg.Value(False, isflag=True, short_alias=['-V'])
+    verbose = scfg.Value(0, isflag=True, short_alias=['v'])
+    version = scfg.Value(False, isflag=True, short_alias=['V'])
     python = scfg.Value(False, isflag=True, help='enable python repository defaults', alias=['pydev'])
 
     ignore_dotprefix = scfg.Value(True, isflag=True, help='if True ignore directories and folders with a dot prefix')

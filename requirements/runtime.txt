@@ -5,7 +5,7 @@ pygments >= 2.12.0
 IPython >= 7.16.2
 parse >= 1.19.0
 pyflakes >= 2.5.0
-scriptconfig >= 0.7.10
+scriptconfig >= 0.8.4
 
 lazy_loader>=0.3
 
