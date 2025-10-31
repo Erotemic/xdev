@@ -340,6 +340,7 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
     """
     import ubelt as ub
     import difflib
+    import os
     text1 = ub.ensure_unicode(text1)
     text2 = ub.ensure_unicode(text2)
 
@@ -353,7 +354,7 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
         # NOTE: lineterm='\n' avoids extra blank lines and matches typical patches
         diff_iter = difflib.unified_diff(
             text1_lines, text2_lines,
-            fromfile=fromfile, tofile=tofile,
+            fromfile=os.fspath(fromfile), tofile=os.fspath(tofile),
             n=n, lineterm='\n'
         )
         text = ''.join(diff_iter)

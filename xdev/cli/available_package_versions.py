@@ -701,6 +701,12 @@ def build_package_table(package_name, refresh=False):
                 # TODO: can use better heuristics here
                 min_pyver = last_min_pyver
 
+            # HACK, 3.14 seemed to update the names for the versions.
+            if max_pyver == 'cp314':
+                max_pyver = '3.14'
+            if min_pyver == 'cp314':
+                min_pyver = '3.14'
+
             row['min_pyver'] = min_pyver
             row['max_pyver'] = max_pyver
 
