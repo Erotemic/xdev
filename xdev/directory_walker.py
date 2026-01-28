@@ -131,7 +131,7 @@ class DirectoryWalker:
     def write_network_text(self, **kwargs):
         nx.write_network_text(self.graph, rich.print, end='', **kwargs)
 
-    def write_report(self, **nxtxt_kwargs):
+    def write_report(self, max_nodes=10, **nxtxt_kwargs):
         """
         Args:
             **nxtxt_kwargs:
@@ -162,12 +162,21 @@ class DirectoryWalker:
 
                 vertical_chains : Boolean
                     If True, chains of nodes will be drawn vertically when possible.
+
+        Example:
+            >>> import xdev
+            >>> walker = xdev.DirectoryWalker.demo()
+            >>> walker.write_report(max_nodes=0)
         """
         import pandas as pd
-        try:
-            self.write_network_text(**nxtxt_kwargs)
-        except KeyboardInterrupt:
-            ...
+
+        if len(self.graph.nodes) <= max_nodes * 10000:
+            try:
+                self.write_network_text(**nxtxt_kwargs)
+            except KeyboardInterrupt:
+                ...
+        else:
+            print('...graph to big, not printing')
 
         if len(self._topo_order):
             root_node = self._topo_order[0]
@@ -699,6 +708,169 @@ class DirectoryWalker:
         new.add_nodes_from(ordered_nodes.items())
         new.add_edges_from(ordered_edges)
         self.graph = new
+
+    @classmethod
+    def demo(cls):
+        """
+        Create a persistent demo directory tree and return a built walker.
+
+        The directory is created under ``ub.Path.appdir('directory_walker/demo')`` and
+        is re-initialized on each call to keep doctests deterministic.
+
+        Returns:
+            DirectoryWalker
+
+        Example:
+            >>> import xdev
+            >>> walker = xdev.DirectoryWalker.demo()
+            >>> walker.dpath.exists()
+            True
+        """
+        import os
+        import ubelt as ub
+
+        demo_root = ub.Path.appdir('xdev/directory_walker/demo').ensuredir()
+
+        # Make deterministic by clearing and recreating
+        if demo_root.exists():
+            demo_root.delete()
+        demo_root.ensuredir()
+
+        # Build a small stable tree
+        (demo_root / 'adir').ensuredir()
+        (demo_root / 'bdir').ensuredir()
+        (demo_root / 'adir' / 'foo.txt').write_text('hello')
+        (demo_root / 'adir' / 'bar.md').write_text('world')
+        (demo_root / 'bdir' / 'foo.md').write_text('x')
+
+        # Optional symlink (best effort)
+        link_path = demo_root / 'alink.txt'
+        try:
+            os.symlink(demo_root / 'adir' / 'foo.txt', link_path)
+        except Exception:
+            # Windows / permissions / filesystem may not allow symlinks
+            pass
+
+        walker = cls(demo_root)
+        walker.build()
+        return walker
+
+    def find(self, pattern, data=False, root=None, filetype=None):
+        """
+        Search for nodes whose **name** matches a MultiPattern, optionally filtering by type.
+
+        Args:
+            pattern: Coerced via ``kwutil.MultiPattern.coerce(pattern)`` and tested with
+                ``pattern.match(node.name)``.
+            data (bool): if True, also yield the node data dict
+            root (pathlib.Path | None): if specified, search descendants of this node
+            filetype (Iterable[str] | None):
+                Iterable of type chars from {'f', 'd', 'l'}:
+                  - 'f' = regular file
+                  - 'd' = directory
+                  - 'l' = symlink
+                Examples: 'f', 'fd', {'l'}, ['f','l'].
+
+        Yields:
+            pathlib.Path | Tuple[pathlib.Path, dict]
+
+        Example:
+            >>> import xdev
+            >>> walker = DirectoryWalker.demo()
+            >>> sorted(p.name for p in walker.find('foo.txt'))
+            ['foo.txt']
+            >>> sorted(p.name for p in walker.find('foo*', filetype='f'))
+            ['foo.md', 'foo.txt']
+            >>> sorted(p.name for p in walker.find('adir', filetype='d'))
+            ['adir']
+            >>> # Best-effort: only assert something meaningful if the symlink exists
+            >>> links = list(walker.find('alink.txt', filetype='l'))
+            >>> (len(links) == 1)
+            True
+        """
+        import networkx as nx
+        import kwutil
+
+        if self.graph is None:
+            raise RuntimeError('DirectoryWalker.find() requires build() first')
+
+        graph = self.graph
+
+        # Normalize root
+        if root is not None:
+            if root not in graph:
+                raise KeyError(f'root {root!r} not found in graph')
+            nodes = nx.descendants(graph, root)
+        else:
+            nodes = graph.nodes
+
+        # Coerce pattern
+        pattern = kwutil.MultiPattern.coerce(pattern)
+
+        # Normalize filetype: iterable of chars in {f,d,l}
+        ftypes = None
+        if filetype is not None:
+            ftypes = set(filetype)
+            unknown = ftypes - {'f', 'd', 'l'}
+            if unknown:
+                raise ValueError(f'unknown filetype chars={sorted(unknown)!r}, expected subset of {{"f","d","l"}}')
+
+        for node in nodes:
+            # Match only on node.name
+            if not pattern.match(node.name):
+                continue
+
+            node_data = graph.nodes[node]
+
+            if ftypes is not None:
+                keep = False
+                if ('l' in ftypes and node_data['islink']):
+                    keep = True
+                if ('f' in ftypes and node_data['isfile']):
+                    keep = True
+                if ('d' in ftypes and node_data['isdir']):
+                    keep = True
+
+                if not keep:
+                    continue
+
+            if data:
+                yield node, node_data
+            else:
+                yield node
+
+    def find_one(self, pattern, data=False, root=None, filetype=None):
+        """
+        Find exactly one node matching a pattern (and optional type filter).
+
+        Args:
+            pattern: Coerced via ``kwutil.MultiPattern.coerce(pattern)`` (see ``find``).
+            data (bool): if True, also return the node data dict.
+            root (pathlib.Path | None): if specified, search descendants of this node.
+            filetype (Iterable[str] | None): iterable of {'f','d','l'} (see ``find``).
+
+        Returns:
+            pathlib.Path | Tuple[pathlib.Path, dict]
+
+        Raises:
+            KeyError: if zero or multiple matches are found.
+
+        Example:
+            >>> walker = DirectoryWalker.demo()
+            >>> walker.find_one('foo.txt').name
+            'foo.txt'
+        """
+        matches = list(self.find(pattern, data=data, root=root, filetype=filetype))
+
+        if not matches:
+            raise KeyError(f'find_one({pattern!r}) found no matches')
+
+        if len(matches) > 1:
+            raise KeyError(
+                f'find_one({pattern!r}) found {len(matches)} matches, expected exactly one'
+            )
+
+        return matches[0]
 
 
 def parse_file_stats(fpath, parse_content=True, fs=None):
