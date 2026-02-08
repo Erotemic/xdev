@@ -341,8 +341,6 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
     import ubelt as ub
     import difflib
     import os
-    text1 = ub.ensure_unicode(text1)
-    text2 = ub.ensure_unicode(text2)
 
     if style == 'unified':
         # difflib.unified_diff expects an integer for n (context lines)

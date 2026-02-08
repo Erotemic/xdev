@@ -352,8 +352,7 @@ def sedfile(fpath, regexpr, repl, dry=False, verbose=1):
                 mode_text, nChanged, rel_fpath))
             print(' * --------------------')
         new_file = ''.join(new_file_lines)
-        old_file = ub.ensure_unicode(
-            ''.join(list(map(ub.ensure_unicode, file_lines))))
+        old_file = ''.join(file_lines)
         if verbose:
             print(xdev.difftext(old_file, new_file, colored=True))
         if not dry:
