@@ -21,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fix:
 * Issue not respecting qqq=1 while embedding in 3.13
+* Issue in sed cli using smartcast scriptconfig 
 
 
 ## Version 1.5.4 - Released 2025-03-09

@@ -84,11 +84,11 @@ class XdevCLI(ModalCLI):
         """
         __command__ = 'sed'
         __default__ = {
-            'regexpr': scfg.Value('', position=1, help=ub.paragraph(
+            'regexpr': scfg.Value('', type=str, position=1, help=ub.paragraph(
                 '''
                 The pattern to search for.
                 ''')),
-            'repl': scfg.Value('', position=2, help=ub.paragraph(
+            'repl': scfg.Value('', type=str, position=2, help=ub.paragraph(
                 '''
                 The pattern to replace with.
                 ''')),
