@@ -36,6 +36,7 @@ class DirectoryStatsCLI(scfg.DataConfig):
     verbose = scfg.Value(0, isflag=True, short_alias=['v'])
     version = scfg.Value(False, isflag=True, short_alias=['V'])
     python = scfg.Value(False, isflag=True, help='enable python repository defaults', alias=['pydev'])
+    rust = scfg.Value(False, isflag=True, help='enable rust repository defaults', alias=['rsdev'])
 
     ignore_dotprefix = scfg.Value(True, isflag=True, help='if True ignore directories and folders with a dot prefix')
 
@@ -64,6 +65,22 @@ class DirectoryStatsCLI(scfg.DataConfig):
                 '_modules',
                 'htmlcov',
                 # '.*',
+            ]
+
+        if config.rust:
+            # Effective LOC requires content parsing.
+            config.parse_content = True
+
+            # If the user did not give an include filter, focus the report on
+            # Rust source files. Explicit include_fnames still wins.
+            if config.include_fnames is None:
+                config.include_fnames = ['*.rs']
+
+            config.exclude_fnames += [
+                'Cargo.lock',
+            ]
+            config.exclude_dnames += [
+                'target',
             ]
 
     @classmethod

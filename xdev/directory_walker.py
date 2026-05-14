@@ -932,6 +932,12 @@ def parse_file_stats(fpath, parse_content=True, fs=None):
                 else:
                     stats['doc_lines'] = total_doclines
 
+            elif ext == '.rs':
+                try:
+                    stats.update(parse_rust_content_stats(text))
+                except Exception:
+                    ...
+
     stats = {prefix + k: v for k, v in stats.items()}
     return stats
 
@@ -1214,3 +1220,181 @@ class DirectoryDiff:
     def write_report(self):
         summary = self.summary()
         print(f'summary = {ub.urepr(summary, nl=1)}')
+
+
+# TODO: move rust utils to helpers
+
+
+def parse_rust_content_stats(source: str):
+    """
+    Count effective Rust lines of code.
+
+    This counts non-empty lines after removing Rust comments, while preserving
+    comment-like text inside normal strings, raw strings, byte strings, and C
+    strings. Rust nested block comments are handled.
+
+    Returns:
+        Dict[str, int]: contains code_lines, comment_lines, and doc_lines.
+
+    Example:
+        >>> import ubelt as ub
+        >>> source = ub.codeblock(
+        >>>     r'''
+        >>>     // module comment
+        >>>
+        >>>     fn main() {
+        >>>         println!("http://example.com"); // trailing comment
+        >>>         let text = "/* not comment */";
+        >>>         let raw = r#"// not comment"#;
+        >>>         /*
+        >>>           block comment
+        >>>           /* nested */
+        >>>         */
+        >>>         /// doc comment
+        >>>         pub fn documented() {}
+        >>>     }
+        >>>     ''')
+        >>> stats = parse_rust_content_stats(source)
+        >>> assert stats['code_lines'] == 6
+        >>> assert stats['doc_lines'] == 1
+    """
+    import collections
+
+    n = len(source)
+    i = 0
+    line = 0
+    line_has_code = collections.defaultdict(bool)
+    comment_lines = set()
+    doc_lines = set()
+
+    def mark_comment_char(ch, is_doc):
+        nonlocal line
+        if ch == '\n':
+            line += 1
+        elif not ch.isspace():
+            comment_lines.add(line)
+            if is_doc:
+                doc_lines.add(line)
+
+    def mark_code_span(start, stop):
+        nonlocal line
+        j = start
+        while j < stop:
+            ch = source[j]
+            if ch == '\n':
+                line += 1
+            elif not ch.isspace():
+                line_has_code[line] = True
+            j += 1
+
+    while i < n:
+        ch = source[i]
+
+        # Rust line comments: //, ///, //!
+        if source.startswith('//', i):
+            is_doc = source.startswith('///', i) or source.startswith('//!', i)
+            while i < n and source[i] != '\n':
+                mark_comment_char(source[i], is_doc)
+                i += 1
+            continue
+
+        # Rust nested block comments: /* ... */, /** ... */, /*! ... */
+        if source.startswith('/*', i):
+            is_doc = (
+                source.startswith('/**', i) and
+                not source.startswith('/***', i)
+            ) or source.startswith('/*!', i)
+            depth = 0
+            while i < n:
+                if source.startswith('/*', i):
+                    depth += 1
+                    mark_comment_char(source[i], is_doc)
+                    mark_comment_char(source[i + 1], is_doc)
+                    i += 2
+                    continue
+                if source.startswith('*/', i):
+                    mark_comment_char(source[i], is_doc)
+                    mark_comment_char(source[i + 1], is_doc)
+                    i += 2
+                    depth -= 1
+                    if depth <= 0:
+                        break
+                    continue
+                mark_comment_char(source[i], is_doc)
+                i += 1
+            continue
+
+        # Rust raw strings: r"...", r#"..."#, br"...", br#"..."#.
+        close_delim = _rust_raw_string_close_delim(source, i)
+        if close_delim is not None:
+            open_quote = source.find('"', i)
+            stop = source.find(close_delim, open_quote + 1)
+            if stop < 0:
+                stop = n
+            else:
+                stop += len(close_delim)
+            mark_code_span(i, stop)
+            i = stop
+            continue
+
+        # Normal string-ish literals. This avoids treating // or /* inside a
+        # string as a comment.
+        if (
+            ch == '"' or
+            (ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"')
+        ):
+            stop = i + 1
+            if ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"':
+                stop = i + 2
+            escape = False
+            while stop < n:
+                c = source[stop]
+                stop += 1
+                if escape:
+                    escape = False
+                elif c == '\\':
+                    escape = True
+                elif c == '"':
+                    break
+            mark_code_span(i, stop)
+            i = stop
+            continue
+
+        if ch == '\n':
+            line += 1
+            i += 1
+            continue
+
+        if not ch.isspace():
+            line_has_code[line] = True
+
+        i += 1
+
+    return {
+        'code_lines': sum(line_has_code.values()),
+        'comment_lines': len(comment_lines),
+        'doc_lines': len(doc_lines),
+    }
+
+
+def _rust_raw_string_close_delim(source: str, pos: int):
+    """
+    Return the closing delimiter for a Rust raw string at ``pos``, or None.
+    """
+    n = len(source)
+    if source.startswith(('br', 'cr'), pos):
+        j = pos + 2
+        prefix_len = 2
+    elif pos < n and source[pos] == 'r':
+        j = pos + 1
+        prefix_len = 1
+    else:
+        return None
+
+    while j < n and source[j] == '#':
+        j += 1
+
+    if j < n and source[j] == '"':
+        hashes = source[pos + prefix_len:j]
+        return '"' + hashes
+    return None
