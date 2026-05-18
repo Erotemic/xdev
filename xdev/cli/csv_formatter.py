@@ -20,7 +20,7 @@ Usage:
     '
 
 """
-
+from __future__ import annotations
 import sys
 import csv
 from typing import Any, List, Tuple
