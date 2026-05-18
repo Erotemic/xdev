@@ -164,6 +164,7 @@ class DirectoryWalker:
                     If True, chains of nodes will be drawn vertically when possible.
 
         Example:
+            >>> # xdoctest: +REQUIRES(module:pandas)
             >>> import xdev
             >>> walker = xdev.DirectoryWalker.demo()
             >>> walker.write_report(max_nodes=0)
@@ -760,7 +761,7 @@ class DirectoryWalker:
         Search for nodes whose **name** matches a MultiPattern, optionally filtering by type.
 
         Args:
-            pattern: Coerced via ``kwutil.MultiPattern.coerce(pattern)`` and tested with
+            pattern: Coerced via ``MultiPattern.coerce(pattern)`` and tested with
                 ``pattern.match(node.name)``.
             data (bool): if True, also yield the node data dict
             root (pathlib.Path | None): if specified, search descendants of this node
@@ -789,7 +790,6 @@ class DirectoryWalker:
             True
         """
         import networkx as nx
-        import kwutil
 
         if self.graph is None:
             raise RuntimeError('DirectoryWalker.find() requires build() first')
@@ -805,7 +805,7 @@ class DirectoryWalker:
             nodes = graph.nodes
 
         # Coerce pattern
-        pattern = kwutil.MultiPattern.coerce(pattern)
+        pattern = MultiPattern.coerce(pattern)
 
         # Normalize filetype: iterable of chars in {f,d,l}
         ftypes = None

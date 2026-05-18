@@ -23,7 +23,7 @@ Usage:
 
 import sys
 import csv
-from typing import List, Tuple
+from typing import Any, List, Tuple
 import ubelt as ub
 import scriptconfig as scfg
 
@@ -169,7 +169,7 @@ def try_sniff(sample: str, delimiter: str | None, quotechar: str | None):
         return Simple()
 
     try:
-        dialect = csv.Sniffer().sniff(sample, delimiters=[",", ";", "\t", "|"])
+        dialect: Any = csv.Sniffer().sniff(sample, delimiters=",;\t|")
         # Respect common CSV behaviors
         dialect.doublequote = True
         dialect.skipinitialspace = True

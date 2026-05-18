@@ -336,7 +336,10 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
         >>> patch = difftext(text1, text2, context_lines=3, style='unified', colored=True,
         ...                  fromfile='a/example.txt', tofile='b/example.txt')
         >>> print(patch)  # doctest: +ELLIPSIS
-        >>> assert patch.startswith('--- a/example.txt\\n+++ b/example.txt\\n@@')
+        >>> lines = patch.splitlines()
+        >>> assert lines[0] == '--- a/example.txt'
+        >>> assert lines[1] == '+++ b/example.txt'
+        >>> assert lines[2].startswith('@@')
     """
     import ubelt as ub
     import difflib
@@ -356,9 +359,9 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
             n=n, lineterm='\n'
         )
         text = ''.join(diff_iter)
-        if colored:
-            text = ub.highlight_code(text, lexer_name='diff')
-        # For git patches, never colorize the output (would break `git apply`)
+        # For git patches, never colorize the output (would break `git apply`).
+        # Keep this uncolored even when colored=True so callers can pipe the
+        # returned text directly into patch / git-apply style tools.
         return text
 
     assert style == 'ndiff'

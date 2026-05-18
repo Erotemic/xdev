@@ -95,6 +95,8 @@ def parse_cli_config(text, input_type='auto'):
         xdoctest -m xdev.cli.cli_formatter parse_cli_config
 
     Example:
+        >>> # xdoctest: +REQUIRES(module:kwutil)
+        >>> # xdoctest: +REQUIRES(module:bashlex)
         >>> from xdev.cli.cli_formatter import *  # NOQA
         >>> from xdev.cli.cli_formatter import _InputFormatGuesser
         >>> cases = [
@@ -139,6 +141,7 @@ class _InputFormatGuesser:
             * An argv string
 
         Example:
+            >>> # xdoctest: +REQUIRES(module:kwutil)
             >>> from xdev.cli.cli_formatter import *  # NOQA
             >>> cases = [
             >>>      '--foo=bar',
@@ -224,6 +227,7 @@ class _InputFormatGuesser:
             * An argv string
 
         Example:
+            >>> # xdoctest: +REQUIRES(module:kwutil)
             >>> from xdev.cli.cli_formatter import *  # NOQA
             >>> cases = [
             >>>      '--foo=bar',
@@ -339,6 +343,7 @@ def parse_argv_as_config_dict(text, with_positional=False):
         dict: parsed key value pairs
 
     Example:
+        >>> # xdoctest: +REQUIRES(module:bashlex)
         >>> from xdev.cli.cli_formatter import *  # NOQA
         >>> text = '--foo=bar'
         >>> config = parse_argv_as_config_dict(text)
@@ -390,6 +395,8 @@ def parse_bash_invocation(bash_text, with_tokens=False):
         bashlex - https://pypi.org/project/bashlex/
 
     Example:
+        >>> # xdoctest: +REQUIRES(module:bashlex)
+        >>> # xdoctest: +REQUIRES(module:pandas)
         >>> from xdev.cli.cli_formatter import *  # NOQA
         >>> bash_text = r'''
             # Leading comment
@@ -408,6 +415,7 @@ def parse_bash_invocation(bash_text, with_tokens=False):
         >>> pd.DataFrame(components)
 
     Example:
+        >>> # xdoctest: +REQUIRES(module:bashlex)
         >>> text = '--foo bar baz biz --key=value --subkey "{big: long, yaml: text--text}" --flag -- pos1 pos2'
         >>> components = parse_bash_invocation(text, with_tokens=True)
         >>> print(f'components = {ub.urepr(components, nl=1)}')

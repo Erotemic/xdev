@@ -24,7 +24,7 @@ import builtins
 import importlib
 import os
 import scriptconfig as scfg
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Set, Tuple, cast
 
 
 class ExpandImportStarCLI(scfg.DataConfig):
@@ -34,7 +34,7 @@ class ExpandImportStarCLI(scfg.DataConfig):
     Replace 'from <module> import *' with explicit imports for used names.
     """
     path = scfg.Value(None, position=1, required=True, help='Path to the Python file to rewrite')
-    inplace = scfg.Value(False, isflag=True, short_alias='i', help='if True overwrite the original file with the expanded args')
+    inplace = scfg.Value(False, isflag=True, short_alias=['i'], help='if True overwrite the original file with the expanded args')
     check = scfg.Value(False, isflag=True, help='if True check that the expanded import statement executes')
     verbose = scfg.Value(0, help='verbosity level')
 
@@ -217,7 +217,7 @@ def build_explicit_import_line(module: str, names: List[str], original_indent: s
 # ----------------------------
 
 def process_file(args: ExpandImportStarCLI) -> int:
-    path = args.path
+    path = cast(str, args.path)
     text = open(path, "r", encoding="utf-8").read()
     try:
         tree = ast.parse(text, filename=path)
