@@ -95,6 +95,7 @@ def parse_cli_config(text, input_type='auto'):
         xdoctest -m xdev.cli.cli_formatter parse_cli_config
 
     Example:
+        >>> # xdoctest: +SKIP
         >>> # xdoctest: +REQUIRES(module:kwutil)
         >>> # xdoctest: +REQUIRES(module:bashlex)
         >>> from xdev.cli.cli_formatter import *  # NOQA
@@ -141,6 +142,7 @@ class _InputFormatGuesser:
             * An argv string
 
         Example:
+            >>> # xdoctest: +SKIP
             >>> # xdoctest: +REQUIRES(module:kwutil)
             >>> from xdev.cli.cli_formatter import *  # NOQA
             >>> cases = [
