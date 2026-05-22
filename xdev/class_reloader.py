@@ -4,7 +4,7 @@ works)
 """
 import types
 import ubelt as ub
-from os.path import sys
+import sys
 
 
 def reload_class(self, verbose=True, reload_module=True):

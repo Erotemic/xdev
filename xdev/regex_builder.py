@@ -45,9 +45,9 @@ class RegexBuilder:
             mode = 'positive' if positive else 'negative'
 
         if mode == 'positive':
-            return self.constructs['positive_lookahead'].format(pat=pat)
+            return self.constructs['positive_lookahead'].format(pat=pat)  # type: ignore[attr-defined]
         elif mode == 'negative':
-            return self.constructs['negative_lookahead'].format(pat=pat)
+            return self.constructs['negative_lookahead'].format(pat=pat)  # type: ignore[attr-defined]
         else:
             raise KeyError(mode)
 
@@ -64,20 +64,20 @@ class RegexBuilder:
             mode = 'positive' if positive else 'negative'
 
         if mode == 'positive':
-            return self.constructs['positive_lookbehind'].format(pat=pat)
+            return self.constructs['positive_lookbehind'].format(pat=pat)  # type: ignore[attr-defined]
         elif mode == 'negative':
-            return self.constructs['negative_lookbehind'].format(pat=pat)
+            return self.constructs['negative_lookbehind'].format(pat=pat)  # type: ignore[attr-defined]
         else:
             raise KeyError(mode)
 
     def named_field(self, pat, name=None):
         if name is None:
-            return self.constructs['group'].format(pat=pat)
+            return self.constructs['group'].format(pat=pat)  # type: ignore[attr-defined]
         else:
-            return self.constructs['named_field'].format(pat=pat, name=name)
+            return self.constructs['named_field'].format(pat=pat, name=name)  # type: ignore[attr-defined]
 
     def bref_field(self, name):
-        return self.constructs['backref_field'].format(name=name)
+        return self.constructs['backref_field'].format(name=name)  # type: ignore[attr-defined]
 
     def escape(self, pat):
         return re.escape(pat)
@@ -86,7 +86,7 @@ class RegexBuilder:
         return r'{pat}?'.format(pat=pat)
 
     def group(self, pat):
-        return self.constructs['group'].format(pat=pat)
+        return self.constructs['group'].format(pat=pat)  # type: ignore[attr-defined]
 
     def oneof(self, *paterns):
         return self.group('|'.join(paterns))
@@ -131,15 +131,15 @@ class RegexBuilder:
 
     @property
     def word(self):
-        return self.special['word']
+        return self.special['word']  # type: ignore[attr-defined]
 
     @property
     def whitespace(self):
-        return self.special['space'] + '*'
+        return self.special['space'] + '*'  # type: ignore[attr-defined]
 
     @property
     def nongreedy(self):
-        return self.special['nongreedy_zero_or_more']
+        return self.special['nongreedy_zero_or_more']  # type: ignore[attr-defined]
 
     @property
     def integer(self):
@@ -186,7 +186,7 @@ class RegexBuilder:
         """
         exponent_part = '[eE][-+]?[0-9]+'
         decimal_part = r'[-+]?[0-9]*\.?[0-9]+'
-        exponent_group = self.constructs['group'].format(pat=exponent_part)
+        exponent_group = self.constructs['group'].format(pat=exponent_part)  # type: ignore[attr-defined]
         number_pat = decimal_part + exponent_group + '?'
         return number_pat
 

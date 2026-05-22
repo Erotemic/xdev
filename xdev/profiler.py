@@ -30,7 +30,7 @@ class DummyProfiler:
         print('Profiling was not enabled')
 
 if IS_PROFILING:
-    import line_profiler
+    import line_profiler  # type: ignore[import-untyped]
     profile = line_profiler.profile
     profile.enable()
 else:
@@ -69,7 +69,7 @@ def profile_now(func):
              5         1       1949.0   1949.0      7.0      tuple(range(100))
              6         1      22618.0  22618.0     81.5      set(range(1000))
     """
-    import line_profiler
+    import line_profiler  # type: ignore[import-untyped]
     profile = line_profiler.LineProfiler()
     new_func = profile(func)
     new_func.profile = profile
@@ -86,7 +86,7 @@ def profile_now(func):
             pass
         finally:
             new_func.print_report()
-    wraper.new_func = new_func
+    wraper.new_func = new_func  # type: ignore[attr-defined]
     return wraper
 
 
@@ -95,10 +95,10 @@ def profile_globals():
     Adds the profile decorator to all global functions
     """
     import inspect
-    parent_frame = inspect.currentframe().f_back
+    parent_frame = inspect.currentframe().f_back  # type: ignore[union-attr]
 
-    parent_frame.f_globals
-    name = parent_frame.f_globals['__name__']
+    parent_frame.f_globals  # type: ignore[union-attr]
+    name = parent_frame.f_globals['__name__']  # type: ignore[union-attr]
     module = sys.modules[name]
 
     from xdoctest.dynamic_analysis import is_defined_by_module
@@ -107,7 +107,7 @@ def profile_globals():
         if is_defined_by_module(v, module):
             if callable(v):
                 v = xdev.profile(v)
-                parent_frame.f_globals[k] = v
+                parent_frame.f_globals[k] = v  # type: ignore[union-attr]
 
 
 if __name__ == '__main__':

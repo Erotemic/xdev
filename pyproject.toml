@@ -160,6 +160,8 @@ scripts = [
   "xdev/bin/freshpyenv.sh",
 ]
 url = "https://github.com/Erotemic/xdev"
+enable_gpg = true
+ci_gpg_secret_transport = "direct_ci"
 use_setup_py = false
 use_pyproject_requirements = false
 entry_points.console_scripts = [

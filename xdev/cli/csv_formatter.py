@@ -158,8 +158,8 @@ def try_sniff(sample: str, delimiter: str | None, quotechar: str | None):
     if delimiter or quotechar:
         # User-specified settings take precedence over sniffing
         class Simple(csv.Dialect):
-            delimiter = delimiter or ","
-            quotechar = quotechar or '"'
+            delimiter = delimiter or ","  # type: ignore[name-defined]
+            quotechar = quotechar or '"'  # type: ignore[name-defined]
             escapechar = None
             doublequote = True
             skipinitialspace = False

@@ -119,7 +119,7 @@ class InteractiveIter:
             return
             # raise StopIteration()
         # assert isinstance(iiter.iterable, INDEXABLE_TYPES), 'input is not iterable'
-        iiter.num_items = len(iiter.iterable)
+        iiter.num_items = len(iiter.iterable)  # type: ignore[arg-type]
         if iiter.verbose:
             print('[IITER] Begin interactive iteration: %r items\n' % (iiter.num_items))
         if iiter.num_items == 0:
@@ -148,8 +148,8 @@ class InteractiveIter:
             if iiter.verbose:
                 print('')
             if iiter.wraparound:
-                iiter.index = iiter.index % len(iiter.iterable)
-            if iiter.index >= len(iiter.iterable):
+                iiter.index = iiter.index % len(iiter.iterable)  # type: ignore[arg-type]
+            if iiter.index >= len(iiter.iterable):  # type: ignore[arg-type]
                 if iiter.verbose:
                     print('Got to end the end of the iterable')
                 break
@@ -160,7 +160,7 @@ class InteractiveIter:
             # prog._reset_internals()
             # prog.step(iiter.index + 1)
 
-            item = iiter.iterable[iiter.index]
+            item = iiter.iterable[iiter.index]  # type: ignore[index]
             if iiter.verbose:
                 print('')
             yield item
@@ -226,7 +226,7 @@ class InteractiveIter:
                 print('Unknown ans=%r' % (ans,))
         elif chack_if_answer_was(iiter.action_keys['set']):
             try:
-                iiter.iterable[iiter.index] = eval(parse_str_value(ans))
+                iiter.iterable[iiter.index] = eval(parse_str_value(ans))  # type: ignore[index]
             except ValueError:
                 print('Unknown ans=%r' % (ans,))
         elif ans in iiter.action_keys['ipy']:
@@ -278,6 +278,6 @@ class InteractiveIter:
         figures, you will have to draw the figure manually. This is a helper
         for that task.
         """
-        from matplotlib import pyplot as plt
+        from matplotlib import pyplot as plt  # type: ignore[import-untyped]
         fig = plt.gcf()
         fig.canvas.draw()

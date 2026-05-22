@@ -50,14 +50,14 @@ class InteractiveShellEmbedEnhanced(InteractiveShellEmbed):
             self._saved_user_ns = None
             self._ns = {}
             # make global variables for user access to the histories
-            self._ns['_ih'] = self.history_manager.input_hist_parsed
-            self._ns['_oh'] = self.history_manager.output_hist
-            self._ns['_dh'] = self.history_manager.dir_hist
+            self._ns['_ih'] = self.history_manager.input_hist_parsed  # type: ignore[union-attr]
+            self._ns['_oh'] = self.history_manager.output_hist  # type: ignore[union-attr]
+            self._ns['_dh'] = self.history_manager.dir_hist  # type: ignore[union-attr]
 
             # user aliases to input and output histories.  These shouldn't show up
             # in %who, as they can have very large reprs.
-            self._ns['In']  = self.history_manager.input_hist_parsed
-            self._ns['Out'] = self.history_manager.output_hist
+            self._ns['In']  = self.history_manager.input_hist_parsed  # type: ignore[union-attr]
+            self._ns['Out'] = self.history_manager.output_hist  # type: ignore[union-attr]
 
             # Store myself as the public api!!!
             # ns['get_ipython'] = self.get_ipython
@@ -136,8 +136,8 @@ def embed2(local_ns=None, **kwargs):
     global_ns['ipy'] = shell
     global_ns['share_locals'] = shell.share_locals
 
-    startup_files = glob.glob(os.path.join(shell.profile_dir.startup_dir, '*.py'))
-    startup_files += glob.glob(os.path.join(shell.profile_dir.startup_dir, '*.ipy'))
+    startup_files = glob.glob(os.path.join(shell.profile_dir.startup_dir, '*.py'))  # type: ignore[union-attr]
+    startup_files += glob.glob(os.path.join(shell.profile_dir.startup_dir, '*.ipy'))  # type: ignore[union-attr]
 
     if '__file__' in global_ns:
         hasfile = True

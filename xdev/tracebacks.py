@@ -75,7 +75,7 @@ class WarningsWithTracebacks:
             if self._enter_count == 0:
                 print("ENTER")
                 self._orig_formatwarning = warnings.formatwarning
-                warnings.formatwarning = self._monkeypatch_formatwarning_tb
+                warnings.formatwarning = self._monkeypatch_formatwarning_tb  # type: ignore[assignment]
             else:
                 print("NOT ENTER")
             self._enter_count += 1
@@ -83,7 +83,7 @@ class WarningsWithTracebacks:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._enter_count -= 1
         if self._enter_count == 0:
-            warnings.formatwarning = self._orig_formatwarning
+            warnings.formatwarning = self._orig_formatwarning  # type: ignore[assignment]
 
     def _monkeypatch_formatwarning_tb(self, *args, **kwargs):
         import traceback

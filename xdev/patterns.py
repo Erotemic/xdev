@@ -30,7 +30,7 @@ except ImportError:
     class FakeParseModule:
         def Parser(self, *args, **kwargs):
             raise ImportError('Unable to import parse')
-    parse = FakeParseModule()
+    parse = FakeParseModule()  # type: ignore[assignment]
 
 
 class PatternBase:
@@ -165,11 +165,11 @@ class Pattern(PatternBase, ub.NiceRepr):
             regex_pattern = self.pattern
         elif self.backend == 'parse':
             # regex_pattern = self.pattern._generate_expression()
-            regex_pattern = self.pattern._expression
+            regex_pattern = self.pattern._expression  # type: ignore[union-attr]
         elif self.backend == 'glob':
-            regex_pattern = fnmatch.translate(self.pattern)
+            regex_pattern = fnmatch.translate(self.pattern)  # type: ignore[arg-type]
         elif self.backend == 'strict':
-            regex_pattern = re.escape(self.pattern)
+            regex_pattern = re.escape(self.pattern)  # type: ignore[arg-type]
         else:
             raise AssertionError
         new = self.__class__(regex_pattern, 'regex')
@@ -254,11 +254,11 @@ class Pattern(PatternBase, ub.NiceRepr):
     def match(self, text):
         # TODO standardize return value with a Result class.
         if self.backend == 'regex':
-            return self.pattern.match(text)
+            return self.pattern.match(text)  # type: ignore[union-attr]
         elif self.backend == 'parse':
-            return self.pattern.parse(text)
+            return self.pattern.parse(text)  # type: ignore[union-attr]
         elif self.backend == 'glob':
-            return fnmatch.fnmatch(text, self.pattern)
+            return fnmatch.fnmatch(text, self.pattern)  # type: ignore[arg-type]
         elif self.backend == 'strict':
             return self.pattern == text
         else:
@@ -270,7 +270,7 @@ class Pattern(PatternBase, ub.NiceRepr):
         elif self.backend == 'parse':
             return self.pattern.search(text)
         elif self.backend == 'glob':
-            return fnmatch.fnmatch(text, '*{}*'.format(self.pattern))
+            return fnmatch.fnmatch(text, '*{}*'.format(self.pattern))  # type: ignore[arg-type]
         elif self.backend == 'strict':
             return self.pattern in text
         else:
@@ -287,7 +287,7 @@ class Pattern(PatternBase, ub.NiceRepr):
         if count == 0:
             return text  # make regex conform to the API
         if self.backend == 'regex':
-            return self.pattern.sub(repl, text, count=max(0, count))
+            return self.pattern.sub(repl, text, count=max(0, count))  # type: ignore[union-attr]
         elif self.backend == 'parse':
             raise NotImplementedError
         elif self.backend == 'glob':
@@ -309,10 +309,10 @@ class Pattern(PatternBase, ub.NiceRepr):
             import glob
             with ChDir(cwd):
                 yield from map(ub.Path, glob.glob(
-                    self.pattern, recursive=recursive))
+                    self.pattern, recursive=recursive))  # type: ignore[arg-type]
         elif self.backend == 'strict':
             with ChDir(cwd):
-                p  = ub.Path(self.pattern)
+                p  = ub.Path(self.pattern)  # type: ignore[arg-type]
                 if p.exists():
                     yield p
         else:

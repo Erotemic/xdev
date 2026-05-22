@@ -53,7 +53,7 @@ class ChDir:
 
     def __exit__(self, a, b, c):
         if self.context_dpath is not None:
-            os.chdir(self.orig_dpath)
+            os.chdir(self.orig_dpath)  # type: ignore[arg-type]
 
 
 def sidecar_glob(main_pat, sidecar_ext, main_key='main', sidecar_key=None,
@@ -150,10 +150,10 @@ def sidecar_glob(main_pat, sidecar_ext, main_key='main', sidecar_key=None,
         sidecar_key = sidecar_ext
     default = {main_key: None, sidecar_key: None}
     id_to_row = ub.ddict(default.copy)
-    paths = mpat.paths(recursive=recursive)
+    paths = mpat.paths(recursive=recursive)  # type: ignore[arg-type]
 
     def _gen():
-        for path in paths:
+        for path in paths:  # type: ignore[union-attr]
             parent = path.parent
             name = path.name
             if name.endswith(sidecar_ext):

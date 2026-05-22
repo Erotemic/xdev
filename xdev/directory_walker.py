@@ -169,9 +169,9 @@ class DirectoryWalker:
             >>> walker = xdev.DirectoryWalker.demo()
             >>> walker.write_report(max_nodes=0)
         """
-        import pandas as pd
+        import pandas as pd  # type: ignore[import-untyped]
 
-        if len(self.graph.nodes) <= max_nodes * 10000:
+        if len(self.graph.nodes) <= max_nodes * 10000:  # type: ignore[union-attr]
             try:
                 self.write_network_text(**nxtxt_kwargs)
             except KeyboardInterrupt:
@@ -179,13 +179,13 @@ class DirectoryWalker:
         else:
             print('...graph to big, not printing')
 
-        if len(self._topo_order):
-            root_node = self._topo_order[0]
+        if len(self._topo_order):  # type: ignore[arg-type]
+            root_node = self._topo_order[0]  # type: ignore[index]
         else:
             root_node = None
 
         def _node_table(node):
-            node_data = self.graph.nodes[node]
+            node_data = self.graph.nodes[node]  # type: ignore[union-attr]
             stats = node_data.get('stats', {})
             stat_rows = []
             for k, v in stats.items():
@@ -216,10 +216,10 @@ class DirectoryWalker:
 
         if root_node:
             child_rows = []
-            for node in self.graph.succ[root_node]:
+            for node in self.graph.succ[root_node]:  # type: ignore[union-attr]
                 disp_piv = _node_table(node)
                 row = disp_piv.iloc[-1].to_dict()
-                row['name'] = self.graph.nodes[node]['name']
+                row['name'] = self.graph.nodes[node]['name']  # type: ignore[union-attr]
                 child_rows.append(row)
             if child_rows:
                 print('')
@@ -271,7 +271,7 @@ class DirectoryWalker:
         Return stats about the directories starting at the root.
         Requires walker has been built. If root unspecified uses walker root
         """
-        node = self.graph.nodes[self.root]
+        node = self.graph.nodes[self.root]  # type: ignore[union-attr]
         stats = node['stats']
         # node_type = node['type']
         if typed:
@@ -409,13 +409,13 @@ class DirectoryWalker:
         g = self.graph
         # Accumulate size stats
         ### Iterate from leaf-to-root, and accumulate info in directories
-        for node in self._topo_order[::-1]:
-            children = g.succ[node]
-            node_data = g.nodes[node]
+        for node in self._topo_order[::-1]:  # type: ignore[index]
+            children = g.succ[node]  # type: ignore[union-attr]
+            node_data = g.nodes[node]  # type: ignore[union-attr]
             if node_data['type'] == 'dir':
                 node_data['stats'] = accum_stats = {}
                 for child in children:
-                    child_data = g.nodes[child]
+                    child_data = g.nodes[child]  # type: ignore[union-attr]
                     child_stats = child_data.get('stats', {})
                     for key, stat_value in child_stats.items():
                         # a collections.Counter might be more efficient
@@ -432,8 +432,8 @@ class DirectoryWalker:
         # Get size stats for each file.
         pman = ProgressManager()
         with pman:
-            prog = pman.progiter(desc='Parse File Info', total=len(g))
-            for fpath, node_data in g.nodes(data=True):
+            prog = pman.progiter(desc='Parse File Info', total=len(g))  # type: ignore[arg-type]
+            for fpath, node_data in g.nodes(data=True):  # type: ignore[union-attr]
                 if node_data['type'] == 'file':
                     stats = parse_file_stats(fpath,
                                              parse_content=self.parse_content, fs=fs)
@@ -470,18 +470,18 @@ class DirectoryWalker:
             # Get the files from the graph first.
             fpaths = [
                 path
-                for path, data in graph.nodes(data=True)
+                for path, data in graph.nodes(data=True)  # type: ignore[union-attr]
                 if data['isfile']
             ]
             prog = ub.ProgIter(fpaths, desc=submit_desc, total=len(fpaths),
                                homogeneous=False)
             for fpath in prog:
                 job = jobs.submit(func, fpath)
-                job.fpath = fpath
+                job.fpath = fpath  # type: ignore[attr-defined]
 
             for job in ub.ProgIter(jobs.as_completed(), desc=collect_desc,
                                    total=len(jobs)):
-                fpath = job.fpath
+                fpath = job.fpath  # type: ignore[attr-defined]
                 result = job.result()
                 yield fpath, result
 
@@ -519,12 +519,12 @@ class DirectoryWalker:
 
     def _find_duplicate_files(self):
         hasher = 'blake3'
-        for path, node_data in self.graph.nodes(data=True):
+        for path, node_data in self.graph.nodes(data=True):  # type: ignore[union-attr]
             if node_data['isfile']:
                 node_data[hasher] = ub.hash_file(path, hasher=hasher)
 
         hash_to_paths = ub.ddict(list)
-        for path, node_data in self.graph.nodes(data=True):
+        for path, node_data in self.graph.nodes(data=True):  # type: ignore[union-attr]
             if node_data['isfile']:
                 hash = node_data[hasher]
                 hash_to_paths[hash].append(path)
@@ -534,13 +534,13 @@ class DirectoryWalker:
         for k, v in hash_to_paths.items():
             if len(v) > 1:
                 dups.append(k)
-        dup_hash_to_paths = hash_to_paths & dups
+        dup_hash_to_paths = hash_to_paths & dups  # type: ignore[operator]
         print('dup_hash_to_paths = {}'.format(ub.urepr(dup_hash_to_paths, nl=2)))
 
     def _update_path_metadata(self):
         g = self.graph
-        for path in self._topo_order:
-            node_data = g.nodes[path]
+        for path in self._topo_order:  # type: ignore[union-attr]
+            node_data = g.nodes[path]  # type: ignore[union-attr]
 
             islink = os.path.islink(path)
             isfile = os.path.isfile(path)
@@ -605,7 +605,7 @@ class DirectoryWalker:
 
         self._update_path_metadata()
 
-        for path, node_data in self.graph.nodes(data=True):
+        for path, node_data in self.graph.nodes(data=True):  # type: ignore[union-attr]
             stats = node_data.get('stats', None)
             node_type = node_data.get('type', None)
 
@@ -690,13 +690,13 @@ class DirectoryWalker:
     def _sort(self):
         g = self.graph
         # Order nodes based on size
-        ordered_nodes = dict(g.nodes(data=True))
+        ordered_nodes = dict(g.nodes(data=True))  # type: ignore[union-attr]
         ordered_edges = []
-        for node in self._topo_order[::-1]:
+        for node in self._topo_order[::-1]:  # type: ignore[index]
             # Sort children by total lines
-            children = g.succ[node]
-            children = ub.udict({c: g.nodes[c] for c in children})
-            children = children.sorted_keys(lambda c: (g.nodes[c]['type'], g.nodes[c].get('stats', {}).get('total_lines', 0)), reverse=True)
+            children = g.succ[node]  # type: ignore[union-attr]
+            children = ub.udict({c: g.nodes[c] for c in children})  # type: ignore[union-attr]
+            children = children.sorted_keys(lambda c: (g.nodes[c]['type'], g.nodes[c].get('stats', {}).get('total_lines', 0)), reverse=True)  # type: ignore[union-attr]
             for c, d in children.items():
                 ordered_nodes.pop(c, None)
                 ordered_nodes[c] = d
@@ -704,7 +704,7 @@ class DirectoryWalker:
 
             # ordered_nodes.update(children)
 
-        assert not (set(g.edges) - set(ordered_edges))
+        assert not (set(g.edges) - set(ordered_edges))  # type: ignore[union-attr]
         new = nx.DiGraph()
         new.add_nodes_from(ordered_nodes.items())
         new.add_edges_from(ordered_edges)

@@ -22,7 +22,7 @@ def quantum_random(pure=False):
     """
     import numpy as np
     import os
-    import quantumrandom
+    import quantumrandom  # type: ignore[import-untyped]
 
     # Data was sent over a network
     qr_data16 = quantumrandom.uint16(array_length=2)
@@ -204,7 +204,7 @@ def set_overlaps(set1, set2, s1='s1', s2='s2', n_samples=None):
             f'{s2} - {s1}': set2.difference(set1),
         }
         from itertools import islice
-        overlaps['samples'] = {k: list(islice(v, n_samples)) for k, v in raw_samples.items()}
+        overlaps['samples'] = {k: list(islice(v, n_samples)) for k, v in raw_samples.items()}  # type: ignore[assignment]
     return overlaps
 
 

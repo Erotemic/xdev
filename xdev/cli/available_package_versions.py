@@ -32,7 +32,7 @@ class AvailablePackageConfig(scfg.DataConfig):
     """
     package_name = scfg.Value(None, position=1, help='the pypi package name')
     request_min = scfg.Value(None, help='request a minimum version', position=2)
-    refresh = scfg.Value(False, isflag=1, help='if True refresh the cache')
+    refresh = scfg.Value(False, isflag=1, help='if True refresh the cache')  # type: ignore[arg-type]
 
 
 def main(cmdline=1, **kwargs):
@@ -44,7 +44,7 @@ def main(cmdline=1, **kwargs):
         >>> )
         >>> main(cmdline=cmdline, **kwargs)
     """
-    config = AvailablePackageConfig.legacy(cmdline=cmdline, data=kwargs)
+    config = AvailablePackageConfig.legacy(cmdline=cmdline, data=kwargs)  # type: ignore[arg-type]
     print('config = ' + ub.urepr(dict(config), nl=1))
     minimum_cross_python_versions(**config)
 
@@ -261,7 +261,7 @@ def grab_pypi_items(package_name, refresh=False):
         package_name = 'ubelt'
         package_name = 'scikit-image'
     """
-    import pandas as pd
+    import pandas as pd  # type: ignore[import-untyped]
     import json
     url = "https://pypi.org/pypi/{}/json".format(package_name)
     if 0:
@@ -398,7 +398,7 @@ def summarize_package_availability(package_name):
         summarize_package_availability(package_name)
     """
     import numpy as np
-    import pandas as pd
+    import pandas as pd  # type: ignore[import-untyped]
     flat_table = grab_pypi_items(package_name)
 
     new = []
@@ -459,9 +459,9 @@ def summarize_package_availability(package_name):
 
         if len(counts):
             try:
-                counts = counts.iloc[ub.argsort(counts['abi_tag'], key=cp_sorter)]
+                counts = counts.iloc[ub.argsort(counts['abi_tag'], key=cp_sorter)]  # type: ignore[union-attr,index]
             except Exception:
-                counts = counts.sort_values('abi_tag')
+                counts = counts.sort_values('abi_tag')  # type: ignore[union-attr]
             piv = counts.pivot(
                 index=['pkg_version'],
                 columns=['abi_tag', 'os', 'arch'],
@@ -549,7 +549,7 @@ class PythonVersions:
     Class that contains information about different Python versions
     """
     def __init__(self):
-        import pandas as pd
+        import pandas as pd  # type: ignore[import-untyped]
         # https://en.wikipedia.org/wiki/History_of_Python#Version_3
         python_version_rows = [
             {'release_date': '2024-10-01', 'pyver': '3.13'},
@@ -601,7 +601,7 @@ class PythonVersions:
 
 
 def build_package_table(package_name, refresh=False):
-    import pandas as pd
+    import pandas as pd  # type: ignore[import-untyped]
     table = grab_pypi_items(package_name, refresh=refresh)
     table = table[~table['yanked']]
 
@@ -713,7 +713,7 @@ def build_package_table(package_name, refresh=False):
             if heuristic_support is not None:
                 if max_pyver is not None:
                     heuristic_support = [v for v in heuristic_support if Version(v) <= Version(max_pyver)]
-                    heuristic_support = [v for v in heuristic_support if Version(v) >= Version(min_pyver)]
+                    heuristic_support = [v for v in heuristic_support if Version(v) >= Version(min_pyver)]  # type: ignore[arg-type]
                 hacked_pkgver_to_pyvers[pkg_version].update(heuristic_support)
 
             if min_pyver is not None:
@@ -800,7 +800,7 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
                 cand_to_score[cand] = score
 
         cand_to_score = ub.udict.sorted_values(cand_to_score)
-        cand_to_score = ub.udict.sorted_keys(cand_to_score, key=Version)
+        cand_to_score = ub.udict.sorted_keys(cand_to_score, key=Version)  # type: ignore[arg-type]
 
         # Filter to only the versions we requested, but if
         # none exist, return something

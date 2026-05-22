@@ -41,8 +41,8 @@ class DirectoryStatsCLI(scfg.DataConfig):
     ignore_dotprefix = scfg.Value(True, isflag=True, help='if True ignore directories and folders with a dot prefix')
 
     def __post_init__(config):
-        if config.dpath.startswith('module:'):
-            config.dpath = ub.modname_to_modpath(config.dpath.split('module:', 1)[1])
+        if config.dpath.startswith('module:'):  # type: ignore[union-attr]
+            config.dpath = ub.modname_to_modpath(config.dpath.split('module:', 1)[1])  # type: ignore[assignment,union-attr]
 
         if config.exclude_fnames is None:
             config.exclude_fnames = []
@@ -50,15 +50,15 @@ class DirectoryStatsCLI(scfg.DataConfig):
             config.exclude_dnames = []
 
         if config.ignore_dotprefix:
-            config.exclude_fnames.append('.*')
-            config.exclude_dnames.append('.*')
+            config.exclude_fnames.append('.*')  # type: ignore[union-attr]
+            config.exclude_dnames.append('.*')  # type: ignore[union-attr]
 
         if config.python:
-            config.exclude_fnames += [
+            config.exclude_fnames += [  # type: ignore[operator]
                 '*.pyc',
                 '*.pyi',
             ]
-            config.exclude_dnames += [
+            config.exclude_dnames += [  # type: ignore[operator]
                 # '_*',
                 '__pycache__',
                 '_static',
@@ -69,17 +69,17 @@ class DirectoryStatsCLI(scfg.DataConfig):
 
         if config.rust:
             # Effective LOC requires content parsing.
-            config.parse_content = True
+            config.parse_content = True  # type: ignore[assignment]
 
             # If the user did not give an include filter, focus the report on
             # Rust source files. Explicit include_fnames still wins.
             if config.include_fnames is None:
                 config.include_fnames = ['*.rs']
 
-            config.exclude_fnames += [
+            config.exclude_fnames += [  # type: ignore[operator]
                 'Cargo.lock',
             ]
-            config.exclude_dnames += [
+            config.exclude_dnames += [  # type: ignore[operator]
                 'target',
             ]
 
@@ -100,7 +100,7 @@ def main(cmdline=1, **kwargs):
         >>> kwargs = dict(dpath='module:watch')
         >>> main(cmdline=cmdline, **kwargs)
     """
-    config = DirectoryStatsCLI.cli(cmdline=cmdline, data=kwargs, strict=True)
+    config = DirectoryStatsCLI.cli(cmdline=cmdline, data=kwargs, strict=True)  # type: ignore[arg-type]
 
     import rich
     if config.verbose:
@@ -108,7 +108,7 @@ def main(cmdline=1, **kwargs):
     rich.print('config = ' + ub.urepr(config, nl=1))
 
     from xdev.directory_walker import DirectoryWalker  # NOQA
-    kwargs = ub.udict(config) & {
+    kwargs = ub.udict(config) & {  # type: ignore[operator]
         'dpath', 'exclude_dnames', 'exclude_fnames', 'include_dnames',
         'include_fnames', 'max_walk_depth', 'parse_content', 'max_files'
     }

@@ -55,8 +55,8 @@ class CLIFormatterCLI(scfg.DataConfig):
             >>> cls = CLIFormatterCLI
             >>> cls.main(cmdline=cmdline, **kwargs)
         """
-        config = cls.cli(cmdline=cmdline, data=kwargs, strict=True, verbose='auto')
-        import kwutil
+        config = cls.cli(cmdline=cmdline, data=kwargs, strict=True, verbose='auto')  # type: ignore[arg-type]
+        import kwutil  # type: ignore[import-untyped]
 
         input_type = config.input_type
         text = config.input
@@ -114,7 +114,7 @@ def parse_cli_config(text, input_type='auto'):
         >>>     config_dict = parse_cli_config(text)
         >>>     print(f' * config_dict = {ub.urepr(config_dict, nl=1)}')
     """
-    import kwutil
+    import kwutil  # type: ignore[import-untyped]
     if input_type == 'auto':
         input_type = _InputFormatGuesser.guess_input_type(text)
     if input_type == 'dict':
@@ -154,7 +154,7 @@ class _InputFormatGuesser:
             >>>     scores = _InputFormatGuesser.input_type_scores(text)
             >>>     print(f'{text!r} - {scores}')
         """
-        import kwutil
+        import kwutil  # type: ignore[import-untyped]
         scores = {
             'yaml': 0,
             'dict': 0,
@@ -211,11 +211,11 @@ class _InputFormatGuesser:
         score = 0
 
         # Count valid flags
-        flags = re.findall(flag_pattern, text)
+        flags = re.findall(flag_pattern, text)  # type: ignore[call-overload]
         score += len(flags)  # Each valid flag adds points
 
         # Check for positional arguments
-        found = re.search(positional_pattern, text)
+        found = re.search(positional_pattern, text)  # type: ignore[call-overload]
         if found:
             score += len(found.groups()) * 2  # Each valid flag adds points
         return score
@@ -424,7 +424,7 @@ def parse_bash_invocation(bash_text, with_tokens=False):
     """
     import re
     # Split the bash_text into tokens based on spaces, keeping the structure intact
-    import bashlex
+    import bashlex  # type: ignore[import-untyped]
     tokens = list(bashlex.split(bash_text.strip()))
     # import shlex
     # bash_text = bash_text.replace('\\\n', ' ')
