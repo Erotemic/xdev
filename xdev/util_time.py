@@ -522,7 +522,7 @@ def coerce_timedelta(delta, nan_policy='raise', none_policy='raise'):
                 r'^(?P<magnitude>[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)'
                 '(?P<spaces> *)'
                 '(?P<unit>.*)$')
-            match = expr_pat.match(delta.strip())  # type: ignore[union-attr]
+            match = expr_pat.match(delta.strip())  # type: ignore
             if match:
                 parsed = match.groupdict()
                 unit = parsed.get('unit', '')
@@ -532,19 +532,19 @@ def coerce_timedelta(delta, nan_policy='raise', none_policy='raise'):
                 magnitude = None
 
             if unit in {'y', 'year', 'years'}:
-                delta = datetime_mod.timedelta(days=365 * float(magnitude))  # type: ignore[arg-type]
+                delta = datetime_mod.timedelta(days=365 * float(magnitude))  # type: ignore
             elif unit in {'d', 'day', 'days'}:
-                delta = datetime_mod.timedelta(days=1 * float(magnitude))  # type: ignore[arg-type]
+                delta = datetime_mod.timedelta(days=1 * float(magnitude))  # type: ignore
             elif unit in {'w', 'week', 'weeks'}:
-                delta = datetime_mod.timedelta(days=7 * float(magnitude))  # type: ignore[arg-type]
+                delta = datetime_mod.timedelta(days=7 * float(magnitude))  # type: ignore
             elif unit == {'m', 'month', 'months'}:
-                delta = datetime_mod.timedelta(days=30.437 * float(magnitude))  # type: ignore[arg-type]
+                delta = datetime_mod.timedelta(days=30.437 * float(magnitude))  # type: ignore
             elif unit == {'H', 'hour', 'hours'}:
-                delta = datetime_mod.timedelta(hours=float(magnitude))  # type: ignore[arg-type]
+                delta = datetime_mod.timedelta(hours=float(magnitude))  # type: ignore
             elif unit == {'M', 'min', 'mins', 'minute', 'minutes'}:
-                delta = datetime_mod.timedelta(minutes=float(magnitude))  # type: ignore[arg-type]
+                delta = datetime_mod.timedelta(minutes=float(magnitude))  # type: ignore
             elif unit == {'S', 'sec', 'secs', 'second', 'seconds'}:
-                delta = datetime_mod.timedelta(seconds=float(magnitude))  # type: ignore[arg-type]
+                delta = datetime_mod.timedelta(seconds=float(magnitude))  # type: ignore
             else:
                 import pytimeparse  # type: ignore[import-untyped]
                 import warnings
@@ -646,7 +646,7 @@ def _time_unit_registery():
     ureg.define('ms = millisecond')
     ureg.define('us = microsecond')
 
-    @ ub.urepr.extensions.register(pint.Unit)  # type: ignore[attr-defined]
+    @ ub.urepr.extensions.register(pint.Unit)  # type: ignore
     def format_unit(data, **kwargs):
         numer = [k for k, v in data._units.items() if v > 0]
         denom = [k for k, v in data._units.items() if v < 0]
@@ -664,7 +664,7 @@ def _time_unit_registery():
         else:
             return numer_str + ' / ' + denom_str
 
-    @ub.urepr.extensions.register(pint.Quantity)  # type: ignore[attr-defined]
+    @ub.urepr.extensions.register(pint.Quantity)  # type: ignore
     def format_quantity(data, _return_info=None, **kwargs):
         return ub.repr2(data.magnitude, **kwargs) + ' ' + ub.repr2(data.u)
 
