@@ -33,6 +33,7 @@ class DirectoryWalker:
                  parse_content=False,
                  show_progress=True,
                  ignore_empty_dirs=False,
+                 sort=False,
                  fs=None,
                  **kwargs):
         """
@@ -59,6 +60,10 @@ class DirectoryWalker:
 
             parse_content (bool):
                 if True, include content analysis
+
+            sort (bool):
+                if True, sort files and directories before adding them to the
+                graph.
 
             fs (fsspec.spec.AbstractFileSystem):
                 experimental: an fsspec filesystem
@@ -94,6 +99,7 @@ class DirectoryWalker:
         self.max_files = max_files
         self.show_progress = show_progress
         self.ignore_empty_dirs = ignore_empty_dirs
+        self.sort = sort
 
         kwargs = ub.udict(kwargs)
 
@@ -115,23 +121,71 @@ class DirectoryWalker:
         self._topo_order = None
         self._type_to_path = {}
 
+    @property
+    def root(self):
+        """
+        Alias for ``self.dpath``
+        """
+        return self.dpath
+
     def write_network_text(self, **kwargs):
         nx.write_network_text(self.graph, rich.print, end='', **kwargs)
 
-    def write_report(self, **nxtxt_kwargs):
-        import pandas as pd
-        try:
-            self.write_network_text(**nxtxt_kwargs)
-        except KeyboardInterrupt:
-            ...
+    def write_report(self, max_nodes=10, **nxtxt_kwargs):
+        """
+        Args:
+            **nxtxt_kwargs:
+                path : string or file or callable or None
+                   Filename or file handle for data output.
+                   if a function, then it will be called for each generated line.
+                   if None, this will default to "sys.stdout.write"
 
-        if len(self._topo_order):
-            root_node = self._topo_order[0]
+                with_labels : bool | str
+                    If True will use the "label" attribute of a node to display if it
+                    exists otherwise it will use the node value itself. If given as a
+                    string, then that attribute name will be used instead of "label".
+                    Defaults to True.
+
+                sources : List
+                    Specifies which nodes to start traversal from. Note: nodes that are not
+                    reachable from one of these sources may not be shown. If unspecified,
+                    the minimal set of nodes needed to reach all others will be used.
+
+                max_depth : int | None
+                    The maximum depth to traverse before stopping. Defaults to None.
+
+                ascii_only : Boolean
+                    If True only ASCII characters are used to construct the visualization
+
+                end : string
+                    The line ending character
+
+                vertical_chains : Boolean
+                    If True, chains of nodes will be drawn vertically when possible.
+
+        Example:
+            >>> # xdoctest: +REQUIRES(module:pandas)
+            >>> import xdev
+            >>> walker = xdev.DirectoryWalker.demo()
+            >>> walker.write_report(max_nodes=0)
+        """
+        import pandas as pd  # type: ignore
+
+        if len(self.graph.nodes) <= max_nodes * 10000:  # type: ignore
+            try:
+                self.write_network_text(**nxtxt_kwargs)
+            except KeyboardInterrupt:
+                ...
+        else:
+            print('...graph to big, not printing')
+
+        if len(self._topo_order):  # type: ignore
+            root_node = self._topo_order[0]  # type: ignore
         else:
             root_node = None
 
         def _node_table(node):
-            node_data = self.graph.nodes[node]
+            node_data = self.graph.nodes[node]  # type: ignore
             stats = node_data.get('stats', {})
             stat_rows = []
             for k, v in stats.items():
@@ -162,10 +216,10 @@ class DirectoryWalker:
 
         if root_node:
             child_rows = []
-            for node in self.graph.succ[root_node]:
+            for node in self.graph.succ[root_node]:  # type: ignore
                 disp_piv = _node_table(node)
                 row = disp_piv.iloc[-1].to_dict()
-                row['name'] = self.graph.nodes[node]['name']
+                row['name'] = self.graph.nodes[node]['name']  # type: ignore
                 child_rows.append(row)
             if child_rows:
                 print('')
@@ -211,6 +265,22 @@ class DirectoryWalker:
         self._update_labels()
         self._sort()
         return self
+
+    def stats(self, typed=False, root=None):
+        """
+        Return stats about the directories starting at the root.
+        Requires walker has been built. If root unspecified uses walker root
+        """
+        node = self.graph.nodes[self.root]  # type: ignore
+        stats = node['stats']
+        # node_type = node['type']
+        if typed:
+            _stats = stats
+        else:
+            _stats = self._reduce_stats(stats)
+        return _stats
+        # self._humanize_stats(stats, node_type)
+        # disp_stats = self._humanize_stats(_stats, node_type)
 
     def _inplace_filter_dnames(self, dnames):
         if self.include_dnames is not None:
@@ -284,6 +354,11 @@ class DirectoryWalker:
                 # if root != dpath:
                 #     g.add_edge(root.parent, root)
 
+                if self.sort:
+                    # TODO: good API to customize sorting
+                    fnames = sorted(fnames)
+                    dnames = sorted(dnames)
+
                 if not too_many_files:
                     for f in fnames:
                         fpath = root / f
@@ -334,13 +409,13 @@ class DirectoryWalker:
         g = self.graph
         # Accumulate size stats
         ### Iterate from leaf-to-root, and accumulate info in directories
-        for node in self._topo_order[::-1]:
-            children = g.succ[node]
-            node_data = g.nodes[node]
+        for node in self._topo_order[::-1]:  # type: ignore
+            children = g.succ[node]  # type: ignore
+            node_data = g.nodes[node]  # type: ignore
             if node_data['type'] == 'dir':
                 node_data['stats'] = accum_stats = {}
                 for child in children:
-                    child_data = g.nodes[child]
+                    child_data = g.nodes[child]  # type: ignore
                     child_stats = child_data.get('stats', {})
                     for key, stat_value in child_stats.items():
                         # a collections.Counter might be more efficient
@@ -357,8 +432,8 @@ class DirectoryWalker:
         # Get size stats for each file.
         pman = ProgressManager()
         with pman:
-            prog = pman.progiter(desc='Parse File Info', total=len(g))
-            for fpath, node_data in g.nodes(data=True):
+            prog = pman.progiter(desc='Parse File Info', total=len(g))  # type: ignore
+            for fpath, node_data in g.nodes(data=True):  # type: ignore
                 if node_data['type'] == 'file':
                     stats = parse_file_stats(fpath,
                                              parse_content=self.parse_content, fs=fs)
@@ -395,27 +470,36 @@ class DirectoryWalker:
             # Get the files from the graph first.
             fpaths = [
                 path
-                for path, data in graph.nodes(data=True)
+                for path, data in graph.nodes(data=True)  # type: ignore
                 if data['isfile']
             ]
             prog = ub.ProgIter(fpaths, desc=submit_desc, total=len(fpaths),
                                homogeneous=False)
             for fpath in prog:
                 job = jobs.submit(func, fpath)
-                job.fpath = fpath
+                job.fpath = fpath  # type: ignore
 
             for job in ub.ProgIter(jobs.as_completed(), desc=collect_desc,
                                    total=len(jobs)):
-                fpath = job.fpath
+                fpath = job.fpath  # type: ignore
                 result = job.result()
                 yield fpath, result
 
-    def _humanize_stats(self, stats, node_type, reduce_prefix=False):
+    @classmethod
+    def _reduce_stats(cls, stats):
+        """
+        Combines stats over the a prefix
+        """
+        suffixes = [k.split('.', 1)[1] for k in stats.keys()]
+        _stats = ub.udict(ub.group_items(stats.values(), suffixes)).map_values(sum)
+        # _stats.update({k: v for k, v in stats.items() if k.endswith('.files')})
+        return _stats
+
+    @classmethod
+    def _humanize_stats(cls, stats, node_type, reduce_prefix=False):
         disp_stats = {}
         if reduce_prefix:
-            suffixes = [k.split('.', 1)[1] for k in stats.keys()]
-            _stats = ub.udict(ub.group_items(stats.values(), suffixes)).map_values(sum)
-            # _stats.update({k: v for k, v in stats.items() if k.endswith('.files')})
+            _stats = cls._reduce_stats(stats)
         else:
             _stats = stats
         if node_type == 'dir':
@@ -435,12 +519,12 @@ class DirectoryWalker:
 
     def _find_duplicate_files(self):
         hasher = 'blake3'
-        for path, node_data in self.graph.nodes(data=True):
+        for path, node_data in self.graph.nodes(data=True):  # type: ignore
             if node_data['isfile']:
                 node_data[hasher] = ub.hash_file(path, hasher=hasher)
 
         hash_to_paths = ub.ddict(list)
-        for path, node_data in self.graph.nodes(data=True):
+        for path, node_data in self.graph.nodes(data=True):  # type: ignore
             if node_data['isfile']:
                 hash = node_data[hasher]
                 hash_to_paths[hash].append(path)
@@ -450,13 +534,13 @@ class DirectoryWalker:
         for k, v in hash_to_paths.items():
             if len(v) > 1:
                 dups.append(k)
-        dup_hash_to_paths = hash_to_paths & dups
+        dup_hash_to_paths = hash_to_paths & dups  # type: ignore
         print('dup_hash_to_paths = {}'.format(ub.urepr(dup_hash_to_paths, nl=2)))
 
     def _update_path_metadata(self):
         g = self.graph
-        for path in self._topo_order:
-            node_data = g.nodes[path]
+        for path in self._topo_order:  # type: ignore
+            node_data = g.nodes[path]  # type: ignore
 
             islink = os.path.islink(path)
             isfile = os.path.isfile(path)
@@ -521,7 +605,7 @@ class DirectoryWalker:
 
         self._update_path_metadata()
 
-        for path, node_data in self.graph.nodes(data=True):
+        for path, node_data in self.graph.nodes(data=True):  # type: ignore
             stats = node_data.get('stats', None)
             node_type = node_data.get('type', None)
 
@@ -606,13 +690,13 @@ class DirectoryWalker:
     def _sort(self):
         g = self.graph
         # Order nodes based on size
-        ordered_nodes = dict(g.nodes(data=True))
+        ordered_nodes = dict(g.nodes(data=True))  # type: ignore
         ordered_edges = []
-        for node in self._topo_order[::-1]:
+        for node in self._topo_order[::-1]:  # type: ignore
             # Sort children by total lines
-            children = g.succ[node]
-            children = ub.udict({c: g.nodes[c] for c in children})
-            children = children.sorted_keys(lambda c: (g.nodes[c]['type'], g.nodes[c].get('stats', {}).get('total_lines', 0)), reverse=True)
+            children = g.succ[node]  # type: ignore
+            children = ub.udict({c: g.nodes[c] for c in children})  # type: ignore
+            children = children.sorted_keys(lambda c: (g.nodes[c]['type'], g.nodes[c].get('stats', {}).get('total_lines', 0)), reverse=True)  # type: ignore
             for c, d in children.items():
                 ordered_nodes.pop(c, None)
                 ordered_nodes[c] = d
@@ -620,11 +704,173 @@ class DirectoryWalker:
 
             # ordered_nodes.update(children)
 
-        assert not (set(g.edges) - set(ordered_edges))
+        assert not (set(g.edges) - set(ordered_edges))  # type: ignore
         new = nx.DiGraph()
         new.add_nodes_from(ordered_nodes.items())
         new.add_edges_from(ordered_edges)
         self.graph = new
+
+    @classmethod
+    def demo(cls):
+        """
+        Create a persistent demo directory tree and return a built walker.
+
+        The directory is created under ``ub.Path.appdir('directory_walker/demo')`` and
+        is re-initialized on each call to keep doctests deterministic.
+
+        Returns:
+            DirectoryWalker
+
+        Example:
+            >>> import xdev
+            >>> walker = xdev.DirectoryWalker.demo()
+            >>> walker.dpath.exists()
+            True
+        """
+        import os
+        import ubelt as ub
+
+        demo_root = ub.Path.appdir('xdev/directory_walker/demo').ensuredir()
+
+        # Make deterministic by clearing and recreating
+        if demo_root.exists():
+            demo_root.delete()
+        demo_root.ensuredir()
+
+        # Build a small stable tree
+        (demo_root / 'adir').ensuredir()
+        (demo_root / 'bdir').ensuredir()
+        (demo_root / 'adir' / 'foo.txt').write_text('hello')
+        (demo_root / 'adir' / 'bar.md').write_text('world')
+        (demo_root / 'bdir' / 'foo.md').write_text('x')
+
+        # Optional symlink (best effort)
+        link_path = demo_root / 'alink.txt'
+        try:
+            os.symlink(demo_root / 'adir' / 'foo.txt', link_path)
+        except Exception:
+            # Windows / permissions / filesystem may not allow symlinks
+            pass
+
+        walker = cls(demo_root)
+        walker.build()
+        return walker
+
+    def find(self, pattern, data=False, root=None, filetype=None):
+        """
+        Search for nodes whose **name** matches a MultiPattern, optionally filtering by type.
+
+        Args:
+            pattern: Coerced via ``MultiPattern.coerce(pattern)`` and tested with
+                ``pattern.match(node.name)``.
+            data (bool): if True, also yield the node data dict
+            root (pathlib.Path | None): if specified, search descendants of this node
+            filetype (Iterable[str] | None):
+                Iterable of type chars from {'f', 'd', 'l'}:
+                  - 'f' = regular file
+                  - 'd' = directory
+                  - 'l' = symlink
+                Examples: 'f', 'fd', {'l'}, ['f','l'].
+
+        Yields:
+            pathlib.Path | Tuple[pathlib.Path, dict]
+
+        Example:
+            >>> import xdev
+            >>> walker = DirectoryWalker.demo()
+            >>> sorted(p.name for p in walker.find('foo.txt'))
+            ['foo.txt']
+            >>> sorted(p.name for p in walker.find('foo*', filetype='f'))
+            ['foo.md', 'foo.txt']
+            >>> sorted(p.name for p in walker.find('adir', filetype='d'))
+            ['adir']
+            >>> # Best-effort: only assert something meaningful if the symlink exists
+            >>> links = list(walker.find('alink.txt', filetype='l'))
+            >>> (len(links) == 1)
+            True
+        """
+        import networkx as nx
+
+        if self.graph is None:
+            raise RuntimeError('DirectoryWalker.find() requires build() first')
+
+        graph = self.graph
+
+        # Normalize root
+        if root is not None:
+            if root not in graph:
+                raise KeyError(f'root {root!r} not found in graph')
+            nodes = nx.descendants(graph, root)
+        else:
+            nodes = graph.nodes
+
+        # Coerce pattern
+        pattern = MultiPattern.coerce(pattern)
+
+        # Normalize filetype: iterable of chars in {f,d,l}
+        ftypes = None
+        if filetype is not None:
+            ftypes = set(filetype)
+            unknown = ftypes - {'f', 'd', 'l'}
+            if unknown:
+                raise ValueError(f'unknown filetype chars={sorted(unknown)!r}, expected subset of {{"f","d","l"}}')
+
+        for node in nodes:
+            # Match only on node.name
+            if not pattern.match(node.name):
+                continue
+
+            node_data = graph.nodes[node]
+
+            if ftypes is not None:
+                keep = False
+                if ('l' in ftypes and node_data['islink']):
+                    keep = True
+                if ('f' in ftypes and node_data['isfile']):
+                    keep = True
+                if ('d' in ftypes and node_data['isdir']):
+                    keep = True
+
+                if not keep:
+                    continue
+
+            if data:
+                yield node, node_data
+            else:
+                yield node
+
+    def find_one(self, pattern, data=False, root=None, filetype=None):
+        """
+        Find exactly one node matching a pattern (and optional type filter).
+
+        Args:
+            pattern: Coerced via ``kwutil.MultiPattern.coerce(pattern)`` (see ``find``).
+            data (bool): if True, also return the node data dict.
+            root (pathlib.Path | None): if specified, search descendants of this node.
+            filetype (Iterable[str] | None): iterable of {'f','d','l'} (see ``find``).
+
+        Returns:
+            pathlib.Path | Tuple[pathlib.Path, dict]
+
+        Raises:
+            KeyError: if zero or multiple matches are found.
+
+        Example:
+            >>> walker = DirectoryWalker.demo()
+            >>> walker.find_one('foo.txt').name
+            'foo.txt'
+        """
+        matches = list(self.find(pattern, data=data, root=root, filetype=filetype))
+
+        if not matches:
+            raise KeyError(f'find_one({pattern!r}) found no matches')
+
+        if len(matches) > 1:
+            raise KeyError(
+                f'find_one({pattern!r}) found {len(matches)} matches, expected exactly one'
+            )
+
+        return matches[0]
 
 
 def parse_file_stats(fpath, parse_content=True, fs=None):
@@ -685,6 +931,12 @@ def parse_file_stats(fpath, parse_content=True, fs=None):
                     ...
                 else:
                     stats['doc_lines'] = total_doclines
+
+            elif ext == '.rs':
+                try:
+                    stats.update(parse_rust_content_stats(text))
+                except Exception:
+                    ...
 
     stats = {prefix + k: v for k, v in stats.items()}
     return stats
@@ -868,3 +1120,281 @@ def _null_coerce(cls, arg, **kwargs):
         return arg
     else:
         return cls.coerce(arg, **kwargs)
+
+
+class DirectoryDiff:
+    """
+    Given two directory walkers (that walk over what should be similar
+    directories), compare the state of them both.
+
+    Ignore:
+        from xdev.directory_walker import *  # NOQA
+        walker1 = DirectoryWalker('.')
+        walker2 = DirectoryWalker('.')
+        walker1.build()
+        walker2.build()
+        self = DirectoryDiff(walker1, walker2).build()
+        self.write_report()
+    """
+    def __init__(self, walker1, walker2):
+        self.walker1 = walker1
+        self.walker2 = walker2
+
+    def build(self):
+        rel_paths1 = {p.relative_to(self.walker1.dpath) for p in self.walker1.graph.nodes}
+        rel_paths2 = {p.relative_to(self.walker2.dpath) for p in self.walker2.graph.nodes}
+        self.root1 = self.walker1.dpath
+        self.root2 = self.walker2.dpath
+        self.common_paths = rel_paths1 & rel_paths2
+        self.unique_paths1 = rel_paths1 - rel_paths2
+        self.unique_paths2 = rel_paths2 - rel_paths1
+
+        common_table = []
+        for rel_path in self.common_paths:
+            path1 = self.root1 / rel_path
+            path2 = self.root2 / rel_path
+            row = {
+                'rel_path': rel_path,
+                'type': None,
+                'hash': None,
+                'num_errors': 0,
+            }
+            data1 = self.walker1.graph.nodes[path1]
+            data2 = self.walker2.graph.nodes[path2]
+
+            to_compare = {
+                'item1': {'type': data1['type']},
+                'item2': {'type': data2['type']},
+            }
+            type1 = data1['type']
+            type2 = data2['type']
+            if type1 == type2:
+                if data1['isfile']:
+                    # TODO: control what is compared.
+                    to_compare['item1']['hash'] = ub.hash_file(path1)
+                    to_compare['item2']['hash'] = ub.hash_file(path2)
+
+                    stat1 = path1.stat()
+                    stat2 = path2.stat()
+                    to_compare['item1']['st_mode'] = stat1.st_mode
+                    to_compare['item2']['st_mode'] = stat2.st_mode
+                    to_compare['item1']['st_mtime'] = stat1.st_mtime
+                    to_compare['item2']['st_mtime'] = stat2.st_mtime
+                    to_compare['item1']['st_ctime'] = stat1.st_ctime
+                    to_compare['item2']['st_ctime'] = stat2.st_ctime
+                    to_compare['item1']['st_gid'] = stat1.st_gid
+                    to_compare['item2']['st_gid'] = stat2.st_gid
+                    to_compare['item1']['st_uid'] = stat1.st_uid
+                    to_compare['item2']['st_uid'] = stat2.st_uid
+
+                to_compare['item1']['stats'] = data2['stats']
+                to_compare['item2']['stats'] = data2['stats']
+
+            compare1 = to_compare['item1']
+            compare2 = to_compare['item2']
+            for k in compare1.keys():
+                v1 = compare1[k]
+                v2 = compare2[k]
+                if v1 != v2:
+                    row[k] = f'MISMATCH: {v1} {v2}'
+                    row['num_errors'] += 1
+                else:
+                    row[k] = v1
+            common_table.append(row)
+
+        self.common_table = common_table
+        return self
+
+    def summary(self):
+        from collections import Counter
+        error_hist = Counter({0: 0, 1: 0})
+        error_hist.update(r['num_errors'] for r in self.common_table)
+        summary = {
+            'n_common_paths': len(self.common_paths),
+            'n_unique_paths1': len(self.unique_paths1),
+            'n_unique_paths2': len(self.unique_paths2),
+            'error_hist': error_hist,
+        }
+        return summary
+
+    def write_report(self):
+        summary = self.summary()
+        print(f'summary = {ub.urepr(summary, nl=1)}')
+
+
+# TODO: move rust utils to helpers
+
+
+def parse_rust_content_stats(source: str):
+    """
+    Count effective Rust lines of code.
+
+    This counts non-empty lines after removing Rust comments, while preserving
+    comment-like text inside normal strings, raw strings, byte strings, and C
+    strings. Rust nested block comments are handled.
+
+    Returns:
+        Dict[str, int]: contains code_lines, comment_lines, and doc_lines.
+
+    Example:
+        >>> import ubelt as ub
+        >>> source = ub.codeblock(
+        >>>     r'''
+        >>>     // module comment
+        >>>
+        >>>     fn main() {
+        >>>         println!("http://example.com"); // trailing comment
+        >>>         let text = "/* not comment */";
+        >>>         let raw = r#"// not comment"#;
+        >>>         /*
+        >>>           block comment
+        >>>           /* nested */
+        >>>         */
+        >>>         /// doc comment
+        >>>         pub fn documented() {}
+        >>>     }
+        >>>     ''')
+        >>> stats = parse_rust_content_stats(source)
+        >>> assert stats['code_lines'] == 6
+        >>> assert stats['doc_lines'] == 1
+    """
+    import collections
+
+    n = len(source)
+    i = 0
+    line = 0
+    line_has_code = collections.defaultdict(bool)
+    comment_lines = set()
+    doc_lines = set()
+
+    def mark_comment_char(ch, is_doc):
+        nonlocal line
+        if ch == '\n':
+            line += 1
+        elif not ch.isspace():
+            comment_lines.add(line)
+            if is_doc:
+                doc_lines.add(line)
+
+    def mark_code_span(start, stop):
+        nonlocal line
+        j = start
+        while j < stop:
+            ch = source[j]
+            if ch == '\n':
+                line += 1
+            elif not ch.isspace():
+                line_has_code[line] = True
+            j += 1
+
+    while i < n:
+        ch = source[i]
+
+        # Rust line comments: //, ///, //!
+        if source.startswith('//', i):
+            is_doc = source.startswith('///', i) or source.startswith('//!', i)
+            while i < n and source[i] != '\n':
+                mark_comment_char(source[i], is_doc)
+                i += 1
+            continue
+
+        # Rust nested block comments: /* ... */, /** ... */, /*! ... */
+        if source.startswith('/*', i):
+            is_doc = (
+                source.startswith('/**', i) and
+                not source.startswith('/***', i)
+            ) or source.startswith('/*!', i)
+            depth = 0
+            while i < n:
+                if source.startswith('/*', i):
+                    depth += 1
+                    mark_comment_char(source[i], is_doc)
+                    mark_comment_char(source[i + 1], is_doc)
+                    i += 2
+                    continue
+                if source.startswith('*/', i):
+                    mark_comment_char(source[i], is_doc)
+                    mark_comment_char(source[i + 1], is_doc)
+                    i += 2
+                    depth -= 1
+                    if depth <= 0:
+                        break
+                    continue
+                mark_comment_char(source[i], is_doc)
+                i += 1
+            continue
+
+        # Rust raw strings: r"...", r#"..."#, br"...", br#"..."#.
+        close_delim = _rust_raw_string_close_delim(source, i)
+        if close_delim is not None:
+            open_quote = source.find('"', i)
+            stop = source.find(close_delim, open_quote + 1)
+            if stop < 0:
+                stop = n
+            else:
+                stop += len(close_delim)
+            mark_code_span(i, stop)
+            i = stop
+            continue
+
+        # Normal string-ish literals. This avoids treating // or /* inside a
+        # string as a comment.
+        if (
+            ch == '"' or
+            (ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"')
+        ):
+            stop = i + 1
+            if ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"':
+                stop = i + 2
+            escape = False
+            while stop < n:
+                c = source[stop]
+                stop += 1
+                if escape:
+                    escape = False
+                elif c == '\\':
+                    escape = True
+                elif c == '"':
+                    break
+            mark_code_span(i, stop)
+            i = stop
+            continue
+
+        if ch == '\n':
+            line += 1
+            i += 1
+            continue
+
+        if not ch.isspace():
+            line_has_code[line] = True
+
+        i += 1
+
+    return {
+        'code_lines': sum(line_has_code.values()),
+        'comment_lines': len(comment_lines),
+        'doc_lines': len(doc_lines),
+    }
+
+
+def _rust_raw_string_close_delim(source: str, pos: int):
+    """
+    Return the closing delimiter for a Rust raw string at ``pos``, or None.
+    """
+    n = len(source)
+    if source.startswith(('br', 'cr'), pos):
+        j = pos + 2
+        prefix_len = 2
+    elif pos < n and source[pos] == 'r':
+        j = pos + 1
+        prefix_len = 1
+    else:
+        return None
+
+    while j < n and source[j] == '#':
+        j += 1
+
+    if j < n and source[j] == '"':
+        hashes = source[pos + prefix_len:j]
+        return '"' + hashes
+    return None

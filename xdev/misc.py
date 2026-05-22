@@ -22,7 +22,7 @@ def quantum_random(pure=False):
     """
     import numpy as np
     import os
-    import quantumrandom
+    import quantumrandom  # type: ignore
 
     # Data was sent over a network
     qr_data16 = quantumrandom.uint16(array_length=2)
@@ -127,7 +127,7 @@ def _resolve_set(items, name='items'):
     return unique_items, n_total, dup_counts
 
 
-def set_overlaps(set1, set2, s1='s1', s2='s2'):
+def set_overlaps(set1, set2, s1='s1', s2='s2', n_samples=None):
     """
     Return sizes about set overlaps.
 
@@ -139,9 +139,11 @@ def set_overlaps(set1, set2, s1='s1', s2='s2'):
         set2 (Iterable): the second set of items
         s1 (str): name for set1
         s2 (str): name for set2
+        n_samples (int | None): provide up to n examples from each set.
 
     Returns:
-        Dict[str, int]: sizes of sets intersections unions and differences
+        Dict[str, int] | Dict[str, int | Dict]:
+            sizes of sets intersections unions and differences
 
     Example:
         >>> import ubelt as ub
@@ -190,6 +192,19 @@ def set_overlaps(set1, set2, s1='s1', s2='s2'):
         overlaps[f'{s1} total'] = n_total1
     if dup_counts2:
         overlaps[f'{s2} total'] = n_total2
+
+    if n_samples:
+        # If requested provide samples of the parts.
+        raw_samples = {
+            's1': set1,
+            's2': set2,
+            'isect': set1.intersection(set2),
+            'union': set1.union(set2),
+            f'{s1} - {s2}': set1.difference(set2),
+            f'{s2} - {s1}': set2.difference(set1),
+        }
+        from itertools import islice
+        overlaps['samples'] = {k: list(islice(v, n_samples)) for k, v in raw_samples.items()}  # type: ignore
     return overlaps
 
 
@@ -262,16 +277,26 @@ def nested_type(obj, unions=False):
 
 
 def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
-             colored=False):
+             colored=False, style='ndiff', fromfile='', tofile=''):
     r"""
     Uses difflib to return a difference string between two similar texts
 
     Args:
         text1 (str): old text
+
         text2 (str): new text
+
         context_lines (int): number of lines of unchanged context
+
         ignore_whitespace (bool):
+
         colored (bool): if true highlight the diff
+
+        style (str): can be ndiff or unified (git style)
+
+        fromfile (str): unified diff "old" header label
+
+        tofile (str): unified diff "new" header label
 
     Returns:
         str: formatted difference text message
@@ -292,18 +317,55 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
 
     Example:
         >>> # build test data
+        >>> from xdev.misc import *  # NOQA
         >>> text1 = 'one\ntwo\nthree\n3.1\n3.14\n3.1415\npi\n3.4\n3.5\n4'
         >>> text2 = 'one\ntwo\nfive\n3.1\n3.14\n3.1415\npi\n3.4\n4'
         >>> # execute function
         >>> context_lines = 1
         >>> result = difftext(text1, text2, context_lines, colored=True)
-        >>> # verify results
         >>> print(result)
+        >>> #
+        >>> result = difftext(text1, text2, context_lines, colored=True, style='unified')
+        >>> print(result)
+
+    Example:
+        >>> # build test data for a git-apply-able unified patch
+        >>> from xdev.misc import *  # NOQA
+        >>> text1 = 'alpha\nbeta\ngamma\n'
+        >>> text2 = 'alpha\nbeta\nGAMMA\ndelta\n'
+        >>> patch = difftext(text1, text2, context_lines=3, style='unified', colored=True,
+        ...                  fromfile='a/example.txt', tofile='b/example.txt')
+        >>> print(patch)  # doctest: +ELLIPSIS
+        >>> lines = patch.splitlines()
+        >>> assert lines[0] == '--- a/example.txt'
+        >>> assert lines[1] == '+++ b/example.txt'
+        >>> assert lines[2].startswith('@@')
     """
     import ubelt as ub
     import difflib
-    text1 = ub.ensure_unicode(text1)
-    text2 = ub.ensure_unicode(text2)
+    import os
+
+    if style == 'unified':
+        # difflib.unified_diff expects an integer for n (context lines)
+        n = 3 if (context_lines is None) else int(context_lines)
+
+        text1_lines = text1.splitlines(True)
+        text2_lines = text2.splitlines(True)
+
+        # NOTE: lineterm='\n' avoids extra blank lines and matches typical patches
+        diff_iter = difflib.unified_diff(
+            text1_lines, text2_lines,
+            fromfile=os.fspath(fromfile), tofile=os.fspath(tofile),
+            n=n, lineterm='\n'
+        )
+        text = ''.join(diff_iter)
+        # For git patches, never colorize the output (would break `git apply`).
+        # Keep this uncolored even when colored=True so callers can pipe the
+        # returned text directly into patch / git-apply style tools.
+        return text
+
+    assert style == 'ndiff'
+
     text1_lines = text1.splitlines()
     text2_lines = text2.splitlines()
     if ignore_whitespace:
@@ -313,6 +375,7 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
                         charjunk=difflib.IS_CHARACTER_JUNK)
     else:
         ndiff_kw = {}
+
     all_diff_lines = list(difflib.ndiff(text1_lines, text2_lines, **ndiff_kw))
 
     if context_lines is None:

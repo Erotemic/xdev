@@ -60,7 +60,7 @@ class PyVersionCLI(scfg.DataConfig):
         modname = args['modname']
 
         if args['backend'] == 'auto':
-            candidate_backends  = ['import', 'pkg_resources']
+            candidate_backends  = ['importlib', 'import', 'pkg_resources']
         else:
             candidate_backends = [args['backend']]
 
@@ -90,7 +90,7 @@ class PyVersionCLI(scfg.DataConfig):
                     print(one_liner)
             elif backend == 'pkg_resources':
                 # pkg resources is deprecated.
-                import pkg_resources
+                import pkg_resources  # type: ignore
                 version = pkg_resources.get_distribution(modname).version
                 if args.verbose:
                     one_liner = ub.codeblock(

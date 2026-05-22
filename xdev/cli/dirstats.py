@@ -33,15 +33,16 @@ class DirectoryStatsCLI(scfg.DataConfig):
     max_walk_depth = scfg.Value(None, short_alias=['L'], help='maximum depth to walk')
     max_display_depth = scfg.Value(None, short_alias=['D'], help='maximum depth to display')
 
-    verbose = scfg.Value(0, isflag=True, short_alias=['-v'])
-    version = scfg.Value(False, isflag=True, short_alias=['-V'])
+    verbose = scfg.Value(0, isflag=True, short_alias=['v'])
+    version = scfg.Value(False, isflag=True, short_alias=['V'])
     python = scfg.Value(False, isflag=True, help='enable python repository defaults', alias=['pydev'])
+    rust = scfg.Value(False, isflag=True, help='enable rust repository defaults', alias=['rsdev'])
 
     ignore_dotprefix = scfg.Value(True, isflag=True, help='if True ignore directories and folders with a dot prefix')
 
     def __post_init__(config):
-        if config.dpath.startswith('module:'):
-            config.dpath = ub.modname_to_modpath(config.dpath.split('module:', 1)[1])
+        if config.dpath.startswith('module:'):  # type: ignore
+            config.dpath = ub.modname_to_modpath(config.dpath.split('module:', 1)[1])  # type: ignore
 
         if config.exclude_fnames is None:
             config.exclude_fnames = []
@@ -49,21 +50,37 @@ class DirectoryStatsCLI(scfg.DataConfig):
             config.exclude_dnames = []
 
         if config.ignore_dotprefix:
-            config.exclude_fnames.append('.*')
-            config.exclude_dnames.append('.*')
+            config.exclude_fnames.append('.*')  # type: ignore
+            config.exclude_dnames.append('.*')  # type: ignore
 
         if config.python:
-            config.exclude_fnames += [
+            config.exclude_fnames += [  # type: ignore
                 '*.pyc',
                 '*.pyi',
             ]
-            config.exclude_dnames += [
+            config.exclude_dnames += [  # type: ignore
                 # '_*',
                 '__pycache__',
                 '_static',
                 '_modules',
                 'htmlcov',
                 # '.*',
+            ]
+
+        if config.rust:
+            # Effective LOC requires content parsing.
+            config.parse_content = True  # type: ignore
+
+            # If the user did not give an include filter, focus the report on
+            # Rust source files. Explicit include_fnames still wins.
+            if config.include_fnames is None:
+                config.include_fnames = ['*.rs']
+
+            config.exclude_fnames += [  # type: ignore
+                'Cargo.lock',
+            ]
+            config.exclude_dnames += [  # type: ignore
+                'target',
             ]
 
     @classmethod
@@ -83,7 +100,7 @@ def main(cmdline=1, **kwargs):
         >>> kwargs = dict(dpath='module:watch')
         >>> main(cmdline=cmdline, **kwargs)
     """
-    config = DirectoryStatsCLI.cli(cmdline=cmdline, data=kwargs, strict=True)
+    config = DirectoryStatsCLI.cli(cmdline=cmdline, data=kwargs, strict=True)  # type: ignore
 
     import rich
     if config.verbose:
@@ -91,7 +108,7 @@ def main(cmdline=1, **kwargs):
     rich.print('config = ' + ub.urepr(config, nl=1))
 
     from xdev.directory_walker import DirectoryWalker  # NOQA
-    kwargs = ub.udict(config) & {
+    kwargs = ub.udict(config) & {  # type: ignore
         'dpath', 'exclude_dnames', 'exclude_fnames', 'include_dnames',
         'include_fnames', 'max_walk_depth', 'parse_content', 'max_files'
     }

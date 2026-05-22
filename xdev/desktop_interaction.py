@@ -3,7 +3,7 @@ Functions related to interacting with data via an OS Desktop GUI.
 """
 from os.path import normpath
 from os.path import exists
-from os.path import sys
+import sys
 import types
 import os
 import warnings
@@ -37,13 +37,13 @@ def _coerce_editable_fpath(target):
     elif isinstance(target, os.PathLike):
         fpath = ub.Path(target)
     elif hasattr(target, '__module__'):
-        fpath =  ub.Path(sys.modules[target.__module__].__file__)
+        fpath =  ub.Path(sys.modules[target.__module__].__file__)  # type: ignore
     else:
         raise TypeError(f"Unable to coerce {target} into a file path")
 
     if fpath is None:
         # Is it a package name?
-        import pkg_resources
+        import pkg_resources  # type: ignore
         try:
             distribution = pkg_resources.get_distribution(target)
             top_level_names = list(distribution.get_metadata_lines("top_level.txt"))
@@ -66,8 +66,8 @@ def _coerce_editable_fpath(target):
         raise Exception(f"Unable to interpret {target} as a module name or file path")
 
     # Resolve a pyc file to a py file if possible.
-    if fpath.suffix == '.pyc':
-        fpath_py = fpath.augment(ext='.py')
+    if fpath.suffix == '.pyc':  # type: ignore
+        fpath_py = fpath.augment(ext='.py')  # type: ignore
         if fpath_py.exists():
             fpath = fpath_py
 
@@ -222,7 +222,7 @@ def startfile(fpath, verbose=True):
     elif ub.DARWIN:
         info = ub.cmd(('open', fpath), detach=True, verbose=verbose)
     elif ub.WIN32:
-        os.startfile(fpath)
+        os.startfile(fpath)  # type: ignore
         info = None
     else:
         raise RuntimeError('Unknown Platform')

@@ -43,10 +43,10 @@ Ignore:
 
 
 try:
-    from mypy.stubgen import (ASTStubGenerator, find_self_initializers, FUNC, EMPTY,
+    from mypy.stubgen import (ASTStubGenerator, find_self_initializers, FUNC, EMPTY,  # type: ignore
                               METHODS_WITH_RETURN_VALUE,)
-    from mypy.stubgen import (is_none_expr)
-    from mypy.nodes import (
+    from mypy.stubgen import (is_none_expr)  # type: ignore
+    from mypy.nodes import (  # type: ignore
         # Expression, IntExpr, UnaryExpr, StrExpr, BytesExpr, NameExpr, FloatExpr, MemberExpr,
         # TupleExpr, ListExpr, ComparisonExpr, CallExpr, IndexExpr, EllipsisExpr,
         # ClassDef, MypyFile, Decorator, AssignmentStmt, TypeInfo,
@@ -58,22 +58,22 @@ try:
         ARG_STAR, ARG_STAR2,
         # ARG_NAMED,
     )
-    from mypy.types import (
+    from mypy.types import (  # type: ignore
         # Type, TypeStrVisitor,
         CallableType,
         # UnboundType, NoneType, TupleType, TypeList, Instance,
         AnyType,
         get_proper_type
     )
-    from mypy.traverser import (
+    from mypy.traverser import (  # type: ignore
         all_yield_expressions,
         has_return_statement,
         has_yield_expression
     )
 except Exception:
-    ASTStubGenerator = object
-    FuncDef = None
-    METHODS_WITH_RETURN_VALUE = []
+    ASTStubGenerator = object  # type: ignore
+    FuncDef = None  # type: ignore
+    METHODS_WITH_RETURN_VALUE = []  # type: ignore
 
 import sys
 from typing import (List,)
@@ -100,7 +100,7 @@ def _hack_away_compiled_mypy():
     """
     # This doesn't seem to work. The only thing that has worked so far is a
     # custom checkout and developer install. Not sure why that is the case.
-    modpath = ub.Path(ub.modname_to_modpath('mypy'))
+    modpath = ub.Path(ub.modname_to_modpath('mypy'))  # type: ignore
     print(f'modpath={modpath}')
     compiled_modules = list(modpath.glob('*.so'))
     print(f'compiled_modules={compiled_modules}')
@@ -194,8 +194,8 @@ def generate_typed_stubs(modpath):
     # import pathlib
     # import ubelt as ub
     import os
-    from mypy import stubgen
-    from mypy import defaults
+    from mypy import stubgen  # type: ignore
+    from mypy import defaults  # type: ignore
     from xdoctest import static_analysis
     # from os.path import join
     import ubelt as ub
@@ -209,7 +209,7 @@ def generate_typed_stubs(modpath):
     modpath = ub.Path(modpath)
 
     files = list(static_analysis.package_modpaths(
-        modpath, recursive=True, with_libs=0, with_pkg=0))
+        modpath, recursive=True, with_libs=0, with_pkg=0))  # type: ignore
 
     # print('files = {}'.format(ub.repr2(files, nl=1)))
     # files = [f for f in files if 'deprecated' not in f]
@@ -248,7 +248,7 @@ def generate_typed_stubs(modpath):
     # Collect info from docs (if given):
     sigs = class_sigs = None  # type: Optional[Dict[str, str]]
     if options.doc_dir:
-        sigs, class_sigs = stubgen.collect_docs_signatures(options.doc_dir)
+        sigs, class_sigs = stubgen.collect_docs_signatures(options.doc_dir)  # type: ignore
 
     # Use parsed sources to generate stubs for Python modules.
     stubgen.generate_asts_for_modules(py_modules, options.parse_only, mypy_opts, options.verbose)
@@ -285,7 +285,7 @@ def generate_typed_stubs(modpath):
                                         include_private=options.include_private,
                                         analyzed=not options.parse_only,
                                         export_less=options.export_less)
-            gen.module = mod.module
+            gen.module = mod.module  # type: ignore
             assert mod.ast is not None, "This function must be used only with analyzed modules"
             mod.ast.accept(gen)
             # print('gen.import_tracker.required_names = {!r}'.format(gen.import_tracker.required_names))
@@ -300,21 +300,21 @@ def generate_typed_stubs(modpath):
                 'ObjT',
             }
             for type_var_name in sorted(set(gen.import_tracker.required_names) & set(known_one_letter_types)):
-                gen.add_typing_import('TypeVar')
+                gen.add_typing_import('TypeVar')  # type: ignore
                 # gen.add_import_line('from typing import {}\n'.format('TypeVar'))
                 gen._output = ['{} = TypeVar("{}")\n'.format(type_var_name, type_var_name)] + gen._output
 
             custom_types = {'Hasher', 'Sliceable'}
             for type_var_name in sorted(set(gen.import_tracker.required_names) & set(custom_types)):
-                gen.add_typing_import('TypeVar')
+                gen.add_typing_import('TypeVar')  # type: ignore
                 # gen.add_import_line('from typing import {}\n'.format('TypeVar'))
                 gen._output = ['{} = TypeVar("{}")\n'.format(type_var_name, type_var_name)] + gen._output
 
             # Check for a special user header variable we pull in verbatim
-            import mypy
+            import mypy  # type: ignore
             user_header = None
             for d in mod.ast.defs:
-                if isinstance(d, mypy.nodes.AssignmentStmt):
+                if isinstance(d, mypy.nodes.AssignmentStmt):  # type: ignore
                     try:
                         if len(d.lvalues) == 1 and d.lvalues[0].name == '__docstubs__':
                             user_header = d.rvalue.value
@@ -415,8 +415,8 @@ def remove_duplicate_imports(text):
 
 
 def postprocess_hacks(text, mod):
-    import autoflake
-    import yapf
+    import autoflake  # type: ignore
+    import yapf  # type: ignore
     # Hack to remove lines caused by Py2 compat
     text = text.replace('Generator = object\n', '')
     text = text.replace('select = NotImplemented\n', '')
@@ -477,9 +477,9 @@ def stdlib_names():
     # https://stackoverflow.com/questions/6463918/how-to-get-a-list-of-all-the-python-standard-library-modules
     import sys
     try:
-        names = sys.stdlib_module_names
+        names = sys.stdlib_module_names  # type: ignore
     except AttributeError:
-        from isort import stdlibs
+        from isort import stdlibs  # type: ignore
         names = list(stdlibs.py3.stdlib)
     return names
 
@@ -602,7 +602,7 @@ def common_unreferenced():
     }
 
     try:
-        import nptyping
+        import nptyping  # type: ignore
         modname_to_refs['nptyping'] = ['NDArray', 'Shape', 'DType'] + list(set(nptyping.typing_.dtype_per_name.keys()) - {'Number'})
     except ModuleNotFoundError as ex:
         print('Warning: ex = {}'.format(ub.urepr(ex, nl=1)))
@@ -761,7 +761,7 @@ def hacked_typing_info(type_name):
     #     result['type_name'] = type_name.replace('callable', 'Callable')
     #     add_typing_import('Callable')
     #     add_import_line('from typing import {}\n'.format(typing_arg))
-    result['type_name'] = type_name
+    result['type_name'] = type_name  # type: ignore
 
     return result
 
@@ -804,7 +804,7 @@ class ExtendedStubGenerator(ASTStubGenerator):
     def visit_func_def(self, o: FuncDef, is_abstract: bool = False,
                        is_overload: bool = False) -> None:
 
-        from mypy import fastparse
+        from mypy import fastparse  # type: ignore
         DEBUG = 0
         if DEBUG:
             print('o.name = {!r}'.format(o.name))
@@ -813,12 +813,12 @@ class ExtendedStubGenerator(ASTStubGenerator):
         # Parse extra information out of the docstring
         name_to_parsed_docstr_info = {}
         return_parsed_docstr_info = None
-        fullname = o.name
+        fullname = o.name  # type: ignore
         if getattr(self, '_IN_CLASS', None) is not None:
-            fullname = self._IN_CLASS + '.' + o.name
+            fullname = self._IN_CLASS + '.' + o.name  # type: ignore
 
         # TODO: Can we do this statically instead?
-        parent_mod = ub.import_module_from_name(self.module)
+        parent_mod = ub.import_module_from_name(self.module)  # type: ignore
         if DEBUG:
             print('fullname = {!r}'.format(fullname))
         curr = parent_mod
@@ -870,12 +870,12 @@ class ExtendedStubGenerator(ASTStubGenerator):
                 except Exception:
                     pass
 
-        if (self.is_private_name(o.name, o.fullname)
-                or self.is_not_in_all(o.name)
-                or (self.is_recorded_name(o.name) and not is_overload)):
+        if (self.is_private_name(o.name, o.fullname)  # type: ignore
+                or self.is_not_in_all(o.name)  # type: ignore
+                or (self.is_recorded_name(o.name) and not is_overload)):  # type: ignore
             self.clear_decorators()
             return
-        if not self._indent and self._state not in (EMPTY, FUNC) and not o.is_awaitable_coroutine:
+        if not self._indent and self._state not in (EMPTY, FUNC) and not o.is_awaitable_coroutine:  # type: ignore
             self.add('\n')
         if not self.is_top_level():
             # This handles class-level attributes.
@@ -883,7 +883,7 @@ class ExtendedStubGenerator(ASTStubGenerator):
             # when we visited the class, so now we have to use that info here.
             self_inits = find_self_initializers(o)
 
-            self_inits_lut = dict(self_inits)
+            self_inits_lut = dict(self_inits)  # type: ignore
             # The docstring is the single source of truth, respect it.
             pseudo_inits = []
             if self._docstring_class_attr_infos is None:
@@ -930,8 +930,8 @@ class ExtendedStubGenerator(ASTStubGenerator):
         for s in self._decorators:
             self.add(s)
         self.clear_decorators()
-        self.add("%s%sdef %s(" % (self._indent, 'async ' if o.is_coroutine else '', o.name))
-        self.record_name(o.name)
+        self.add("%s%sdef %s(" % (self._indent, 'async ' if o.is_coroutine else '', o.name))  # type: ignore
+        self.record_name(o.name)  # type: ignore
 
         DEVELOPER_DEBUGGING = 0
         if DEVELOPER_DEBUGGING:
@@ -951,7 +951,7 @@ class ExtendedStubGenerator(ASTStubGenerator):
         # to default values if they exist. If the default value is something
         # like None, but the existing type annotation isn't marked as optional
         # we can insert that for the user.
-        name_to_argument = {arg_.variable.name: arg_ for arg_ in o.arguments}
+        name_to_argument = {arg_.variable.name: arg_ for arg_ in o.arguments}  # type: ignore
         check_names = set(name_to_argument) & set(name_to_parsed_docstr_info)
         for name in check_names:
             arg_ = name_to_argument[name]
@@ -971,12 +971,12 @@ class ExtendedStubGenerator(ASTStubGenerator):
         # ------------------------------------------
 
         args: List[str] = []
-        for i, arg_ in enumerate(o.arguments):
+        for i, arg_ in enumerate(o.arguments):  # type: ignore
             var = arg_.variable
             kind = arg_.kind
             name = var.name
-            annotated_type = (o.unanalyzed_type.arg_types[i]
-                              if isinstance(o.unanalyzed_type, CallableType) else None)
+            annotated_type = (o.unanalyzed_type.arg_types[i]  # type: ignore
+                              if isinstance(o.unanalyzed_type, CallableType) else None)  # type: ignore
 
             if annotated_type is None:
                 if name in name_to_parsed_docstr_info:
@@ -1016,7 +1016,7 @@ class ExtendedStubGenerator(ASTStubGenerator):
                 if kind.is_named() and not any(arg.startswith('*') for arg in args):
                     args.append('*')
                 if not annotation:
-                    typename = self.get_str_type_of_node(arg_.initializer, True, False)
+                    typename = self.get_str_type_of_node(arg_.initializer, True, False)  # type: ignore
                     if typename == '':
                         if XDEV_KEEP_SOME_DEFAULTS:
                             # TODO
@@ -1027,15 +1027,15 @@ class ExtendedStubGenerator(ASTStubGenerator):
                         annotation = ': {} = ...'.format(typename)
                 else:
                     if XDEV_KEEP_SOME_DEFAULTS:
-                        import mypy
+                        import mypy  # type: ignore
                         # arg_.initializer.is_special_form
-                        if isinstance(arg_.initializer, (mypy.nodes.IntExpr, mypy.nodes.FloatExpr)):
+                        if isinstance(arg_.initializer, (mypy.nodes.IntExpr, mypy.nodes.FloatExpr)):  # type: ignore
                             annotation += '={!r}'.format(arg_.initializer.value)
-                        elif isinstance(arg_.initializer, mypy.nodes.StrExpr):
+                        elif isinstance(arg_.initializer, mypy.nodes.StrExpr):  # type: ignore
                             annotation += '={!r}'.format(arg_.initializer.value)
-                        elif isinstance(arg_.initializer, mypy.nodes.NameExpr):
+                        elif isinstance(arg_.initializer, mypy.nodes.NameExpr):  # type: ignore
                             annotation += '={}'.format(arg_.initializer.name)
-                        elif isinstance(arg_.initializer, mypy.nodes.UnaryExpr):
+                        elif isinstance(arg_.initializer, mypy.nodes.UnaryExpr):  # type: ignore
                             annotation += '={}'.format(arg_.initializer.expr.value)
                         else:
                             # fallback, unhandled default
@@ -1052,20 +1052,20 @@ class ExtendedStubGenerator(ASTStubGenerator):
                 arg = name + annotation
             args.append(arg)
         retname = None
-        if o.name != '__init__' and isinstance(o.unanalyzed_type, CallableType):
-            if isinstance(get_proper_type(o.unanalyzed_type.ret_type), AnyType):
+        if o.name != '__init__' and isinstance(o.unanalyzed_type, CallableType):  # type: ignore
+            if isinstance(get_proper_type(o.unanalyzed_type.ret_type), AnyType):  # type: ignore
                 # Luckily, a return type explicitly annotated with "Any" has
                 # type "UnboundType" and will enter the else branch.
                 retname = None  # implicit Any
             else:
-                retname = self.print_annotation(o.unanalyzed_type.ret_type)
-        elif o.abstract_status == IS_ABSTRACT or o.name in METHODS_WITH_RETURN_VALUE:
+                retname = self.print_annotation(o.unanalyzed_type.ret_type)  # type: ignore
+        elif o.abstract_status == IS_ABSTRACT or o.name in METHODS_WITH_RETURN_VALUE:  # type: ignore
             # Always assume abstract methods return Any unless explicitly annotated. Also
             # some dunder methods should not have a None return type.
             retname = None  # implicit Any
         elif has_yield_expression(o) or force_yield:
             try:
-                self.add_abc_import('Generator')
+                self.add_abc_import('Generator')  # type: ignore
             except AttributeError:
                 # FIXME: mypy removed this API
                 # self.add_typing_import('Generator')
@@ -1115,9 +1115,9 @@ class ExtendedStubGenerator(ASTStubGenerator):
         self._state = FUNC
 
     def process_decorator(self, o) -> None:
-        from mypy.stubgen import get_qualified_name
-        from mypy.nodes import CallExpr
-        parent_mod = ub.import_module_from_name(self.module)
+        from mypy.stubgen import get_qualified_name  # type: ignore
+        from mypy.nodes import CallExpr  # type: ignore
+        parent_mod = ub.import_module_from_name(self.module)  # type: ignore
         for decorator in o.original_decorators:
             if parent_mod.__name__ == 'kwarray.arrayapi':
                 # Very specific hacks that need better support
@@ -1143,7 +1143,7 @@ class ExtendedStubGenerator(ASTStubGenerator):
         # Register the class attribute information that we found here
         # We will need to use it in the init method parsing
         self._docstring_class_attr_infos = {}
-        parent_mod = ub.import_module_from_name(self.module)
+        parent_mod = ub.import_module_from_name(self.module)  # type: ignore
 
         # Classes we will not make stubs for. TODO: generalize.
         blocklist = {

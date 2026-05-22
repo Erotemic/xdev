@@ -5,7 +5,27 @@ We are currently working on porting this changelog to the specifications in
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Version 1.5.4 - Unreleased
+## Version 1.5.5 - Unreleased
+
+### Added
+* `set_overlaps` now has an `n_samples` keyword argument.
+* Add `integer` pattern to regex builder
+* Add CLI formatter.
+* Add CSV formatter.
+
+
+### Change
+* Drop 3.8 and 3.9 support.
+* freshpyenv now uses uv
+* `xdev pyversion` now uses `importlib` before trying import.
+* `xdev availpkg` now has better table order
+
+### Fix:
+* Issue not respecting qqq=1 while embedding in 3.13
+* Issue in sed cli using smartcast scriptconfig 
+
+
+## Version 1.5.4 - Released 2025-03-09
 
 ### Added:
 * `set_overlaps` will now count duplicate values if non-sets are given as input

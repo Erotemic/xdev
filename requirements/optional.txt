@@ -38,3 +38,9 @@ pint>=0.18      ; python_version < '3.9'  and python_version >= '3.8'     # Pyth
 
 python_dateutil>=2.8.2
 pytimeparse>=1.1.8
+
+# Optional helpers used by selected CLI/reporting doctests.
+kwutil>=0.3.6
+bashlex>=0.18
+pandas>=2.2.3    ; python_version < '4.0'  and python_version >= '3.9'
+pandas>=2.0.3    ; python_version < '3.9'  and python_version >= '3.8'

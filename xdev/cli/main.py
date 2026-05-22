@@ -84,11 +84,11 @@ class XdevCLI(ModalCLI):
         """
         __command__ = 'sed'
         __default__ = {
-            'regexpr': scfg.Value('', position=1, help=ub.paragraph(
+            'regexpr': scfg.Value('', type=str, position=1, help=ub.paragraph(
                 '''
                 The pattern to search for.
                 ''')),
-            'repl': scfg.Value('', position=2, help=ub.paragraph(
+            'repl': scfg.Value('', type=str, position=2, help=ub.paragraph(
                 '''
                 The pattern to replace with.
                 ''')),
@@ -231,7 +231,7 @@ class XdevCLI(ModalCLI):
         @classmethod
         def main(cls, cmdline=False, **kwargs):
             args = cls.cli(cmdline=cmdline, data=kwargs)
-            import pint
+            import pint  # type: ignore
             ureg = pint.UnitRegistry()
             ureg.define('gb = 1 * gigabyte = _ = GB')
             ureg.define('mb = 1 * megabyte = _ = MB')
@@ -447,6 +447,10 @@ class XdevCLI(ModalCLI):
             b = RegexBuilder.coerce(config.backend)
             rprint(f'b.constructs = {ub.urepr(b.constructs, nl=1, sk=1, align=":")}')
 
+    from xdev.cli.cli_formatter import CLIFormatterCLI
+
+    from xdev.cli.expand_import_star import ExpandImportStarCLI as expand_import_star
+
 
 def rprint(*args):
     try:
@@ -460,8 +464,9 @@ def main():
     import xdev
     cli = XdevCLI()
     cli.version = xdev.__version__
-    XDEV_LOOSE_CLI = os.environ.get('XDEV_LOOSE_CLI', '')
-    cli.main(strict=not XDEV_LOOSE_CLI)
+    # XDEV_LOOSE_CLI = os.environ.get('XDEV_LOOSE_CLI', '')
+    # cli.main(strict=not XDEV_LOOSE_CLI)
+    cli.main(strict=True)
 
 
 if __name__ == '__main__':

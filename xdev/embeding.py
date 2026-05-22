@@ -116,8 +116,11 @@ def _stop_rich_live_contexts():
     if 'rich' in sys.modules:
         import rich
         console = rich.get_console()
-        if console._live is not None:
-            console._live.__exit__(None, None, None)
+        try:
+            if console._live is not None:  # type: ignore
+                console._live.__exit__(None, None, None)  # type: ignore
+        except AttributeError:
+            print('FIXME: Failed to handle rich live context. Probably due to a rich version bump')
 
 
 def embed(parent_locals=None, parent_globals=None, exec_lines=None,
@@ -171,7 +174,7 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         try:
             if remove_pyqt_hook:
                 try:
-                    import guitool
+                    import guitool  # type: ignore
                     guitool.remove_pyqt_input_hook()
                 except (ImportError, ValueError, AttributeError) as ex:
                     print('ex = {!r}'.format(ex))
@@ -257,7 +260,7 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         #IPython.embed(config=config)
         #IPython.embed(module=module)
         # Exit python immediately if specifed
-        if vars().get('EXIT_NOW', False) or vars().get('qqq', False):
+        if parent_ns.get('EXIT_NOW', False) or parent_ns.get('qqq', False):
             print('[xdev.embed] EXIT_NOW specified')
             sys.exit(1)
 

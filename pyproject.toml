@@ -1,23 +1,167 @@
 [build-system]
-requires = [ "setuptools>=41.0.1",]
 build-backend = "setuptools.build_meta"
+requires = [
+  "setuptools>=77",
+]
+
+[project]
+name = "xdev"
+description = "An excellent developer tool for excellent developers"
+license = "Apache-2.0"
+license-files = [
+  "LICENSE",
+]
+authors = [ { name = "Jon Crall", email = "erotemic@gmail.com" } ]
+requires-python = ">=3.10"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Utilities",
+]
+dynamic = [
+  "dependencies",
+  "optional-dependencies",
+  "version",
+]
+urls.Homepage = "https://github.com/Erotemic/xdev"
+scripts.xdev = "xdev.__main__:main"
+
+[tool.setuptools]
+include-package-data = true
+dynamic.dependencies.file = [
+  "requirements/runtime.txt",
+]
+dynamic.optional-dependencies.docs.file = [
+  "requirements/docs.txt",
+]
+dynamic.optional-dependencies.optional.file = [
+  "requirements/optional.txt",
+]
+dynamic.optional-dependencies.tests.file = [
+  "requirements/tests.txt",
+]
+dynamic.readme.file = [
+  "README.rst",
+]
+dynamic.readme.content-type = "text/x-rst"
+dynamic.version.attr = "xdev.__version__"
+package-data."*" = [
+  "requirements/*.txt",
+]
+packages.find.where = [
+  ".",
+]
+packages.find.include = [
+  "xdev*",
+]
+
+[tool.uv]
+exclude-newer = "2026-05-22"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 80
+format.indent-style = "space"
+format.quote-style = "single"
+format.line-ending = "auto"
+format.skip-magic-trailing-comma = false
+format.docstring-code-format = false
+lint.select = [
+  "E",
+  "F",
+  "I",
+]
+lint.ignore = [
+  "E402",
+  "E501",
+]
+
+[tool.codespell]
+skip = [
+  "./docs/build",
+  "./*.egg-info",
+  "./build",
+  "./htmlcov",
+]
+count = true
+quiet-level = 3
+ignore-words-list = [
+  "wont",
+  "cant",
+  "ANS",
+  "doesnt",
+  "arent",
+  "ans",
+  "thats",
+  "datas",
+  "isnt",
+]
 
 [tool.mypy]
 ignore_missing_imports = true
 
+[tool.pytest]
+ini_options.addopts = "-p no:doctest --xdoctest --xdoctest-style=google --ignore-glob=setup.py --ignore-glob=dev --ignore-glob=docs"
+ini_options.norecursedirs = ".git ignore build __pycache__ dev _skbuild docs"
+ini_options.filterwarnings = [
+  "default",
+  "ignore:.*No cfgstr given in Cacher constructor or call.*:Warning",
+  "ignore:.*Define the __nice__ method for.*:Warning",
+  "ignore:.*private pytest class or function.*:Warning",
+]
+
+[tool.coverage]
+run.branch = true
+report.exclude_lines = [
+  ".*  # nocover",
+  ".*  # pragma: no cover",
+  ".*if six.PY2:",
+  "^ *pass *$",
+  "^ *raise",
+  "def __repr__",
+  "if __name__ == .__main__.:",
+  "if _debug:",
+  "if 0:",
+  "if trace is not None",
+  "pragma: no cover",
+  "raise AssertionError",
+  "raise NotImplementedError",
+  "verbose = .*",
+]
+report.omit = [
+  "*/setup.py",
+  "xdev/__main__.py",
+]
+
+
+[tool.ty.rules]
+unused-ignore-comment = "ignore"
+unused-type-ignore-comment = "ignore"
+unresolved-import = "ignore"
+
+
 [tool.xcookie]
-tags = [ "erotemic", "purepy", "github",]
+tags = [
+  "erotemic",
+  "purepy",
+  "github",
+]
 mod_name = "xdev"
 repo_name = "xdev"
 rel_mod_parent_dpath = "."
-os = [ "win", "osx", "linux", "all",]
-min_python = '3.8'
-max_python = '3.13'
-
-#supported_python_versions = ['3.7', '3.8', '3.9', '3.10', '3.11']
-# os = [ "linux" ]
-# ci_cpython_versions=[3.7, 3.11]
-
+os = [
+  "linux",
+  "osx",
+  "win",
+]
+min_python = "3.10"
+max_python = "3.14"
 author = "Jon Crall"
 author_email = "erotemic@gmail.com"
 description = "An excellent developer tool for excellent developers"
@@ -25,21 +169,13 @@ license = "Apache 2"
 dev_status = "beta"
 ci_pypy_versions = []
 scripts = [
-    "xdev/bin/freshpyenv.sh",
+  "xdev/bin/freshpyenv.sh",
 ]
-[tool.xcookie.entry_points]
-console_scripts = [
-    "xdev = xdev.__main__:main",
+url = "https://github.com/Erotemic/xdev"
+enable_gpg = true
+ci_gpg_secret_transport = "direct_ci"
+use_setup_py = false
+use_pyproject_requirements = false
+entry_points.console_scripts = [
+  "xdev = xdev.__main__:main",
 ]
-
-[tool.pytest.ini_options]
-addopts = "-p no:doctest --xdoctest --xdoctest-style=google --ignore-glob=setup.py --ignore-glob=dev --ignore-glob=docs"
-norecursedirs = ".git ignore build __pycache__ dev _skbuild docs"
-filterwarnings = [ "default", "ignore:.*No cfgstr given in Cacher constructor or call.*:Warning", "ignore:.*Define the __nice__ method for.*:Warning", "ignore:.*private pytest class or function.*:Warning",]
-
-[tool.coverage.run]
-branch = true
-
-[tool.coverage.report]
-exclude_lines = [ "pragma: no cover", ".*  # pragma: no cover", ".*  # nocover", "def __repr__", "raise AssertionError", "raise NotImplementedError", "if 0:", "if trace is not None", "verbose = .*", "^ *raise", "^ *pass *$", "if _debug:", "if __name__ == .__main__.:", ".*if six.PY2:",]
-omit = [ "xdev/__main__.py", "*/setup.py",]

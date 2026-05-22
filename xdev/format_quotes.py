@@ -266,5 +266,5 @@ def format_quotes(path, diff=True, write=False, verbose=3, recursive=True):
 
 
 if __name__ == '__main__':
-    import fire
+    import fire  # type: ignore
     fire.Fire(format_quotes)
