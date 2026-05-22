@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 
 ### Change
+* Drop 3.8 and 3.9 support.
 * freshpyenv now uses uv
 * `xdev pyversion` now uses `importlib` before trying import.
 * `xdev availpkg` now has better table order
