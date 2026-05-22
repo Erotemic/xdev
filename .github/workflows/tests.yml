@@ -376,7 +376,7 @@ jobs:
             cat "$LOCK_REQUIREMENTS"
             LOCK_ARGS=(--constraint "$LOCK_REQUIREMENTS")
         fi
-        python -m uv pip install --prerelease=allow --prefer-binary "${LOCK_ARGS[@]}" "${INSTALL_TARGET}"
+        python -m uv pip install --prerelease=allow "${LOCK_ARGS[@]}" "${INSTALL_TARGET}"
         echo "Install finished."
     - name: Test wheel ${{ matrix.install-extras }}
       shell: bash
