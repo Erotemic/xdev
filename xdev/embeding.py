@@ -117,8 +117,8 @@ def _stop_rich_live_contexts():
         import rich
         console = rich.get_console()
         try:
-            if console._live is not None:  # type: ignore[attr-defined]
-                console._live.__exit__(None, None, None)  # type: ignore[attr-defined]
+            if console._live is not None:  # type: ignore
+                console._live.__exit__(None, None, None)  # type: ignore
         except AttributeError:
             print('FIXME: Failed to handle rich live context. Probably due to a rich version bump')
 
@@ -174,7 +174,7 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         try:
             if remove_pyqt_hook:
                 try:
-                    import guitool  # type: ignore[import-untyped]
+                    import guitool  # type: ignore
                     guitool.remove_pyqt_input_hook()
                 except (ImportError, ValueError, AttributeError) as ex:
                     print('ex = {!r}'.format(ex))

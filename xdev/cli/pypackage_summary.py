@@ -35,11 +35,11 @@ class PypackageSummaryCLI(scfg.DataConfig):
         """
         import rich
         from rich.markup import escape
-        config = cls.cli(argv=argv, data=kwargs, strict=True)  # type: ignore[arg-type]
+        config = cls.cli(argv=argv, data=kwargs, strict=True)  # type: ignore
         rich.print('config = ' + escape(ub.urepr(config, nl=1)))
 
         from xdev.directory_walker import DirectoryWalker  # NOQA
-        kwargs = ub.udict(config) & {  # type: ignore[operator]
+        kwargs = ub.udict(config) & {  # type: ignore
             'dpath',
             # 'exclude_dnames', 'exclude_fnames', 'include_dnames',
             # 'include_fnames', 'max_walk_depth', 'parse_content', 'max_files'
@@ -52,14 +52,14 @@ class PypackageSummaryCLI(scfg.DataConfig):
 
         jobs = self._parallel_process_files(parse_file_stats, 'Parse File Info')
         for fpath, result in jobs:
-            node_data = self.graph.nodes[fpath]  # type: ignore[union-attr]
+            node_data = self.graph.nodes[fpath]  # type: ignore
             # node_data['stats'].update(result)
             node_data['pystats'] = result
 
         # self._accum_stats()
         all_imports = []
         all_nested_imports = []
-        for node, data in self.graph.nodes(data=True):  # type: ignore[union-attr]
+        for node, data in self.graph.nodes(data=True):  # type: ignore
             pystats = data.get('pystats', {})
             if pystats:
                 all_imports.extend(pystats['import'])
@@ -67,7 +67,7 @@ class PypackageSummaryCLI(scfg.DataConfig):
 
         import sys
         known_module_groups = {}
-        known_module_groups['stdlib'] = sys.stdlib_module_names  # type: ignore[attr-defined]
+        known_module_groups['stdlib'] = sys.stdlib_module_names  # type: ignore
         known_module_groups['scientific'] = {
             'pandas', 'numpy', 'scipy', 'shapely', 'matplotlib',
         }
@@ -175,8 +175,8 @@ class PypackageSummaryCLI(scfg.DataConfig):
 
         ungrouped
 
-        std_simple_import_hist = ub.udict(simple_import_hist) & sys.stdlib_module_names  # type: ignore[attr-defined]
-        tpl_simple_import_hist = ub.udict(simple_import_hist) - sys.stdlib_module_names  # type: ignore[attr-defined]
+        std_simple_import_hist = ub.udict(simple_import_hist) & sys.stdlib_module_names  # type: ignore
+        tpl_simple_import_hist = ub.udict(simple_import_hist) - sys.stdlib_module_names  # type: ignore
         print(f'std_simple_import_hist = {ub.urepr(std_simple_import_hist, nl=1)}')
         print(f'tpl_simple_import_hist = {ub.urepr(tpl_simple_import_hist, nl=1)}')
 

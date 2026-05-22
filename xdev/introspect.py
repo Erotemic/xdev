@@ -14,7 +14,7 @@ def get_stack_frame(N=0, strict=True):
     frame_cur = inspect.currentframe()
     for idx in range(N + 1):
         # always skip the frame of this function
-        frame_next = frame_cur.f_back  # type: ignore[union-attr]
+        frame_next = frame_cur.f_back  # type: ignore
         if frame_next is None:
             if strict:
                 raise AssertionError('Frame level {:!r} is root'.format(idx))

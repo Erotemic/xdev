@@ -44,7 +44,7 @@ class datetime(datetime_cls):
     def __repr__(self):
         return f'DT({self.isoformat()})'
 
-    def isoformat(self, pathsafe=False):  # type: ignore[override]
+    def isoformat(self, pathsafe=False):  # type: ignore
         if pathsafe:
             return isoformat(self, pathsafe=pathsafe)
         else:
@@ -195,7 +195,7 @@ class timedelta(datetime_mod.timedelta):
         Returns:
             pd.Timedelta
         """
-        import pandas as pd  # type: ignore[import-untyped]
+        import pandas as pd  # type: ignore
         return pd.Timedelta(self)
 
     def isoformat(self):
@@ -343,7 +343,7 @@ def coerce_datetime(data, default_timezone='utc', nan_policy='return-None',
         >>> assert coerce_datetime(stamp) == dt
         >>> assert dt.isoformat() == '2020-01-01T00:00:00+00:00'
     """
-    from dateutil import parser as date_parser  # type: ignore[import-untyped]
+    from dateutil import parser as date_parser  # type: ignore
     if data is None:
         return _handle_null_policy(
             none_policy, TimeTypeError,
@@ -351,7 +351,7 @@ def coerce_datetime(data, default_timezone='utc', nan_policy='return-None',
     elif isinstance(data, str):
         # Canse use ubelt.timeparse(data, default_timezone=default_timezone) here.
         if data == 'now':
-            dt = datetime_cls.utcnow()
+            dt = datetime_cls.utcnow()  # type: ignore
         else:
             dt = date_parser.parse(data)
     elif isinstance(data, datetime_cls):
@@ -546,7 +546,7 @@ def coerce_timedelta(delta, nan_policy='raise', none_policy='raise'):
             elif unit == {'S', 'sec', 'secs', 'second', 'seconds'}:
                 delta = datetime_mod.timedelta(seconds=float(magnitude))  # type: ignore
             else:
-                import pytimeparse  # type: ignore[import-untyped]
+                import pytimeparse  # type: ignore
                 import warnings
                 warnings.warn('warning: pytimeparse fallback')
                 seconds = pytimeparse.parse(delta)
@@ -614,7 +614,7 @@ def ensure_timezone(dt, default='utc'):
 
 @ub.memoize
 def _time_unit_registery():
-    import pint  # type: ignore[import-untyped]
+    import pint  # type: ignore
     # Empty registry
     ureg = pint.UnitRegistry(None)
     ureg.define('second = []')
@@ -782,7 +782,7 @@ def _devcheck_portion():
     Could also check PyInterval
     """
     import xdev
-    import portion  # type: ignore[import-untyped]
+    import portion  # type: ignore
     delta = abs(xdev.util_time.timedelta.coerce('1 year'))
     start = xdev.util_time.datetime.coerce('2020-01-01')
     interval1 = portion.Interval.from_atomic(portion.CLOSED, start, start + delta, portion.CLOSED)

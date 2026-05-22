@@ -231,7 +231,7 @@ class XdevCLI(ModalCLI):
         @classmethod
         def main(cls, cmdline=False, **kwargs):
             args = cls.cli(cmdline=cmdline, data=kwargs)
-            import pint  # type: ignore[import-untyped]
+            import pint  # type: ignore
             ureg = pint.UnitRegistry()
             ureg.define('gb = 1 * gigabyte = _ = GB')
             ureg.define('mb = 1 * megabyte = _ = MB')

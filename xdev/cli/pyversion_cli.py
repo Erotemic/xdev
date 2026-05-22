@@ -90,7 +90,7 @@ class PyVersionCLI(scfg.DataConfig):
                     print(one_liner)
             elif backend == 'pkg_resources':
                 # pkg resources is deprecated.
-                import pkg_resources  # type: ignore[import-untyped]
+                import pkg_resources  # type: ignore
                 version = pkg_resources.get_distribution(modname).version
                 if args.verbose:
                     one_liner = ub.codeblock(

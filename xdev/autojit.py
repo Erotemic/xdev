@@ -206,7 +206,7 @@ def _autojit_cython(pyx_fpath, verbose=1, recompile=False, annotate=False):
                 stamp_fname,
                 dpath=pyx_dpath,
                 product=so_fpath,
-                depends=depends,  # type: ignore[arg-type]
+                depends=depends,  # type: ignore
                 verbose=verbose,
             )
             if verbose > 3:
@@ -215,7 +215,7 @@ def _autojit_cython(pyx_fpath, verbose=1, recompile=False, annotate=False):
                 # Heuristic to try and grab the numpy include dir or not
                 cythonize_args = ['cythonize']
                 cythonize_env = os.environ.copy()
-                needs_numpy = 'numpy' in content  # type: ignore[operator]
+                needs_numpy = 'numpy' in content  # type: ignore
                 if needs_numpy:
                     import numpy as np
                     import pathlib

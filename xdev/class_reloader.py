@@ -33,7 +33,7 @@ def reload_class(self, verbose=True, reload_module=True):
         def find_base_clases(_class, find_base_clases=None):
             class_list = []
             for _baseclass in _class.__bases__:
-                parents = find_base_clases(_baseclass, find_base_clases)
+                parents = find_base_clases(_baseclass, find_base_clases)  # type: ignore
                 class_list.extend(parents)
             if _class is not object:
                 class_list.append(_class)
@@ -55,7 +55,7 @@ def reload_class(self, verbose=True, reload_module=True):
                 # Attempt to find the module that is the main module
                 # This may be very hacky and potentially break
                 main_module_ = sys.modules[_class.__module__]
-                main_modname = ub.modpath_to_modname(main_module_.__file__)
+                main_modname = ub.modpath_to_modname(main_module_.__file__)  # type: ignore
                 module_ = sys.modules[main_modname]
             else:
                 module_ = sys.modules[_class.__module__]
@@ -70,7 +70,7 @@ def reload_class(self, verbose=True, reload_module=True):
                           ' with imp')
                     # one last thing to try. probably used
                     # import_module_from_fpath when importing this module
-                    imp.load_source(module_.__name__, module_.__file__)
+                    imp.load_source(module_.__name__, module_.__file__)  # type: ignore
             # Reset class attributes
             _newclass = getattr(module_, _class.__name__)
             _reload_class_methods(self, _newclass, verbose=verbose)

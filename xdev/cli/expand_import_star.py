@@ -49,7 +49,7 @@ class ExpandImportStarCLI(scfg.DataConfig):
         if not os.path.isfile(args.path):
             raise FileNotFoundError(f"{args.path}")
 
-        ret = process_file(args)  # type: ignore[arg-type]
+        ret = process_file(args)  # type: ignore
         return ret
 
 

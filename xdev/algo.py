@@ -34,7 +34,7 @@ def edit_distance(string1, string2):
         >>> [7, 9, 6, 6, 7]
     """
 
-    import Levenshtein  # type: ignore[import-untyped]
+    import Levenshtein  # type: ignore
     isiter1 = ub.iterable(string1)
     isiter2 = ub.iterable(string2)
     strs1 = string1 if isiter1 else [string1]
@@ -173,7 +173,7 @@ def knapsack_ilp(items, maxweight, verbose=False):
         >>> total_value, items_subset = knapsack_ilp(items, maxweight, verbose)
         >>> print('items_subset = %s' % (ub.repr2(items_subset, nl=1),))
     """
-    import pulp  # type: ignore[import-untyped]
+    import pulp  # type: ignore
     # Given Input
     values  = [t[0] for t in items]
     weights = [t[1] for t in items]
@@ -219,7 +219,7 @@ def number_of_decimals(num):
         2
     """
     exp = decimal.Decimal(str(num)).as_tuple().exponent
-    return max(0, -exp)  # type: ignore[operator]
+    return max(0, -exp)  # type: ignore
 
 
 def knapsack_iterative(items, maxweight):
