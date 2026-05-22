@@ -5,7 +5,10 @@ We are currently working on porting this changelog to the specifications in
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Version 1.5.5 - Unreleased
+## Version 1.5.6 - Unreleased
+
+
+## Version 1.5.5 - Released 2026-05-22
 
 ### Added
 * `set_overlaps` now has an `n_samples` keyword argument.
