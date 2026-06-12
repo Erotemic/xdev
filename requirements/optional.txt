@@ -44,3 +44,7 @@ kwutil>=0.3.6
 bashlex>=0.18
 pandas>=2.2.3    ; python_version < '4.0'  and python_version >= '3.9'
 pandas>=2.0.3    ; python_version < '3.9'  and python_version >= '3.8'
+
+# Optional Rust syntax-aware dirstats backend.
+tree-sitter>=0.25,<0.26
+tree-sitter-rust>=0.24,<0.25

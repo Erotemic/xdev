@@ -37,6 +37,12 @@ class DirectoryStatsCLI(scfg.DataConfig):
     version = scfg.Value(False, isflag=True, short_alias=['V'])
     python = scfg.Value(False, isflag=True, help='enable python repository defaults', alias=['pydev'])
     rust = scfg.Value(False, isflag=True, help='enable rust repository defaults', alias=['rsdev'])
+    rust_backend = scfg.Value(
+        'tree-sitter',
+        choices=['tree-sitter', 'legacy'],
+        help='Rust content analysis backend. tree-sitter is syntax-aware and adds main/test line breakdowns. legacy preserves the old aggregate-only scanner.',
+        alias=['rust_parser'],
+    )
 
     ignore_dotprefix = scfg.Value(True, isflag=True, help='if True ignore directories and folders with a dot prefix')
 
@@ -110,7 +116,8 @@ def main(cmdline=1, **kwargs):
     from xdev.directory_walker import DirectoryWalker  # NOQA
     kwargs = ub.udict(config) & {  # type: ignore
         'dpath', 'exclude_dnames', 'exclude_fnames', 'include_dnames',
-        'include_fnames', 'max_walk_depth', 'parse_content', 'max_files'
+        'include_fnames', 'max_walk_depth', 'parse_content', 'max_files',
+        'rust_backend'
     }
     self = DirectoryWalker(**kwargs)
     self.build()
