@@ -6,6 +6,31 @@ from xdev.patterns import MultiPattern
 from progiter.manager import ProgressManager
 
 
+STAT_COLUMN_ORDER = [
+    'files',
+    'main_code',
+    'main_comments',
+    'size',
+    'test_code',
+    'test_comments',
+    'total',
+]
+
+
+def _order_columns(df, extra_last=('name',)):
+    """Keep dirstats tables compact and stable."""
+    existing = list(df.columns)
+    preferred = [c for c in STAT_COLUMN_ORDER if c in existing]
+    extra_last = [c for c in extra_last if c in existing]
+    middle = [c for c in existing if c not in preferred and c not in extra_last]
+    return df[preferred + middle + extra_last]
+
+
+def _stats_total(stats):
+    """Total logical text lines from a node stats dict."""
+    return sum(v for k, v in stats.items() if k.endswith('.total') or k == 'total')
+
+
 class DirectoryWalker:
     """
     Configurable directory walker that can explore a directory
@@ -31,7 +56,8 @@ class DirectoryWalker:
                  max_walk_depth=None,
                  max_files=None,
                  parse_content=False,
-                 rust_backend='tree-sitter',
+                 python=False,
+                 rust=False,
                  show_progress=True,
                  ignore_empty_dirs=False,
                  sort=False,
@@ -60,12 +86,13 @@ class DirectoryWalker:
                 how far to recurse
 
             parse_content (bool):
-                if True, include content analysis
+                if True, count total lines for text-like files.
 
-            rust_backend (str):
-                Rust content analysis backend. Either ``'tree-sitter'`` or
-                ``'legacy'``. The tree-sitter backend is syntax-aware and
-                reports main/test line breakdowns.
+            python (bool):
+                if True, enable Python code/doc line analysis.
+
+            rust (bool):
+                if True, enable Rust code/comment line analysis, with test splitting.
 
             sort (bool):
                 if True, sort files and directories before adding them to the
@@ -102,7 +129,8 @@ class DirectoryWalker:
         self.include_dnames = _null_coerce(MultiPattern, include_dnames)
         self.max_walk_depth = max_walk_depth
         self.parse_content = parse_content
-        self.rust_backend = rust_backend
+        self.python = python
+        self.rust = rust
         self.max_files = max_files
         self.show_progress = show_progress
         self.ignore_empty_dirs = ignore_empty_dirs
@@ -219,6 +247,7 @@ class DirectoryWalker:
             disp_piv = disp_piv.fillna('--')
             disp_piv.loc['∑ total'] = disp_totals
             disp_piv['files'] = disp_piv['files'].astype(int)
+            disp_piv = _order_columns(disp_piv, extra_last=())
             return disp_piv
 
         if root_node:
@@ -233,8 +262,7 @@ class DirectoryWalker:
                 df = pd.DataFrame(child_rows)
                 if 'total' in df.columns:
                     df = df.sort_values('total')
-                elif 'total_lines' in df.columns:
-                    df = df.sort_values('total_lines')
+                df = _order_columns(df, extra_last=('name',))
                 rich.print(df)
                 # if self.graph.nodes[node]['type'] == 'dir':
                 # print(f'node={node}')
@@ -447,7 +475,8 @@ class DirectoryWalker:
                     stats = parse_file_stats(
                         fpath,
                         parse_content=self.parse_content,
-                        rust_backend=self.rust_backend,
+                        parse_python=self.python,
+                        parse_rust=self.rust,
                         fs=fs,
                     )
                     node_data['stats'] = stats
@@ -461,7 +490,8 @@ class DirectoryWalker:
             stats = parse_file_stats(
                 fpath,
                 parse_content=self.parse_content,
-                rust_backend=self.rust_backend,
+                parse_python=self.python,
+                parse_rust=self.rust,
             )
             return stats
 
@@ -713,7 +743,7 @@ class DirectoryWalker:
             # Sort children by total lines
             children = g.succ[node]  # type: ignore
             children = ub.udict({c: g.nodes[c] for c in children})  # type: ignore
-            children = children.sorted_keys(lambda c: (g.nodes[c]['type'], g.nodes[c].get('stats', {}).get('total_lines', 0)), reverse=True)  # type: ignore
+            children = children.sorted_keys(lambda c: (g.nodes[c]['type'], _stats_total(g.nodes[c].get('stats', {}))), reverse=True)  # type: ignore
             for c, d in children.items():
                 ordered_nodes.pop(c, None)
                 ordered_nodes[c] = d
@@ -890,17 +920,18 @@ class DirectoryWalker:
         return matches[0]
 
 
-def parse_file_stats(fpath, parse_content=True, fs=None, rust_backend='tree-sitter'):
+def parse_file_stats(
+    fpath,
+    parse_content=True,
+    parse_python=False,
+    parse_rust=False,
+    fs=None,
+):
     """
-    Get information about a file, including things like number of code lines /
-    documentation lines, if that sort of information is available.
+    Get information about a file.
 
-    Args:
-        fpath (PathLike): path to inspect
-        parse_content (bool): if True, parse source-content statistics
-        fs (fsspec.spec.AbstractFileSystem | None): optional filesystem
-        rust_backend (str): Rust analysis backend, either ``'tree-sitter'``
-            or ``'legacy'``.
+    ``parse_content`` counts ``total`` lines for UTF-8 text-like files.
+    Language flags add richer analysis for selected source formats.
     """
     ext = fpath.suffix
     prefix = ext.lstrip('.') + '.'
@@ -923,53 +954,111 @@ def parse_file_stats(fpath, parse_content=True, fs=None, rust_backend='tree-sitt
     stats['files'] = 1
 
     if not is_broken and parse_content:
+        # ``Path.walk`` reports symlinked directories in ``fnames`` when it is
+        # not following symlinks. Treat those entries as file-like for size
+        # accounting, but do not try to read their contents.
         try:
-            text = fpath.read_text()
-        except UnicodeDecodeError:
-            # Binary file
-            ...
-        else:
-            total_lines = text.count('\n')
-            if ext == '.rs' and rust_backend == 'tree-sitter':
-                stats['total'] = total_lines
+            if fs is None:
+                is_readable_file = fpath.is_file()
             else:
-                stats['total_lines'] = total_lines
+                stat_type = stat_obj.get('type', None)
+                is_readable_file = stat_type is None or stat_type == 'file'
+        except OSError:
+            is_readable_file = False
 
-            if ext == '.py':
-                try:
-                    raw_code = strip_comments_and_newlines(text)
-                    code_lines = raw_code.count('\n')
-                except Exception:
-                    ...
+        if is_readable_file:
+            try:
+                if fs is None:
+                    text = fpath.read_text(encoding='utf8')
                 else:
-                    stats['code_lines'] = code_lines
+                    with fs.open(os.fspath(fpath), 'rt', encoding='utf8') as file:
+                        text = file.read()
+            except (UnicodeDecodeError, IsADirectoryError, PermissionError):
+                # Binary, non-UTF8, unreadable, or directory-like entries count
+                # as files/bytes but not text.
+                ...
+            else:
+                stats['total'] = _text_total_lines(text)
 
-                try:
-                    # TODO: this belongs more in the pypackage summarizer
-                    # from xdoctest.core import package_calldefs
-                    from xdoctest.static_analysis import TopLevelVisitor
-                    self = TopLevelVisitor.parse(text)
-                    calldefs = self.calldefs
-                    total_doclines = 0
-                    for k, v in calldefs.items():
-                        if v.docstr is not None:
-                            total_doclines += v.docstr.count('\n')
-                except Exception:
-                    ...
-                else:
-                    stats['doc_lines'] = total_doclines
+                if parse_python and ext == '.py':
+                    try:
+                        stats.update(parse_python_content_stats(text))
+                    except Exception:
+                        ...
 
-            elif ext == '.rs':
-                from xdev import rust_analysis
-                stats.update(
-                    rust_analysis.parse_rust_content_stats(
-                        text, backend=rust_backend,
-                    )
-                )
+                elif parse_rust and ext == '.rs':
+                    try:
+                        stats.update(parse_rust_content_stats(text, fpath=fpath))
+                    except Exception:
+                        ...
 
     stats = {prefix + k: v for k, v in stats.items()}
     return stats
 
+
+def _text_total_lines(text):
+    """Return the number of logical lines in text."""
+    if not text:
+        return 0
+    return len(text.splitlines())
+
+
+def parse_python_content_stats(source: str):
+    """
+    Count Python code and comment/docstring lines.
+
+    Python does not get a test split in dirstats. Test files are counted as
+    main Python text so the report stays compact and language-neutral.
+    """
+    import ast
+    import io
+    import tokenize
+
+    comment_lines = set()
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(source).readline)
+        for tok in tokens:
+            if tok.type == tokenize.COMMENT:
+                start, end = tok.start[0] - 1, tok.end[0] - 1
+                comment_lines.update(range(start, end + 1))
+    except Exception:
+        pass
+
+    try:
+        tree = ast.parse(source)
+    except Exception:
+        pass
+    else:
+        nodes = [tree]
+        nodes.extend(
+            n for n in ast.walk(tree)
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        )
+        for node in nodes:
+            body = getattr(node, 'body', None)
+            if not body:
+                continue
+            first = body[0]
+            if (
+                isinstance(first, ast.Expr) and
+                isinstance(getattr(first, 'value', None), ast.Constant) and
+                isinstance(first.value.value, str)
+            ):
+                start = getattr(first, 'lineno', None)
+                end = getattr(first, 'end_lineno', start)
+                if start is not None:
+                    comment_lines.update(range(start - 1, end))
+
+    try:
+        raw_code = strip_comments_and_newlines(source)
+        code_lines = _text_total_lines(raw_code)
+    except Exception:
+        code_lines = 0
+
+    return {
+        'main_code': code_lines,
+        'main_comments': len(comment_lines),
+    }
 
 def strip_comments_and_newlines(source):
     """
@@ -1251,19 +1340,290 @@ class DirectoryDiff:
         print(f'summary = {ub.urepr(summary, nl=1)}')
 
 
-# TODO: preserve this backwards-compatible helper at this import path.
+# TODO: move rust utils to helpers
 
 
-def parse_rust_content_stats(source: str, backend='tree-sitter'):
+def parse_rust_content_stats(source: str, fpath=None):
     """
-    Count Rust lines of code via :mod:`xdev.rust_analysis`.
+    Count effective Rust lines of code.
 
-    Args:
-        source (str): Rust source text.
-        backend (str): Either ``'tree-sitter'`` or ``'legacy'``.
+    This counts non-empty lines after removing Rust comments, while preserving
+    comment-like text inside normal strings, raw strings, byte strings, and C
+    strings. Rust nested block comments are handled.
 
     Returns:
-        Dict[str, int]: Rust source statistics.
+        Dict[str, int]: contains ``main_code`` / ``main_comments`` and
+        ``test_code`` / ``test_comments`` when test code is detected by path
+        or ``#[cfg(test)]`` / ``#[test]`` spans. Doc comments are counted as
+        comments.
+
+    Example:
+        >>> import ubelt as ub
+        >>> source = ub.codeblock(
+        >>>     r'''
+        >>>     // module comment
+        >>>
+        >>>     fn main() {
+        >>>         println!("http://example.com"); // trailing comment
+        >>>         let text = "/* not comment */";
+        >>>         let raw = r#"// not comment"#;
+        >>>         /*
+        >>>           block comment
+        >>>           /* nested */
+        >>>         */
+        >>>         /// doc comment
+        >>>         pub fn documented() {}
+        >>>     }
+        >>>     ''')
+        >>> stats = parse_rust_content_stats(source)
+        >>> assert stats['main_code'] == 6
+        >>> assert stats['main_comments'] == 3
     """
-    from xdev.rust_analysis import parse_rust_content_stats as _impl
-    return _impl(source, backend=backend)
+    import collections
+
+    n = len(source)
+    i = 0
+    line = 0
+    line_has_code = collections.defaultdict(bool)
+    comment_lines = set()
+
+    def mark_comment_char(ch, is_doc):
+        nonlocal line
+        if ch == '\n':
+            line += 1
+        elif not ch.isspace():
+            comment_lines.add(line)
+
+    def mark_code_span(start, stop):
+        nonlocal line
+        j = start
+        while j < stop:
+            ch = source[j]
+            if ch == '\n':
+                line += 1
+            elif not ch.isspace():
+                line_has_code[line] = True
+            j += 1
+
+    while i < n:
+        ch = source[i]
+
+        # Rust line comments: //, ///, //!
+        if source.startswith('//', i):
+            is_doc = source.startswith('///', i) or source.startswith('//!', i)
+            while i < n and source[i] != '\n':
+                mark_comment_char(source[i], is_doc)
+                i += 1
+            continue
+
+        # Rust nested block comments: /* ... */, /** ... */, /*! ... */
+        if source.startswith('/*', i):
+            is_doc = (
+                source.startswith('/**', i) and
+                not source.startswith('/***', i)
+            ) or source.startswith('/*!', i)
+            depth = 0
+            while i < n:
+                if source.startswith('/*', i):
+                    depth += 1
+                    mark_comment_char(source[i], is_doc)
+                    mark_comment_char(source[i + 1], is_doc)
+                    i += 2
+                    continue
+                if source.startswith('*/', i):
+                    mark_comment_char(source[i], is_doc)
+                    mark_comment_char(source[i + 1], is_doc)
+                    i += 2
+                    depth -= 1
+                    if depth <= 0:
+                        break
+                    continue
+                mark_comment_char(source[i], is_doc)
+                i += 1
+            continue
+
+        # Rust raw strings: r"...", r#"..."#, br"...", br#"..."#.
+        close_delim = _rust_raw_string_close_delim(source, i)
+        if close_delim is not None:
+            open_quote = source.find('"', i)
+            stop = source.find(close_delim, open_quote + 1)
+            if stop < 0:
+                stop = n
+            else:
+                stop += len(close_delim)
+            mark_code_span(i, stop)
+            i = stop
+            continue
+
+        # Normal string-ish literals. This avoids treating // or /* inside a
+        # string as a comment.
+        if (
+            ch == '"' or
+            (ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"')
+        ):
+            stop = i + 1
+            if ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"':
+                stop = i + 2
+            escape = False
+            while stop < n:
+                c = source[stop]
+                stop += 1
+                if escape:
+                    escape = False
+                elif c == '\\':
+                    escape = True
+                elif c == '"':
+                    break
+            mark_code_span(i, stop)
+            i = stop
+            continue
+
+        if ch == '\n':
+            line += 1
+            i += 1
+            continue
+
+        if not ch.isspace():
+            line_has_code[line] = True
+
+        i += 1
+
+    code_lines = {k for k, v in line_has_code.items() if v}
+    test_lines = _rust_test_line_numbers(source, fpath=fpath)
+
+    test_code_lines = len(code_lines & test_lines)
+    test_comment_lines = len(comment_lines & test_lines)
+
+    return {
+        'main_code': len(code_lines) - test_code_lines,
+        'main_comments': len(comment_lines) - test_comment_lines,
+        'test_code': test_code_lines,
+        'test_comments': test_comment_lines,
+    }
+
+
+def _rust_test_line_numbers(source: str, fpath=None):
+    """
+    Return 0-based Rust source lines that belong to test code.
+
+    This intentionally stays lightweight: integration-test files are detected
+    by path, and unit-test spans are detected from ``#[cfg(test)]`` /
+    ``#[test]`` attributes with brace matching.
+    """
+    import bisect
+    import os
+    import re
+
+    total_lines = _text_total_lines(source)
+    if total_lines == 0:
+        return set()
+
+    if fpath is not None:
+        parts = set(os.fspath(fpath).replace('\\', '/').split('/'))
+        name = getattr(fpath, 'name', os.path.basename(os.fspath(fpath)))
+        if 'tests' in parts or name in {'tests.rs', 'test.rs'}:
+            return set(range(total_lines))
+
+    line_starts = [0]
+    for idx, ch in enumerate(source):
+        if ch == '\n':
+            line_starts.append(idx + 1)
+
+    def line_for_pos(pos):
+        return bisect.bisect_right(line_starts, pos) - 1
+
+    test_lines = set()
+    attr_pattern = re.compile(r'#\s*\[\s*(?:cfg\s*\(\s*test\s*\)|test)')
+    for match in attr_pattern.finditer(source):
+        start = match.start()
+        open_brace = source.find('{', match.end())
+        if open_brace < 0:
+            continue
+        close_brace = _find_matching_rust_brace(source, open_brace)
+        if close_brace is None:
+            close_brace = open_brace
+        first_line = line_for_pos(start)
+        last_line = line_for_pos(close_brace)
+        test_lines.update(range(first_line, last_line + 1))
+    return test_lines
+
+
+def _find_matching_rust_brace(source: str, open_pos: int):
+    """Find the matching brace, skipping common Rust string/comment forms."""
+    n = len(source)
+    i = open_pos
+    depth = 0
+    while i < n:
+        if source.startswith('//', i):
+            end = source.find('\n', i)
+            i = n if end < 0 else end + 1
+            continue
+        if source.startswith('/*', i):
+            comment_depth = 0
+            while i < n:
+                if source.startswith('/*', i):
+                    comment_depth += 1
+                    i += 2
+                    continue
+                if source.startswith('*/', i):
+                    i += 2
+                    comment_depth -= 1
+                    if comment_depth <= 0:
+                        break
+                    continue
+                i += 1
+            continue
+        close_delim = _rust_raw_string_close_delim(source, i)
+        if close_delim is not None:
+            open_quote = source.find('"', i)
+            stop = source.find(close_delim, open_quote + 1)
+            i = n if stop < 0 else stop + len(close_delim)
+            continue
+        ch = source[i]
+        if (
+            ch == '"' or
+            (ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"')
+        ):
+            i += 2 if ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"' else 1
+            escape = False
+            while i < n:
+                c = source[i]
+                i += 1
+                if escape:
+                    escape = False
+                elif c == '\\':
+                    escape = True
+                elif c == '"':
+                    break
+            continue
+        if ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+            if depth == 0:
+                return i
+        i += 1
+    return None
+
+
+def _rust_raw_string_close_delim(source: str, pos: int):
+    """
+    Return the closing delimiter for a Rust raw string at ``pos``, or None.
+    """
+    n = len(source)
+    if source.startswith(('br', 'cr'), pos):
+        j = pos + 2
+        prefix_len = 2
+    elif pos < n and source[pos] == 'r':
+        j = pos + 1
+        prefix_len = 1
+    else:
+        return None
+
+    while j < n and source[j] == '#':
+        j += 1
+
+    if j < n and source[j] == '"':
+        hashes = source[pos + prefix_len:j]
+        return '"' + hashes
+    return None

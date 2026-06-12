@@ -26,7 +26,7 @@ class DirectoryStatsCLI(scfg.DataConfig):
     include_dnames = scfg.Value(None, help='A coercable multi-pattern. Only directory names matching this pattern will be considered', nargs='+')
     include_fnames = scfg.Value(None, help='A coercable multi-pattern. Only file names matching this pattern will be considered', nargs='+')
 
-    parse_content = scfg.Value(False, isflag=True, help='if True parse stats about the content of each file')
+    parse_content = scfg.Value(True, isflag=True, help='if True count total lines for text-like files. Language flags add richer parsers.')
     max_files = scfg.Value(None)
     # parse_meta_stats = scfg.Value(True, isflag=True, help='if True parse stats about the content of each file')
 
@@ -35,14 +35,8 @@ class DirectoryStatsCLI(scfg.DataConfig):
 
     verbose = scfg.Value(0, isflag=True, short_alias=['v'])
     version = scfg.Value(False, isflag=True, short_alias=['V'])
-    python = scfg.Value(False, isflag=True, help='enable python repository defaults', alias=['pydev'])
-    rust = scfg.Value(False, isflag=True, help='enable rust repository defaults', alias=['rsdev'])
-    rust_backend = scfg.Value(
-        'tree-sitter',
-        choices=['tree-sitter', 'legacy'],
-        help='Rust content analysis backend. tree-sitter is syntax-aware and adds main/test line breakdowns. legacy preserves the old aggregate-only scanner.',
-        alias=['rust_parser'],
-    )
+    python = scfg.Value(False, isflag=True, help='enable Python defaults and code/doc line analysis', alias=['pydev'])
+    rust = scfg.Value(False, isflag=True, help='enable Rust defaults and code/comment/test line analysis', alias=['rsdev'])
 
     ignore_dotprefix = scfg.Value(True, isflag=True, help='if True ignore directories and folders with a dot prefix')
 
@@ -74,13 +68,9 @@ class DirectoryStatsCLI(scfg.DataConfig):
             ]
 
         if config.rust:
-            # Effective LOC requires content parsing.
+            # Effective Rust LOC requires content parsing. Keep the file
+            # selection broad so text-like docs/configs still get total lines.
             config.parse_content = True  # type: ignore
-
-            # If the user did not give an include filter, focus the report on
-            # Rust source files. Explicit include_fnames still wins.
-            if config.include_fnames is None:
-                config.include_fnames = ['*.rs']
 
             config.exclude_fnames += [  # type: ignore
                 'Cargo.lock',
@@ -117,7 +107,7 @@ def main(cmdline=1, **kwargs):
     kwargs = ub.udict(config) & {  # type: ignore
         'dpath', 'exclude_dnames', 'exclude_fnames', 'include_dnames',
         'include_fnames', 'max_walk_depth', 'parse_content', 'max_files',
-        'rust_backend'
+        'python', 'rust'
     }
     self = DirectoryWalker(**kwargs)
     self.build()
