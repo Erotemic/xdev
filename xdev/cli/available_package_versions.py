@@ -18,6 +18,7 @@ CommandLine:
     #Triggers bdist dumb case
     xdev availpkg flex
 """
+
 import scriptconfig as scfg
 import ubelt as ub
 from packaging.version import parse as Version
@@ -30,6 +31,7 @@ class AvailablePackageConfig(scfg.DataConfig):
     Refactor of ~/local/tools/supported_python_versions_pip.py to report the
     available versions of a python package that meet some critera
     """
+
     package_name = scfg.Value(None, position=1, help='the pypi package name')
     request_min = scfg.Value(None, help='request a minimum version', position=2)
     refresh = scfg.Value(False, isflag=1, help='if True refresh the cache')  # type: ignore
@@ -65,8 +67,10 @@ class ReqPythonVersionSpec:
         >>> self = ReqPythonVersionSpec('~=3.2')
         >>> self.highest_explicit()
     """
+
     def __init__(self, pattern):
         from packaging.specifiers import SpecifierSet
+
         self.pattern = pattern
         self.parts = pattern.split(',')
         self.specifier = SpecifierSet(pattern)
@@ -92,14 +96,18 @@ class ReqPythonVersionSpec:
                 partver = Version('.'.join(verpat_parts[0:idx]))
             else:
                 partver = Version(partpat)
-            self.constraints.append({
-                'opstr': opstr,
-                'idx': idx,
-                'partver': partver,
-            })
+            self.constraints.append(
+                {
+                    'opstr': opstr,
+                    'idx': idx,
+                    'partver': partver,
+                }
+            )
 
     def highest_explicit(self):
-        cands = [c['partver'] for c in self.constraints if c['opstr'] in {'>=', '~='}]
+        cands = [
+            c['partver'] for c in self.constraints if c['opstr'] in {'>=', '~='}
+        ]
         if len(cands):
             return max(cands)
 
@@ -242,10 +250,15 @@ def parse_platform_tag(platform_tag):
 
 def parse_wheel_name(fname):
     import parse
+
     # Is there a grammer modification to make that can make one pattern that captures both cases?
     # wheen_name_parser = parse.Parser('{distribution}-{version}(-{build_tag})?-{python_tag}-{abi_tag}-{platform_tag}.whl')
-    wheel_name_parser1 = parse.Parser('{distribution}-{version}-{build_tag}-{python_tag}-{abi_tag}-{platform_tag}.whl')
-    wheel_name_parser2 = parse.Parser('{distribution}-{version}-{python_tag}-{abi_tag}-{platform_tag}.whl')
+    wheel_name_parser1 = parse.Parser(
+        '{distribution}-{version}-{build_tag}-{python_tag}-{abi_tag}-{platform_tag}.whl'
+    )
+    wheel_name_parser2 = parse.Parser(
+        '{distribution}-{version}-{python_tag}-{abi_tag}-{platform_tag}.whl'
+    )
     result = wheel_name_parser1.parse(fname) or wheel_name_parser2.parse(fname)
     if result is not None:
         return result.named
@@ -263,18 +276,22 @@ def grab_pypi_items(package_name, refresh=False):
     """
     import pandas as pd  # type: ignore
     import json
-    url = "https://pypi.org/pypi/{}/json".format(package_name)
+
+    url = 'https://pypi.org/pypi/{}/json'.format(package_name)
     if 0:
         import requests
+
         resp = requests.get(url)
         assert resp.status_code == 200
         pypi_package_data = json.loads(resp.text)
     else:
         fpath = ub.Path(
             ub.grabdata(
-                url, fname=ub.hash_data(url + 'v2'),
+                url,
+                fname=ub.hash_data(url + 'v2'),
                 redo=refresh,
-                expires=8 * 60 * 60)
+                expires=8 * 60 * 60,
+            )
         )
         pypi_package_data = json.loads(fpath.read_text())
 
@@ -312,7 +329,11 @@ def grab_pypi_items(package_name, refresh=False):
                 # Examples: 'foo-1.0.win32.zip', 'bar-2.3.linux-x86_64.tar.gz'
                 fname = item['filename']
                 import re
-                match = re.match(r'^(?P<name>[^-]+)-(?P<version>[^.]+)\.(?P<platform>[^.]+)\.(zip|tar\.gz|tar\.bz2|tar\.xz)$', fname)
+
+                match = re.match(
+                    r'^(?P<name>[^-]+)-(?P<version>[^.]+)\.(?P<platform>[^.]+)\.(zip|tar\.gz|tar\.bz2|tar\.xz)$',
+                    fname,
+                )
                 if match:
                     platform_tag = match.group('platform')
                     item['platform_tag'] = platform_tag
@@ -347,11 +368,13 @@ def vectorize(func):
             out.append(y)
         return out
         # return [func(x) for x in arr]
+
     return wrp
 
 
 def cp_sorter(v):
     import re
+
     v = str(v.split('_')[0])
     num = re.sub('[a-z]', '', v)
     a = num[0:1]
@@ -399,6 +422,7 @@ def summarize_package_availability(package_name):
     """
     import numpy as np
     import pandas as pd  # type: ignore
+
     flat_table = grab_pypi_items(package_name)
 
     new = []
@@ -411,67 +435,110 @@ def summarize_package_availability(package_name):
     flat_table = pd.DataFrame(new)
 
     df = pd.DataFrame(flat_table)
-    df = df.drop(df.columns.intersection([
-        'digests', 'downloads', 'comment_text', 'has_sig',
-        # 'filename',
-        'size',
-        'url', 'upload_time', 'upload_time_iso_8601', 'distribution',
-        'md5_digest', 'yanked', 'yanked_reason']), axis=1)
+    df = df.drop(
+        df.columns.intersection(
+            [
+                'digests',
+                'downloads',
+                'comment_text',
+                'has_sig',
+                # 'filename',
+                'size',
+                'url',
+                'upload_time',
+                'upload_time_iso_8601',
+                'distribution',
+                'md5_digest',
+                'yanked',
+                'yanked_reason',
+            ]
+        ),
+        axis=1,
+    )
 
     # def vec_ver(vs):
     #     return [Version(v) for v in vs]
 
     # vec_sorter = vectorize(cp_sorter)
 
-    flags = (df['packagetype'] != 'sdist')
+    flags = df['packagetype'] != 'sdist'
     if not np.any(flags):
         df = df[flags]
 
-    flags = (df['abi_tag'] != 'none')
+    flags = df['abi_tag'] != 'none'
     if np.any(flags):
         df = df[flags]
 
     if 0:
-        counts = df.value_counts(['pkg_version', 'abi_tag', 'os']).to_frame('count').reset_index()
+        counts = (
+            df.value_counts(['pkg_version', 'abi_tag', 'os'])
+            .to_frame('count')
+            .reset_index()
+        )
         # piv = counts.to_frame('count').reset_index().pivot(['pkg_version', 'abi_tag'], 'os', 'count')
         counts = counts.sort_values('abi_tag')
         # counts.sort_values('abi_tag', key=vec_sorter)
         # counts = counts.sort_values('abi_tag')
         piv = counts.pivot(
-            index=['pkg_version'],
-            columns=['abi_tag', 'os'],
-            values='count')
+            index=['pkg_version'], columns=['abi_tag', 'os'], values='count'
+        )
     else:
         abi_blocklist = {
             # 'cp36m',
-            'cp26m', 'cp26mu', 'cp27m', 'cp27mu', 'cp32m', 'cp33m', 'cp34m', 'cp35m',
-            'pypy36_pp73', 'pypy37_pp73', 'pypy38_pp73', 'pypy_73', 'pypy_41',
-            'cp36m', 'cp37m',
+            'cp26m',
+            'cp26mu',
+            'cp27m',
+            'cp27mu',
+            'cp32m',
+            'cp33m',
+            'cp34m',
+            'cp35m',
+            'pypy36_pp73',
+            'pypy37_pp73',
+            'pypy38_pp73',
+            'pypy_73',
+            'pypy_41',
+            'cp36m',
+            'cp37m',
         }
         flags = df['abi_tag'].apply(lambda x: x in abi_blocklist)
         if np.any(~flags):
             df = df[~flags]
 
         try:
-            counts = df.value_counts(['pkg_version', 'abi_tag', 'os', 'arch']).to_frame('count').reset_index()
+            counts = (
+                df.value_counts(['pkg_version', 'abi_tag', 'os', 'arch'])
+                .to_frame('count')
+                .reset_index()
+            )
         except KeyError:
             counts = []
 
         if len(counts):
             try:
-                counts = counts.iloc[ub.argsort(counts['abi_tag'], key=cp_sorter)]  # type: ignore
+                counts = counts.iloc[
+                    ub.argsort(counts['abi_tag'], key=cp_sorter)
+                ]  # type: ignore
             except Exception:
                 counts = counts.sort_values('abi_tag')  # type: ignore
             piv = counts.pivot(
                 index=['pkg_version'],
                 columns=['abi_tag', 'os', 'arch'],
-                values='count')
+                values='count',
+            )
         else:
-            counts = df.value_counts(['pkg_version', 'requires_python'], dropna=False).to_frame('count').reset_index()
+            counts = (
+                df.value_counts(
+                    ['pkg_version', 'requires_python'], dropna=False
+                )
+                .to_frame('count')
+                .reset_index()
+            )
             piv = counts.pivot(
                 index=['pkg_version'],
                 columns=['requires_python'],
-                values='count')
+                values='count',
+            )
 
     if 1:
         # Handle at least one case of sorting by simple requires python versions
@@ -479,10 +546,13 @@ def summarize_package_availability(package_name):
         try:
             if piv.columns.name == 'requires_python':
                 import re
+
                 columns = piv.columns
                 version_items = []
                 non_version_items = []
-                ge_version_pat = re.compile(r'>=\s*([0-9]+(?:\.[0-9]+)*[a-zA-Z0-9.\-+]*)\b')
+                ge_version_pat = re.compile(
+                    r'>=\s*([0-9]+(?:\.[0-9]+)*[a-zA-Z0-9.\-+]*)\b'
+                )
 
                 for idx, col in enumerate(columns):
                     if isinstance(col, str):
@@ -533,6 +603,7 @@ def summarize_package_availability(package_name):
         ...
 
     import rich
+
     rich.print('')
     rich.print('package_name = {}'.format(ub.repr2(package_name, nl=1)))
 
@@ -548,13 +619,14 @@ class PythonVersions:
     """
     Class that contains information about different Python versions
     """
+
     def __init__(self):
         import pandas as pd  # type: ignore
+
         # https://en.wikipedia.org/wiki/History_of_Python#Version_3
         python_version_rows = [
             {'release_date': '2024-10-01', 'pyver': '3.13'},
             {'release_date': '2023-10-02', 'pyver': '3.12'},
-
             {'release_date': '2022-10-24', 'pyver': '3.11'},
             {'release_date': '2021-10-04', 'pyver': '3.10'},
             {'release_date': '2020-10-05', 'pyver': '3.9'},
@@ -563,24 +635,24 @@ class PythonVersions:
             {'release_date': '2016-12-23', 'pyver': '3.6'},
             {'release_date': '2015-09-13', 'pyver': '3.5'},
             {'release_date': '2014-03-16', 'pyver': '3.4'},
-
             {'release_date': '2012-09-29', 'pyver': '3.3'},
             {'release_date': '2011-02-20', 'pyver': '3.2'},
             {'release_date': '2009-06-27', 'pyver': '3.1'},
             {'release_date': '2008-12-03', 'pyver': '3.0'},
-
             {'release_date': '2010-07-03', 'pyver': '2.7'},
             {'release_date': '2008-10-01', 'pyver': '2.6'},
         ]
-        python_vstrings = [
-            r['pyver'] for r in python_version_rows
-        ]
+        python_vstrings = [r['pyver'] for r in python_version_rows]
         table = pd.DataFrame(python_version_rows)
         table = table.set_index('pyver', drop=False)
         table['release_date'] = table['release_date'].apply(ub.timeparse)
         cp_codes = {'cp{}{}'.format(*v.split('.')): v for v in python_vstrings}
-        doubledigit_pyvers = [v for v in python_vstrings if len(v.split('.')[1]) > 1]
-        cp_codes.update({'cp{}_{}'.format(*v.split('.')): v for v in doubledigit_pyvers})
+        doubledigit_pyvers = [
+            v for v in python_vstrings if len(v.split('.')[1]) > 1
+        ]
+        cp_codes.update(
+            {'cp{}_{}'.format(*v.split('.')): v for v in doubledigit_pyvers}
+        )
 
         self.latest = python_vstrings[0]
         self.cp_codes = cp_codes
@@ -602,12 +674,22 @@ class PythonVersions:
 
 def build_package_table(package_name, refresh=False):
     import pandas as pd  # type: ignore
+
     table = grab_pypi_items(package_name, refresh=refresh)
     table = table[~table['yanked']]
 
-    ignore_cols = ['digests', 'downloads', 'comment_text', 'md5_digest',
-                   'yanked_reason', 'url', 'upload_time', 'filename',
-                   'build_tag', 'distribution']
+    ignore_cols = [
+        'digests',
+        'downloads',
+        'comment_text',
+        'md5_digest',
+        'yanked_reason',
+        'url',
+        'upload_time',
+        'filename',
+        'build_tag',
+        'distribution',
+    ]
     ignore_cols = table.columns.intersection(ignore_cols)
     table = table.drop(ignore_cols, axis=1)
 
@@ -635,22 +717,29 @@ def build_package_table(package_name, refresh=False):
 
     last_min_pyver = None
     new_rows = []
-    for pkg_version, subdf in sorted(table.groupby('pkg_version'), key=lambda x: Version(x[0]))[::-1]:
+    for pkg_version, subdf in sorted(
+        table.groupby('pkg_version'), key=lambda x: Version(x[0])
+    )[::-1]:
         for row in subdf.to_dict('records'):
             min_pyver = None
             max_pyver = None
             if row['python_version'] is not None:
-
                 # Validate that the Python version is reasonable and
                 # fix it if it is not. Hack for scikit-image
                 if str(row['python_version']) == 'image/tools/scikit_image':
                     row['python_version'] = row['python_tag']
 
-                min_pyver = python_versions.cp_codes.get(row['python_version'], row['python_version'])
-                max_pyver = python_versions.cp_codes.get(row['python_version'], row['python_version'])
+                min_pyver = python_versions.cp_codes.get(
+                    row['python_version'], row['python_version']
+                )
+                max_pyver = python_versions.cp_codes.get(
+                    row['python_version'], row['python_version']
+                )
 
             upload_time = ub.timeparse(row['upload_time_iso_8601'])
-            flags = [upload_time >= t for t in python_version_table['release_date']]
+            flags = [
+                upload_time >= t for t in python_version_table['release_date']
+            ]
             contemporary_pyvers = python_version_table['pyver'][flags].tolist()
 
             heuristic_support = None
@@ -659,6 +748,7 @@ def build_package_table(package_name, refresh=False):
                 requires_python = row['requires_python']
                 reqspec = ReqPythonVersionSpec(requires_python)
                 import xdev
+
                 with xdev.embed_on_exception_context:
                     min_pyver = reqspec.highest_explicit()
                 # min_pyver = min_pyver.vstring
@@ -667,18 +757,33 @@ def build_package_table(package_name, refresh=False):
 
                 # Declared support is generally only good for the python
                 # versions that existed at the time.
-                declared_support = [v for v in python_versions.python_vstrings if reqspec.matches(v)]
-                heuristic_support = set(contemporary_pyvers) & set(declared_support)
+                declared_support = [
+                    v
+                    for v in python_versions.python_vstrings
+                    if reqspec.matches(v)
+                ]
+                heuristic_support = set(contemporary_pyvers) & set(
+                    declared_support
+                )
                 max_pyver = max(heuristic_support, key=Version)
 
-            min_pyver = python_versions.resolve_pyversion(min_pyver, maximize=False)
-            max_pyver = python_versions.resolve_pyversion(max_pyver, maximize=True)
+            min_pyver = python_versions.resolve_pyversion(
+                min_pyver, maximize=False
+            )
+            max_pyver = python_versions.resolve_pyversion(
+                max_pyver, maximize=True
+            )
 
             if row.get('abi_tag', None) is not None:
                 abi_tag = str(row['abi_tag'])
                 if abi_tag.startswith('cp'):
                     # Specific ABI, be restrictive
-                    max_pyver = row['abi_tag'].replace('m', '').replace('u', '').replace('t', '')
+                    max_pyver = (
+                        row['abi_tag']
+                        .replace('m', '')
+                        .replace('u', '')
+                        .replace('t', '')
+                    )
                     ...
                 if abi_tag == 'abi3':
                     # General ABI Be permissive here.
@@ -712,8 +817,16 @@ def build_package_table(package_name, refresh=False):
 
             if heuristic_support is not None:
                 if max_pyver is not None:
-                    heuristic_support = [v for v in heuristic_support if Version(v) <= Version(max_pyver)]
-                    heuristic_support = [v for v in heuristic_support if Version(v) >= Version(min_pyver)]  # type: ignore
+                    heuristic_support = [
+                        v
+                        for v in heuristic_support
+                        if Version(v) <= Version(max_pyver)
+                    ]
+                    heuristic_support = [
+                        v
+                        for v in heuristic_support
+                        if Version(v) >= Version(min_pyver)
+                    ]  # type: ignore
                 hacked_pkgver_to_pyvers[pkg_version].update(heuristic_support)
 
             if min_pyver is not None:
@@ -732,7 +845,9 @@ def build_package_table(package_name, refresh=False):
     return new_table, hacked_pyver_to_pkgvers
 
 
-def minimum_cross_python_versions(package_name, request_min=None, refresh=False):
+def minimum_cross_python_versions(
+    package_name, request_min=None, refresh=False
+):
     """
     package_name = 'scipy'
     request_min = None
@@ -745,9 +860,12 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
     if request_min is not None:
         request_min = Version(request_min)
 
-    new_table, hacked_pyver_to_pkgvers = build_package_table(package_name, refresh)
+    new_table, hacked_pyver_to_pkgvers = build_package_table(
+        package_name, refresh
+    )
 
     import rich
+
     rich.print(new_table.to_string())
     rich.print(new_table['min_pyver'].unique())
     rich.print(new_table['max_pyver'].unique())
@@ -767,8 +885,12 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
         return ver
 
     # groups = dict(list(new_table.groupby('min_pyver')))
-    max_grouped = ub.udict(sorted(new_table.groupby('max_pyver'), key=parse_vertup))
-    min_grouped = ub.udict(sorted(new_table.groupby('min_pyver'), key=parse_vertup))
+    max_grouped = ub.udict(
+        sorted(new_table.groupby('max_pyver'), key=parse_vertup)
+    )
+    min_grouped = ub.udict(
+        sorted(new_table.groupby('min_pyver'), key=parse_vertup)
+    )
     grouped = min_grouped | (max_grouped - min_grouped)
     for min_pyver, subdf in grouped.items():
         # print('--- min_pyver = {!r} --- '.format(min_pyver))
@@ -785,7 +907,9 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
             maybe_bad_keys = list(version_to_support.keys())
             print('version_to_support = {!r}'.format(maybe_bad_keys))
             maybe_ok_keys = [k for k in maybe_bad_keys if '.dev0' not in k]
-            version_to_support = ub.dict_subset(version_to_support, maybe_ok_keys)
+            version_to_support = ub.dict_subset(
+                version_to_support, maybe_ok_keys
+            )
 
         if 'os' in subdf.columns and 'arch' in subdf.columns:
             combo_values = {
@@ -805,7 +929,9 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
         # Filter to only the versions we requested, but if
         # none exist, return something
         if request_min is not None:
-            valid_cand = [cand for cand in cand_to_score if Version(cand) >= request_min]
+            valid_cand = [
+                cand for cand in cand_to_score if Version(cand) >= request_min
+            ]
         else:
             valid_cand = [cand for cand in cand_to_score]
         if len(valid_cand) == 0:
@@ -821,19 +947,23 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
             max_score = max(cand_to_score.values())
             min_cand = min(cand_to_score.keys())
 
-            best_cand = min([
-                cand for cand, score in cand_to_score.items()
-                if score == max_score
-            ], key=Version)
-            max_cand = max([
-                cand for cand, score in cand_to_score.items()
-            ], key=Version)
+            best_cand = min(
+                [
+                    cand
+                    for cand, score in cand_to_score.items()
+                    if score == max_score
+                ],
+                key=Version,
+            )
+            max_cand = max(
+                [cand for cand, score in cand_to_score.items()], key=Version
+            )
             # print('best_cand = {!r}'.format(best_cand))
             # print('max_cand = {!r}'.format(max_cand))
             chosen_minmax_for[min_pyver] = {
                 'min': min_cand,
                 'best': best_cand,
-                'max': max_cand
+                'max': max_cand,
             }
 
     # For each Python version find the minimum and maximum Package version it
@@ -846,7 +976,9 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
     # TODO better logic:
     # FOR EACH PYTHON VERSION
     # find the minimum version that will work with that Python version.
-    rich.print('chosen_minmax_for = {}'.format(ub.repr2(chosen_minmax_for, nl=1)))
+    rich.print(
+        'chosen_minmax_for = {}'.format(ub.repr2(chosen_minmax_for, nl=1))
+    )
 
     chosen_minimum_for = {k: t['best'] for k, t in chosen_minmax_for.items()}
 
@@ -861,7 +993,7 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
     for cur_pyver, next_pyver in ub.iter_window(chosen_python_versions, 2):
         pkg_ver = chosen_minimum_for[cur_pyver]
         if not pkg_ver.startswith('stdlib'):
-            line = f"{package_name}>={pkg_ver:<8}  ; python_version < {next_pyver!r:<6} and python_version >= {cur_pyver!r:<6}    # Python {cur_pyver}"
+            line = f'{package_name}>={pkg_ver:<8}  ; python_version < {next_pyver!r:<6} and python_version >= {cur_pyver!r:<6}    # Python {cur_pyver}'
             lines.append(line)
         else:
             line = f"# {package_name}>={pkg_ver:<8} is in the stdlib for python_version < '{next_pyver}' and python_version >= '{cur_pyver}'    # Python {cur_pyver}"
@@ -874,7 +1006,7 @@ def minimum_cross_python_versions(package_name, request_min=None, refresh=False)
         if not pkg_ver.startswith('stdlib'):
             # line =     f"{package_name}>={pkg_ver:<8}  ;                             python_version >= {cur_pyver!r:<6}    # Python {cur_pyver}+"
             next_pyver = '4.0'
-            line =     f"{package_name}>={pkg_ver:<8}  ; python_version < '{next_pyver}'  and python_version >= {cur_pyver!r:<6}    # Python {cur_pyver}+"
+            line = f"{package_name}>={pkg_ver:<8}  ; python_version < '{next_pyver}'  and python_version >= {cur_pyver!r:<6}    # Python {cur_pyver}+"
             lines.append(line)
         else:
             line = f"# {package_name}>={pkg_ver:<8} is in the stdlib for python_version < '{next_pyver}' and python_version >= '{cur_pyver}'    # Python {cur_pyver}"
@@ -917,6 +1049,7 @@ def demo():
 
     for package_name in package_names:
         minimum_cross_python_versions(package_name)
+
 
 if __name__ == '__main__':
     """

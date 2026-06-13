@@ -27,6 +27,7 @@ Result is:
     --foo=bar \
         --baz=biz
 """
+
 import scriptconfig as scfg
 import ubelt as ub
 
@@ -36,11 +37,14 @@ class CLIFormatterCLI(scfg.DataConfig):
     The idea is that we can ingest a dictionary, argv list, or a command line
     string and convert between any of these formats.
     """
-    __command__ = "cli_formatter"
+
+    __command__ = 'cli_formatter'
 
     input = scfg.Value(None, type=str, help='the input', position=1)
 
-    input_type = scfg.Value('auto', help='attempt to infer what type the input is')
+    input_type = scfg.Value(
+        'auto', help='attempt to infer what type the input is'
+    )
 
     output_type = scfg.Value('all', help='output type to convert to.')
 
@@ -55,7 +59,9 @@ class CLIFormatterCLI(scfg.DataConfig):
             >>> cls = CLIFormatterCLI
             >>> cls.main(cmdline=cmdline, **kwargs)
         """
-        config = cls.cli(cmdline=cmdline, data=kwargs, strict=True, verbose='auto')  # type: ignore
+        config = cls.cli(
+            cmdline=cmdline, data=kwargs, strict=True, verbose='auto'
+        )  # type: ignore
         import kwutil  # type: ignore
 
         input_type = config.input_type
@@ -115,6 +121,7 @@ def parse_cli_config(text, input_type='auto'):
         >>>     print(f' * config_dict = {ub.urepr(config_dict, nl=1)}')
     """
     import kwutil  # type: ignore
+
     if input_type == 'auto':
         input_type = _InputFormatGuesser.guess_input_type(text)
     if input_type == 'dict':
@@ -155,6 +162,7 @@ class _InputFormatGuesser:
             >>>     print(f'{text!r} - {scores}')
         """
         import kwutil  # type: ignore
+
         scores = {
             'yaml': 0,
             'dict': 0,
@@ -203,8 +211,11 @@ class _InputFormatGuesser:
                 print(score_cli_invocation(text))
         """
         import re
+
         # Patterns for common CLI elements
-        flag_pattern = r'--\w+(?:=\S+)?(?:\s+\S+)?'  # Match flags with or without values
+        flag_pattern = (
+            r'--\w+(?:=\S+)?(?:\s+\S+)?'  # Match flags with or without values
+        )
         positional_pattern = r'(?:--\s|--\w+(?:=\S+|\s+\S+))\s*(.*)'  # Match positional args after "--"
 
         # Scoring factors
@@ -274,6 +285,7 @@ def make_argstr(config_dict):
     # parts = [f'    --{k}="{v}" \\' for k, v in config.items()]
     parts = []
     import shlex
+
     for k, v in config_dict.items():
         if isinstance(v, list):
             # Handle variable-args params
@@ -283,6 +295,7 @@ def make_argstr(config_dict):
             parts.extend(preped_varargs)
         else:
             import shlex
+
             vstr = shlex.quote(str(v))
             parts.append(f'    --{k}={vstr} \\')
 
@@ -305,6 +318,7 @@ def pretty_argjoin(args):
             --help
     """
     import shlex
+
     max_width = 80
     lines = []
     current_line = ''
@@ -319,7 +333,7 @@ def pretty_argjoin(args):
 
         if len(current_line) == 0:
             if len(lines):
-                current_line += ('    ' + arg)
+                current_line += '    ' + arg
             else:
                 current_line += arg
         else:
@@ -423,8 +437,10 @@ def parse_bash_invocation(bash_text, with_tokens=False):
         >>> print(f'components = {ub.urepr(components, nl=1)}')
     """
     import re
+
     # Split the bash_text into tokens based on spaces, keeping the structure intact
     import bashlex  # type: ignore
+
     tokens = list(bashlex.split(bash_text.strip()))
     # import shlex
     # bash_text = bash_text.replace('\\\n', ' ')
@@ -455,7 +471,7 @@ def parse_bash_invocation(bash_text, with_tokens=False):
                     'type': 'separator',
                     'token_index_start': index,
                     'token_index_stop': index + 1,
-                    'tokens': tokens[index: index + 1]
+                    'tokens': tokens[index : index + 1],
                 }
                 components.append(item)
             continue
@@ -475,7 +491,7 @@ def parse_bash_invocation(bash_text, with_tokens=False):
                 if with_tokens:
                     item['token_index_start'] = index
                     item['token_index_stop'] = index + 1
-                    item['tokens'] = tokens[index: index + 1]
+                    item['tokens'] = tokens[index : index + 1]
                 handled = True
 
             # Handle --key value or -key value
@@ -483,7 +499,9 @@ def parse_bash_invocation(bash_text, with_tokens=False):
                 key = token.lstrip('-')
                 token_index_start = index
                 next_values = []
-                while index + 1 < len(tokens) and not tokens[index + 1].startswith('-'):
+                while index + 1 < len(tokens) and not tokens[
+                    index + 1
+                ].startswith('-'):
                     value = tokens[index + 1]
                     next_values.append(value)
                     index += 1
@@ -497,7 +515,7 @@ def parse_bash_invocation(bash_text, with_tokens=False):
                     if with_tokens:
                         item['token_index_start'] = index
                         item['token_index_stop'] = index + 1
-                        item['tokens'] = tokens[index: index + 1]
+                        item['tokens'] = tokens[index : index + 1]
 
                 else:
                     if len(next_values) == 1:
@@ -513,7 +531,9 @@ def parse_bash_invocation(bash_text, with_tokens=False):
                     if with_tokens:
                         item['token_index_start'] = token_index_start
                         item['token_index_stop'] = token_index_stop
-                        item['tokens'] = tokens[token_index_start: token_index_stop]
+                        item['tokens'] = tokens[
+                            token_index_start:token_index_stop
+                        ]
                 handled = True
 
         # Handle positional arguments
@@ -525,7 +545,7 @@ def parse_bash_invocation(bash_text, with_tokens=False):
             if with_tokens:
                 item['token_index_start'] = index
                 item['token_index_stop'] = index + 1
-                item['tokens'] = tokens[index: index + 1]
+                item['tokens'] = tokens[index : index + 1]
         components.append(item)
         index += 1
     return components

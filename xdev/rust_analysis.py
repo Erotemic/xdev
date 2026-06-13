@@ -54,7 +54,9 @@ class RustLineSets:
         }
 
 
-def parse_rust_content_stats(source: str, backend: str = 'tree-sitter') -> dict[str, int]:
+def parse_rust_content_stats(
+    source: str, backend: str = 'tree-sitter'
+) -> dict[str, int]:
     """
     Count Rust lines of code and comments.
 
@@ -135,7 +137,9 @@ def rust_line_sets(parsed: ParsedRustSource) -> RustLineSets:
 
     comment_by_line = group_spans_by_line(comment_spans, line_starts, line_ends)
 
-    for line_no, (line_start, line_end) in enumerate(zip(line_starts, line_ends)):
+    for line_no, (line_start, line_end) in enumerate(
+        zip(line_starts, line_ends)
+    ):
         line_comment_spans = comment_by_line.get(line_no, [])
 
         # Comment and doc line accounting.
@@ -188,7 +192,9 @@ def parse_rust_source(source: str) -> ParsedRustSource:
     source_bytes = source.encode('utf-8')
     parser = make_parser()
     tree = parser.parse(source_bytes)
-    return ParsedRustSource(text=source, source=source_bytes, root=tree.root_node)
+    return ParsedRustSource(
+        text=source, source=source_bytes, root=tree.root_node
+    )
 
 
 @functools.lru_cache(maxsize=1)
@@ -231,7 +237,7 @@ def make_parser():
 
 
 def node_text(source: bytes, node: object) -> str:
-    return source[node.start_byte:node.end_byte].decode('utf-8')
+    return source[node.start_byte : node.end_byte].decode('utf-8')
 
 
 def child_count(node: object) -> int:
@@ -260,9 +266,9 @@ def named_children(node: object) -> list[object]:
 
 def same_node(left: object, right: object) -> bool:
     return (
-        left.type == right.type and
-        left.start_byte == right.start_byte and
-        left.end_byte == right.end_byte
+        left.type == right.type
+        and left.start_byte == right.start_byte
+        and left.end_byte == right.end_byte
     )
 
 
@@ -321,9 +327,9 @@ def attr_is_cfg_test(attr_text: str) -> bool:
     """Return True for attributes that put an item in Rust test cfg."""
     dense = ''.join(attr_text.split())
     return (
-        'cfg(test)' in dense or
-        'cfg(any(test' in dense or
-        'cfg(all(test' in dense
+        'cfg(test)' in dense
+        or 'cfg(any(test' in dense
+        or 'cfg(all(test' in dense
     )
 
 
@@ -356,7 +362,9 @@ def collect_test_spans(source: bytes, root: object) -> list[tuple[int, int]]:
     return merge_spans(spans)
 
 
-def collect_comment_spans(source: bytes, root: object) -> list[tuple[int, int, bool]]:
+def collect_comment_spans(
+    source: bytes, root: object
+) -> list[tuple[int, int, bool]]:
     """
     Return ``(start_byte, end_byte, is_doc)`` for tree-sitter comment nodes.
 
@@ -370,10 +378,10 @@ def collect_comment_spans(source: bytes, root: object) -> list[tuple[int, int, b
             continue
         text = node_text(source, node).lstrip()
         is_doc = (
-            text.startswith('///') or
-            text.startswith('//!') or
-            text.startswith('/**') or
-            text.startswith('/*!')
+            text.startswith('///')
+            or text.startswith('//!')
+            or text.startswith('/**')
+            or text.startswith('/*!')
         )
         if text.startswith('/***'):
             is_doc = False
@@ -394,7 +402,7 @@ def byte_line_bounds(source: bytes) -> tuple[list[int], list[int]]:
     if starts[-1] <= len(source):
         ends.append(len(source))
     if len(starts) > len(ends):
-        starts = starts[:len(ends)]
+        starts = starts[: len(ends)]
     return starts, ends
 
 
@@ -403,7 +411,9 @@ def group_spans_by_line(
     line_starts: Sequence[int],
     line_ends: Sequence[int],
 ) -> dict[int, list[tuple[int, int, bool]]]:
-    grouped: dict[int, list[tuple[int, int, bool]]] = collections.defaultdict(list)
+    grouped: dict[int, list[tuple[int, int, bool]]] = collections.defaultdict(
+        list
+    )
     for start, end, is_doc in spans:
         if end <= start:
             continue
@@ -435,7 +445,9 @@ def merge_spans(spans: Iterable[tuple[int, int]]) -> list[tuple[int, int]]:
     return merged
 
 
-def span_intersects_any(span: tuple[int, int], spans: Sequence[tuple[int, int]]) -> bool:
+def span_intersects_any(
+    span: tuple[int, int], spans: Sequence[tuple[int, int]]
+) -> bool:
     start, end = span
     index = bisect.bisect_right(spans, (start, float('inf'))) - 1
     if index >= 0 and spans[index][1] > start:
@@ -491,8 +503,7 @@ def parse_rust_content_stats_legacy(source: str) -> dict[str, int]:
         # Rust nested block comments: /* ... */, /** ... */, /*! ... */
         if source.startswith('/*', i):
             is_doc = (
-                source.startswith('/**', i) and
-                not source.startswith('/***', i)
+                source.startswith('/**', i) and not source.startswith('/***', i)
             ) or source.startswith('/*!', i)
             depth = 0
             while i < n:
@@ -529,9 +540,8 @@ def parse_rust_content_stats_legacy(source: str) -> dict[str, int]:
 
         # Normal string-ish literals. This avoids treating // or /* inside a
         # string as a comment.
-        if (
-            ch == '"' or
-            (ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"')
+        if ch == '"' or (
+            ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"'
         ):
             stop = i + 1
             if ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"':
@@ -585,7 +595,7 @@ def _rust_raw_string_close_delim(source: str, pos: int):
         j += 1
 
     if j < n and source[j] == '"':
-        hashes = source[pos + prefix_len:j]
+        hashes = source[pos + prefix_len : j]
         return '"' + hashes
     return None
 

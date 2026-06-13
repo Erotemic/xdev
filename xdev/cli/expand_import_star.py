@@ -19,6 +19,7 @@ Notes & limitations:
 - If multiple star-import modules export the same name, we assign it to the first star
   import encountered and warn about the conflict.
 """
+
 import ast
 import builtins
 import importlib
@@ -33,9 +34,24 @@ class ExpandImportStarCLI(scfg.DataConfig):
 
     Replace 'from <module> import *' with explicit imports for used names.
     """
-    path = scfg.Value(None, position=1, required=True, help='Path to the Python file to rewrite')
-    inplace = scfg.Value(False, isflag=True, short_alias=['i'], help='if True overwrite the original file with the expanded args')
-    check = scfg.Value(False, isflag=True, help='if True check that the expanded import statement executes')
+
+    path = scfg.Value(
+        None,
+        position=1,
+        required=True,
+        help='Path to the Python file to rewrite',
+    )
+    inplace = scfg.Value(
+        False,
+        isflag=True,
+        short_alias=['i'],
+        help='if True overwrite the original file with the expanded args',
+    )
+    check = scfg.Value(
+        False,
+        isflag=True,
+        help='if True check that the expanded import statement executes',
+    )
     verbose = scfg.Value(0, help='verbosity level')
 
     @classmethod
@@ -44,10 +60,16 @@ class ExpandImportStarCLI(scfg.DataConfig):
         Example:
 
         """
-        args = cls.cli(argv=argv, data=kwargs, strict=True, special_options=False, verbose='auto')
+        args = cls.cli(
+            argv=argv,
+            data=kwargs,
+            strict=True,
+            special_options=False,
+            verbose='auto',
+        )
 
         if not os.path.isfile(args.path):
-            raise FileNotFoundError(f"{args.path}")
+            raise FileNotFoundError(f'{args.path}')
 
         ret = process_file(args)  # type: ignore
         return ret
@@ -60,6 +82,7 @@ __cli__ = ExpandImportStarCLI
 # AST utilities
 # ----------------------------
 
+
 class NameUsageCollector(ast.NodeVisitor):
     """
     Collect:
@@ -69,6 +92,7 @@ class NameUsageCollector(ast.NodeVisitor):
       - def_names: names introduced by def/class
       - with_except_aliases: aliases introduced by `with ... as x` / `except ... as x`
     """
+
     def __init__(self) -> None:
         self.used_names: Set[str] = set()
         self.defined_names: Set[str] = set()
@@ -99,12 +123,12 @@ class NameUsageCollector(ast.NodeVisitor):
 
     def visit_Import(self, node: ast.Import):
         for alias in node.names:
-            self.import_defs.add(alias.asname or alias.name.split(".")[0])
+            self.import_defs.add(alias.asname or alias.name.split('.')[0])
         self.generic_visit(node)
 
     def visit_ImportFrom(self, node: ast.ImportFrom):
         for alias in node.names:
-            if alias.name != "*":
+            if alias.name != '*':
                 self.import_defs.add(alias.asname or alias.name)
         self.generic_visit(node)
 
@@ -126,7 +150,9 @@ class NameUsageCollector(ast.NodeVisitor):
         self.generic_visit(node)
 
     def _collect_args(self, args: ast.arguments):
-        for a in list(args.posonlyargs) + list(args.args) + list(args.kwonlyargs):
+        for a in (
+            list(args.posonlyargs) + list(args.args) + list(args.kwonlyargs)
+        ):
             if isinstance(a, ast.arg):
                 self.defined_names.add(a.arg)
         if args.vararg:
@@ -139,7 +165,7 @@ def find_star_imports(tree: ast.AST) -> List[ast.ImportFrom]:
     stars: List[ast.ImportFrom] = []
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom):
-            if any(alias.name == "*" for alias in node.names):
+            if any(alias.name == '*' for alias in node.names):
                 stars.append(node)
     return stars
 
@@ -152,6 +178,7 @@ def builtin_names() -> Set[str]:
 # Export discovery
 # ----------------------------
 
+
 def discover_module_exports(module_name: str) -> Set[str]:
     """
     Return the set of names exported by a module:
@@ -163,15 +190,17 @@ def discover_module_exports(module_name: str) -> Set[str]:
         mod = importlib.import_module(module_name)
     except Exception:
         return set()
-    if hasattr(mod, "__all__"):
+    if hasattr(mod, '__all__'):
         try:
-            all_list = set(getattr(mod, "__all__"))
+            all_list = set(getattr(mod, '__all__'))
             # Filter to identifiers
-            return {n for n in all_list if isinstance(n, str) and n.isidentifier()}
+            return {
+                n for n in all_list if isinstance(n, str) and n.isidentifier()
+            }
         except Exception:
             pass
     try:
-        return {n for n in dir(mod) if n and not n.startswith("_")}
+        return {n for n in dir(mod) if n and not n.startswith('_')}
     except Exception:
         return set()
 
@@ -180,10 +209,9 @@ def discover_module_exports(module_name: str) -> Set[str]:
 # Rewriter
 # ----------------------------
 
+
 def rewrite_source_lines(
-    src_lines: List[str],
-    mapping: Dict[int, str],
-    removals: Set[int]
+    src_lines: List[str], mapping: Dict[int, str], removals: Set[int]
 ) -> List[str]:
     """
     Replace specific 0-based line indices with the given text and/or drop them.
@@ -201,33 +229,38 @@ def rewrite_source_lines(
     return out
 
 
-def build_explicit_import_line(module: str, names: List[str], original_indent: str) -> str:
+def build_explicit_import_line(
+    module: str, names: List[str], original_indent: str
+) -> str:
     # Keep lines readable if there are many names: use parentheses when long.
-    joined = ", ".join(names)
-    candidate = f"{original_indent}from {module} import {joined}\n"
+    joined = ', '.join(names)
+    candidate = f'{original_indent}from {module} import {joined}\n'
     if len(candidate) <= 100:
         return candidate
     # Multi-line with parentheses
-    inner = ",\n".join(f"{original_indent}    {n}" for n in names)
-    return f"{original_indent}from {module} import (\n{inner},\n{original_indent})\n"
+    inner = ',\n'.join(f'{original_indent}    {n}' for n in names)
+    return f'{original_indent}from {module} import (\n{inner},\n{original_indent})\n'
 
 
 # ----------------------------
 # Main logic
 # ----------------------------
 
+
 def process_file(args: ExpandImportStarCLI) -> int:
     path = cast(str, args.path)
-    text = open(path, "r", encoding="utf-8").read()
+    text = open(path, 'r', encoding='utf-8').read()
     try:
         tree = ast.parse(text, filename=path)
     except SyntaxError as e:
-        print(f"[error] Failed to parse {path}: {e}")
+        print(f'[error] Failed to parse {path}: {e}')
         return 2
 
     stars = find_star_imports(tree)
     if not stars:
-        print("[info] No `from <module> import *` statements found. No changes made.")
+        print(
+            '[info] No `from <module> import *` statements found. No changes made.'
+        )
         return 0
 
     # Gather name usage/defs
@@ -251,7 +284,7 @@ def process_file(args: ExpandImportStarCLI) -> int:
     for node in stars:
         if (node.level or 0) > 0:
             print(
-                f"[warn] Skipping relative star import at line {node.lineno}: "
+                f'[warn] Skipping relative star import at line {node.lineno}: '
                 f"'from {'.' * node.level}{node.module or ''} import *'"
             )
             star_info.append((node, set()))
@@ -266,7 +299,7 @@ def process_file(args: ExpandImportStarCLI) -> int:
         if not exports:
             print(
                 f"[warn] Could not determine exports for module '{node.module}' "
-                f"(line {node.lineno}). Leaving as-is."
+                f'(line {node.lineno}). Leaving as-is.'
             )
         star_info.append((node, exports))
 
@@ -283,7 +316,9 @@ def process_file(args: ExpandImportStarCLI) -> int:
         name_to_provider[name] = chosen
         # Note any conflicts (multiple providers)
         if len(providers) > 1:
-            conflicts.setdefault(name, []).extend([p.module for p in providers if p.module])
+            conflicts.setdefault(name, []).extend(
+                [p.module for p in providers if p.module]
+            )
 
     if unresolvable:
         raise Exception('Unresolvable names: ' + ', '.join(unresolvable))
@@ -291,7 +326,9 @@ def process_file(args: ExpandImportStarCLI) -> int:
     for n, mods in conflicts.items():
         # De-duplicate and keep readable
         uniq = sorted(set(mods))
-        print(f"[warn] Name '{n}' is exported by multiple star-import modules: {', '.join(uniq)}. Using the first encountered.")
+        print(
+            f"[warn] Name '{n}' is exported by multiple star-import modules: {', '.join(uniq)}. Using the first encountered."
+        )
 
     # For each star import node, collect its assigned names
     provider_to_names: Dict[ast.ImportFrom, Set[str]] = {}
@@ -304,9 +341,11 @@ def process_file(args: ExpandImportStarCLI) -> int:
     removals: Set[int] = set()
 
     for node in stars:
-        line_idx = (node.lineno - 1)
+        line_idx = node.lineno - 1
         original_line = src_lines[line_idx]
-        indent = original_line[: len(original_line) - len(original_line.lstrip())]
+        indent = original_line[
+            : len(original_line) - len(original_line.lstrip())
+        ]
 
         used_from_this = sorted(provider_to_names.get(node, set()))
         if (node.level or 0) > 0:
@@ -318,12 +357,15 @@ def process_file(args: ExpandImportStarCLI) -> int:
 
         if not used_from_this:
             # No names used from this star import -> remove it completely
-            print(f"[info] Removing unused star import at line {node.lineno}: from {node.module} import *")
+            print(
+                f'[info] Removing unused star import at line {node.lineno}: from {node.module} import *'
+            )
             removals.add(line_idx)
             continue
 
         if args.check:
             from collections import defaultdict
+
             # Import each name individually from the base module to verify resolvability.
             _g: Dict[str, object] = {}
             resolved: Dict[str, object] = {}
@@ -333,42 +375,52 @@ def process_file(args: ExpandImportStarCLI) -> int:
                 _l: Dict[str, object] = {}
                 try:
                     # Use "as __tmp" to avoid polluting the per-name locals with arbitrary identifiers.
-                    exec(f"from {node.module} import {_name} as __tmp", _g, _l)
-                    resolved[_name] = _l["__tmp"]
+                    exec(f'from {node.module} import {_name} as __tmp', _g, _l)
+                    resolved[_name] = _l['__tmp']
                 except Exception:
                     unresolved.append(_name)
 
             if unresolved:
                 # Fail fast with a clear, actionable error message.
                 raise RuntimeError(
-                    "Could not import the following names from "
+                    'Could not import the following names from '
                     f"'from {node.module} import *' at line {node.lineno}: "
-                    f"{', '.join(sorted(unresolved))}"
+                    f'{", ".join(sorted(unresolved))}'
                 )
 
             # Group by where names resolve (object.__module__ or its class' module).
             name_groups: Dict[str, List[str]] = defaultdict(list)
             for _name, _obj in resolved.items():
-                _mod = getattr(_obj, "__module__", None)
+                _mod = getattr(_obj, '__module__', None)
                 if not _mod:
-                    _mod = getattr(getattr(_obj, "__class__", object), "__module__", "__ungrouped__")
+                    _mod = getattr(
+                        getattr(_obj, '__class__', object),
+                        '__module__',
+                        '__ungrouped__',
+                    )
                 name_groups[str(_mod)].append(_name)
 
             # Deterministic order: base module group first (if present), then lexicographically.
-            order = sorted(name_groups.keys(), key=lambda m: (m != node.module, m))
+            order = sorted(
+                name_groups.keys(), key=lambda m: (m != node.module, m)
+            )
             lines: List[str] = []
             for grp in order:
                 lines.append(
                     build_explicit_import_line(
-                        module=node.module,              # keep importing from the base module
-                        names=sorted(name_groups[grp]),  # but group by resolved origin
+                        module=node.module,  # keep importing from the base module
+                        names=sorted(
+                            name_groups[grp]
+                        ),  # but group by resolved origin
                         original_indent=indent,
                     )
                 )
-            replacements[line_idx] = "".join(lines)
+            replacements[line_idx] = ''.join(lines)
 
         else:
-            new_line = build_explicit_import_line(node.module, used_from_this, indent)
+            new_line = build_explicit_import_line(
+                node.module, used_from_this, indent
+            )
             replacements[line_idx] = new_line
 
         # new_line = build_explicit_import_line(
@@ -379,25 +431,35 @@ def process_file(args: ExpandImportStarCLI) -> int:
 
     # If nothing to change, exit
     if not replacements and not removals:
-        print("[info] No safe rewrites determined. No changes made.")
+        print('[info] No safe rewrites determined. No changes made.')
         return 0
 
     new_src = rewrite_source_lines(src_lines, replacements, removals)
 
     if args.inplace:
-        with open(path, "w", encoding="utf-8") as f:
-            f.write("".join(new_src))
-        print(f"[success] Updated {path}")
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(''.join(new_src))
+        print(f'[success] Updated {path}')
     else:
         import xdev
-        diff = xdev.difftext(text, ''.join(new_src), style='unified', fromfile=args.path, tofile=args.path, colored=True)
+
+        diff = xdev.difftext(
+            text,
+            ''.join(new_src),
+            style='unified',
+            fromfile=args.path,
+            tofile=args.path,
+            colored=True,
+        )
         print(diff)
         # print(f'removals={removals}')
         # print(f'replacements={replacements}')
     return 0
 
 
-def _group_names_by_defining_module(base_module: str, names: List[str]) -> Dict[str, List[str]]:
+def _group_names_by_defining_module(
+    base_module: str, names: List[str]
+) -> Dict[str, List[str]]:
     """
     Dynamically import each name from `base_module` and try to infer the module
     it actually belongs to, primarily via `obj.__module__` (fallback to
@@ -407,6 +469,7 @@ def _group_names_by_defining_module(base_module: str, names: List[str]) -> Dict[
     fall back to the provided `base_module`.
     """
     import traceback
+
     groups: Dict[str, List[str]] = {}
     # We'll import into isolated globals/locals for safety
     g: Dict[str, object] = {}
@@ -417,12 +480,14 @@ def _group_names_by_defining_module(base_module: str, names: List[str]) -> Dict[
         try:
             # Import the specific name into our empty namespace
             # Using exec so we don't leak names into our own module globals.
-            exec(f"from {base_module} import {n}", g, l)
+            exec(f'from {base_module} import {n}', g, l)
             obj = l.get(n, None)
             if obj is not None:
-                mod = getattr(obj, "__module__", None)
+                mod = getattr(obj, '__module__', None)
                 if not mod:
-                    mod = getattr(getattr(obj, "__class__", object), "__module__", None)
+                    mod = getattr(
+                        getattr(obj, '__class__', object), '__module__', None
+                    )
                 # Prefer a submodule beneath the base module if it matches; otherwise,
                 # still allow a fully-qualified module path (e.g. 'numpy.random').
                 if isinstance(mod, str) and mod:
@@ -430,11 +495,14 @@ def _group_names_by_defining_module(base_module: str, names: List[str]) -> Dict[
         except Exception:
             # On failure, keep the base module; also leave a breadcrumb on stderr
             # without breaking the flow.
-            print(f"[warn] Failed to introspect '{n}' from '{base_module}'. Using base module.", flush=True)
+            print(
+                f"[warn] Failed to introspect '{n}' from '{base_module}'. Using base module.",
+                flush=True,
+            )
             traceback.print_exc()
         groups.setdefault(inferred_mod, []).append(n)
     return groups
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     __cli__.main()

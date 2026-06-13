@@ -28,7 +28,9 @@ def _order_columns(df, extra_last=('name',)):
 
 def _stats_total(stats):
     """Total logical text lines from a node stats dict."""
-    return sum(v for k, v in stats.items() if k.endswith('.total') or k == 'total')
+    return sum(
+        v for k, v in stats.items() if k.endswith('.total') or k == 'total'
+    )
 
 
 class DirectoryWalker:
@@ -47,22 +49,24 @@ class DirectoryWalker:
         >>> self.write_network_text()
     """
 
-    def __init__(self,
-                 dpath,
-                 exclude_dnames=None,
-                 exclude_fnames=None,
-                 include_dnames=None,
-                 include_fnames=None,
-                 max_walk_depth=None,
-                 max_files=None,
-                 parse_content=False,
-                 python=False,
-                 rust=False,
-                 show_progress=True,
-                 ignore_empty_dirs=False,
-                 sort=False,
-                 fs=None,
-                 **kwargs):
+    def __init__(
+        self,
+        dpath,
+        exclude_dnames=None,
+        exclude_fnames=None,
+        include_dnames=None,
+        include_fnames=None,
+        max_walk_depth=None,
+        max_files=None,
+        parse_content=False,
+        python=False,
+        rust=False,
+        show_progress=True,
+        ignore_empty_dirs=False,
+        sort=False,
+        fs=None,
+        **kwargs,
+    ):
         """
         Args:
             dpath (str | PathLike): the path to walk
@@ -105,7 +109,9 @@ class DirectoryWalker:
         """
         if 'block_fnames' in kwargs:
             ub.schedule_deprecation(
-                'xdev', 'DirectoryWalker block_fnames', 'arg',
+                'xdev',
+                'DirectoryWalker block_fnames',
+                'arg',
                 migration='Use exclude_fnames instead',
                 deprecate='now',
             )
@@ -114,7 +120,9 @@ class DirectoryWalker:
             exclude_fnames = kwargs.pop('block_fnames')
         if 'block_dnames' in kwargs:
             ub.schedule_deprecation(
-                'xdev', 'DirectoryWalker block_dnames', 'arg',
+                'xdev',
+                'DirectoryWalker block_dnames',
+                'arg',
                 migration='Use exclude_dnames instead',
                 deprecate='now',
             )
@@ -187,7 +195,12 @@ class DirectoryWalker:
         if stat_rows:
             table = pd.DataFrame(stat_rows)
             piv = table.pivot_table(
-                index='ext', columns='kind', values='value', aggfunc='sum', fill_value=0)
+                index='ext',
+                columns='kind',
+                values='value',
+                aggfunc='sum',
+                fill_value=0,
+            )
             if 'size' in piv.columns:
                 piv = piv.sort_values('size')
         else:
@@ -239,7 +252,9 @@ class DirectoryWalker:
                     clean[key] = value
         return clean
 
-    def stats_table(self, max_depth=1, include_files=True, max_rows=None, humanize=True):
+    def stats_table(
+        self, max_depth=1, include_files=True, max_rows=None, humanize=True
+    ):
         """
         Return a path-by-stats table suitable for plain-text reports.
 
@@ -294,7 +309,9 @@ class DirectoryWalker:
         """Return a stable plain-text dirstats report."""
         lines = []
         lines.append(f'Stats root: {self.root}')
-        lines.append(f'Max display depth: {max_depth if max_depth is not None else "full"}')
+        lines.append(
+            f'Max display depth: {max_depth if max_depth is not None else "full"}'
+        )
         lines.append('')
         lines.append('Path summary:')
         path_df = self.stats_table(
@@ -388,7 +405,11 @@ class DirectoryWalker:
                 piv = table.pivot(index='ext', columns='kind', values='value')
                 piv = piv.sort_values('size')
             else:
-                piv = pd.DataFrame([], index=pd.Index([], name='ext'), columns=pd.Index(['size', 'files'], name='kind'))
+                piv = pd.DataFrame(
+                    [],
+                    index=pd.Index([], name='ext'),
+                    columns=pd.Index(['size', 'files'], name='kind'),
+                )
 
             totals = piv.sum(axis=0)
             disp_totals = totals.copy()
@@ -436,6 +457,7 @@ class DirectoryWalker:
             table = sorted(table, key=lambda r: r['path_stat'].st_mtime)
             for row in table:
                 import xdev
+
                 time = xdev.datetime.coerce(row['path_stat'].st_mtime)
                 if 'dev' in str(row['path']):
                     print(time, row['path'])
@@ -504,7 +526,6 @@ class DirectoryWalker:
                 walkgen = self.fs.walk(os.fspath(dpath))
 
             for root, dnames, fnames in walkgen:
-
                 if self.fs is not None:
                     root = ub.Path(root)
 
@@ -517,7 +538,7 @@ class DirectoryWalker:
 
                 if self.max_walk_depth is not None:
                     curr_depth = str(root).count(os.path.sep)
-                    rel_depth = (curr_depth - start_depth)
+                    rel_depth = curr_depth - start_depth
                     if rel_depth >= self.max_walk_depth:
                         del dnames[:]
 
@@ -529,7 +550,9 @@ class DirectoryWalker:
                 root_attrs['num_dirs'] = len(dnames)
                 root_attrs['num_files'] = num_files = len(fnames)
 
-                too_many_files = max_files is not None and num_files >= max_files
+                too_many_files = (
+                    max_files is not None and num_files >= max_files
+                )
                 if too_many_files:
                     root_attrs['too_many_files'] = too_many_files
 
@@ -551,12 +574,19 @@ class DirectoryWalker:
                 if not too_many_files:
                     for f in fnames:
                         fpath = root / f
-                        g.add_node(fpath, name=fpath.name, label=fpath.name, type='file')
+                        g.add_node(
+                            fpath,
+                            name=fpath.name,
+                            label=fpath.name,
+                            type='file',
+                        )
                         g.add_edge(root, fpath)
 
                 for d in dnames:
                     dpath = root / d
-                    g.add_node(dpath, name=dpath.name, label=dpath.name, type='dir')
+                    g.add_node(
+                        dpath, name=dpath.name, label=dpath.name, type='dir'
+                    )
                     g.add_edge(root, dpath)
 
         self._topo_order = list(nx.topological_sort(g))
@@ -650,7 +680,9 @@ class DirectoryWalker:
         self._parallel_process_files(worker, 'Parse File Info')
         self._accum_stats()
 
-    def _parallel_process_files(self, func, desc=None, max_workers=8, mode='thread'):
+    def _parallel_process_files(
+        self, func, desc=None, max_workers=8, mode='thread'
+    ):
         """
         Applies a function to every node.
         """
@@ -672,14 +704,16 @@ class DirectoryWalker:
                 for path, data in graph.nodes(data=True)  # type: ignore
                 if data['isfile']
             ]
-            prog = ub.ProgIter(fpaths, desc=submit_desc, total=len(fpaths),
-                               homogeneous=False)
+            prog = ub.ProgIter(
+                fpaths, desc=submit_desc, total=len(fpaths), homogeneous=False
+            )
             for fpath in prog:
                 job = jobs.submit(func, fpath)
                 job.fpath = fpath  # type: ignore
 
-            for job in ub.ProgIter(jobs.as_completed(), desc=collect_desc,
-                                   total=len(jobs)):
+            for job in ub.ProgIter(
+                jobs.as_completed(), desc=collect_desc, total=len(jobs)
+            ):
                 fpath = job.fpath  # type: ignore
                 result = job.result()
                 yield fpath, result
@@ -690,7 +724,9 @@ class DirectoryWalker:
         Combines stats over the a prefix
         """
         suffixes = [k.split('.', 1)[1] for k in stats.keys()]
-        _stats = ub.udict(ub.group_items(stats.values(), suffixes)).map_values(sum)
+        _stats = ub.udict(ub.group_items(stats.values(), suffixes)).map_values(
+            sum
+        )
         # _stats.update({k: v for k, v in stats.items() if k.endswith('.files')})
         return _stats
 
@@ -734,7 +770,9 @@ class DirectoryWalker:
             if len(v) > 1:
                 dups.append(k)
         dup_hash_to_paths = hash_to_paths & dups  # type: ignore
-        print('dup_hash_to_paths = {}'.format(ub.urepr(dup_hash_to_paths, nl=2)))
+        print(
+            'dup_hash_to_paths = {}'.format(ub.urepr(dup_hash_to_paths, nl=2))
+        )
 
     def _update_path_metadata(self):
         g = self.graph
@@ -834,9 +872,7 @@ class DirectoryWalker:
                 else:
                     show_nfiles_ = show_nfiles
                 if show_nfiles_ and 'num_files' in node_data:
-                    prefix_parts.append(
-                        '[ {} ]'.format(node_data['num_files'])
-                    )
+                    prefix_parts.append('[ {} ]'.format(node_data['num_files']))
             elif node_type == 'file':
                 richlink = False
                 if node_data.get('X_ok', False):
@@ -865,15 +901,21 @@ class DirectoryWalker:
                     targetrep = escape(targetrep)
                     if target_richlink:
                         import urllib.parse
-                        encoded_target = 'file://' + urllib.parse.quote(os.fspath(target))
+
+                        encoded_target = 'file://' + urllib.parse.quote(
+                            os.fspath(target)
+                        )
                         targetrep = f'[link={encoded_target}]{targetrep}[/link]'
                     targetrep = f'[{target_color}]{targetrep}[/{target_color}]'
 
             if colors:
                 if richlink:
                     import urllib.parse
+
                     pathrep = escape(pathrep)
-                    encoded_path = 'file://' + urllib.parse.quote(os.fspath(path))
+                    encoded_path = 'file://' + urllib.parse.quote(
+                        os.fspath(path)
+                    )
                     pathrep = f'[link={encoded_path}]{pathrep}[/link]'
                 pathrep = f'[{color}]{pathrep}[/{color}]'
 
@@ -895,7 +937,13 @@ class DirectoryWalker:
             # Sort children by total lines
             children = g.succ[node]  # type: ignore
             children = ub.udict({c: g.nodes[c] for c in children})  # type: ignore
-            children = children.sorted_keys(lambda c: (g.nodes[c]['type'], _stats_total(g.nodes[c].get('stats', {}))), reverse=True)  # type: ignore
+            children = children.sorted_keys(
+                lambda c: (
+                    g.nodes[c]['type'],
+                    _stats_total(g.nodes[c].get('stats', {})),
+                ),
+                reverse=True,
+            )  # type: ignore
             for c, d in children.items():
                 ordered_nodes.pop(c, None)
                 ordered_nodes[c] = d
@@ -1012,7 +1060,9 @@ class DirectoryWalker:
             ftypes = set(filetype)
             unknown = ftypes - {'f', 'd', 'l'}
             if unknown:
-                raise ValueError(f'unknown filetype chars={sorted(unknown)!r}, expected subset of {{"f","d","l"}}')
+                raise ValueError(
+                    f'unknown filetype chars={sorted(unknown)!r}, expected subset of {{"f","d","l"}}'
+                )
 
         for node in nodes:
             # Match only on node.name
@@ -1023,11 +1073,11 @@ class DirectoryWalker:
 
             if ftypes is not None:
                 keep = False
-                if ('l' in ftypes and node_data['islink']):
+                if 'l' in ftypes and node_data['islink']:
                     keep = True
-                if ('f' in ftypes and node_data['isfile']):
+                if 'f' in ftypes and node_data['isfile']:
                     keep = True
-                if ('d' in ftypes and node_data['isdir']):
+                if 'd' in ftypes and node_data['isdir']:
                     keep = True
 
                 if not keep:
@@ -1059,7 +1109,9 @@ class DirectoryWalker:
             >>> walker.find_one('foo.txt').name
             'foo.txt'
         """
-        matches = list(self.find(pattern, data=data, root=root, filetype=filetype))
+        matches = list(
+            self.find(pattern, data=data, root=root, filetype=filetype)
+        )
 
         if not matches:
             raise KeyError(f'find_one({pattern!r}) found no matches')
@@ -1123,7 +1175,9 @@ def parse_file_stats(
                 if fs is None:
                     text = fpath.read_text(encoding='utf8')
                 else:
-                    with fs.open(os.fspath(fpath), 'rt', encoding='utf8') as file:
+                    with fs.open(
+                        os.fspath(fpath), 'rt', encoding='utf8'
+                    ) as file:
                         text = file.read()
             except (UnicodeDecodeError, IsADirectoryError, PermissionError):
                 # Binary, non-UTF8, unreadable, or directory-like entries count
@@ -1140,7 +1194,9 @@ def parse_file_stats(
 
                 elif parse_rust and ext == '.rs':
                     try:
-                        stats.update(parse_rust_content_stats(text, fpath=fpath))
+                        stats.update(
+                            parse_rust_content_stats(text, fpath=fpath)
+                        )
                     except Exception:
                         ...
 
@@ -1183,8 +1239,11 @@ def parse_python_content_stats(source: str):
     else:
         nodes = [tree]
         nodes.extend(
-            n for n in ast.walk(tree)
-            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+            n
+            for n in ast.walk(tree)
+            if isinstance(
+                n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            )
         )
         for node in nodes:
             body = getattr(node, 'body', None)
@@ -1192,9 +1251,9 @@ def parse_python_content_stats(source: str):
                 continue
             first = body[0]
             if (
-                isinstance(first, ast.Expr) and
-                isinstance(getattr(first, 'value', None), ast.Constant) and
-                isinstance(first.value.value, str)
+                isinstance(first, ast.Expr)
+                and isinstance(getattr(first, 'value', None), ast.Constant)
+                and isinstance(first.value.value, str)
             ):
                 start = getattr(first, 'lineno', None)
                 end = getattr(first, 'end_lineno', start)
@@ -1252,8 +1311,10 @@ def strip_comments_and_newlines(source):
         >>> assert non_comments.count('#') == 1
     """
     import tokenize
+
     if isinstance(source, str):
         import io
+
         f = io.StringIO(source)
         readline = f.readline
     else:
@@ -1275,7 +1336,9 @@ def strip_comments_and_newlines(source):
         prev_end_col = 0
         skipped_rows = 0
         for token_info in tokens:
-            typ, tok, (start_row, start_col), (end_row, end_col), line = token_info
+            typ, tok, (start_row, start_col), (end_row, end_col), line = (
+                token_info
+            )
             if typ in (tokenize.NL, tokenize.NEWLINE):
                 if prev_typ in (tokenize.NL, tokenize.NEWLINE, None):
                     skipped_rows += 1
@@ -1285,7 +1348,13 @@ def strip_comments_and_newlines(source):
                 end_col = start_col + 1
             prev_typ = typ
             prev_end_col = end_col
-            yield typ, tok, (start_row - skipped_rows, start_col), (end_row - skipped_rows, end_col), line
+            yield (
+                typ,
+                tok,
+                (start_row - skipped_rows, start_col),
+                (end_row - skipped_rows, end_col),
+                line,
+            )
 
     tokens = tokenize.generate_tokens(readline)
     tokens = strip_hashtag_comments(tokens)
@@ -1303,6 +1372,7 @@ def strip_docstrings(tokens):
     Indented docstrings are not yet recognised.
     """
     import tokenize
+
     stack = []
     state = 'wait_string'
     for t in tokens:
@@ -1319,7 +1389,13 @@ def strip_docstrings(tokens):
                     yield tokenize.NL, '\n', (i, 0), (i, 1), '\n'
                 for t in stack:
                     if t[0] in (tokenize.DEDENT, tokenize.INDENT):
-                        yield t[0], t[1], (i + 1, t[2][1]), (i + 1, t[3][1]), t[4]
+                        yield (
+                            t[0],
+                            t[1],
+                            (i + 1, t[2][1]),
+                            (i + 1, t[3][1]),
+                            t[4],
+                        )
                 del stack[:]
             else:
                 stack.append(t)
@@ -1359,29 +1435,29 @@ def byte_str(num, unit='auto', precision=2):
     """
     abs_num = abs(num)
     if unit == 'auto':
-        if abs_num < 2.0 ** 10:
+        if abs_num < 2.0**10:
             unit = 'KB'
-        elif abs_num < 2.0 ** 20:
+        elif abs_num < 2.0**20:
             unit = 'KB'
-        elif abs_num < 2.0 ** 30:
+        elif abs_num < 2.0**30:
             unit = 'MB'
-        elif abs_num < 2.0 ** 40:
+        elif abs_num < 2.0**40:
             unit = 'GB'
         else:
             unit = 'TB'
     if unit.lower().startswith('b'):
         num_unit = num
     elif unit.lower().startswith('k'):
-        num_unit =  num / (2.0 ** 10)
+        num_unit = num / (2.0**10)
     elif unit.lower().startswith('m'):
-        num_unit =  num / (2.0 ** 20)
+        num_unit = num / (2.0**20)
     elif unit.lower().startswith('g'):
-        num_unit = num / (2.0 ** 30)
+        num_unit = num / (2.0**30)
     elif unit.lower().startswith('t'):
-        num_unit = num / (2.0 ** 40)
+        num_unit = num / (2.0**40)
     else:
         raise ValueError('unknown num={!r} unit={!r}'.format(num, unit))
-    fmtstr = ('{:.' + str(precision) + 'f} {}')
+    fmtstr = '{:.' + str(precision) + 'f} {}'
     res = fmtstr.format(num_unit, unit)
     return res
 
@@ -1449,13 +1525,18 @@ class DirectoryDiff:
         self = DirectoryDiff(walker1, walker2).build()
         self.write_report()
     """
+
     def __init__(self, walker1, walker2):
         self.walker1 = walker1
         self.walker2 = walker2
 
     def build(self):
-        rel_paths1 = {p.relative_to(self.walker1.dpath) for p in self.walker1.graph.nodes}
-        rel_paths2 = {p.relative_to(self.walker2.dpath) for p in self.walker2.graph.nodes}
+        rel_paths1 = {
+            p.relative_to(self.walker1.dpath) for p in self.walker1.graph.nodes
+        }
+        rel_paths2 = {
+            p.relative_to(self.walker2.dpath) for p in self.walker2.graph.nodes
+        }
         self.root1 = self.walker1.dpath
         self.root2 = self.walker2.dpath
         self.common_paths = rel_paths1 & rel_paths2
@@ -1520,6 +1601,7 @@ class DirectoryDiff:
 
     def summary(self):
         from collections import Counter
+
         error_hist = Counter({0: 0, 1: 0})
         error_hist.update(r['num_errors'] for r in self.common_table)
         summary = {
@@ -1618,8 +1700,7 @@ def parse_rust_content_stats(source: str, fpath=None):
         # Rust nested block comments: /* ... */, /** ... */, /*! ... */
         if source.startswith('/*', i):
             is_doc = (
-                source.startswith('/**', i) and
-                not source.startswith('/***', i)
+                source.startswith('/**', i) and not source.startswith('/***', i)
             ) or source.startswith('/*!', i)
             depth = 0
             while i < n:
@@ -1656,9 +1737,8 @@ def parse_rust_content_stats(source: str, fpath=None):
 
         # Normal string-ish literals. This avoids treating // or /* inside a
         # string as a comment.
-        if (
-            ch == '"' or
-            (ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"')
+        if ch == '"' or (
+            ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"'
         ):
             stop = i + 1
             if ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"':
@@ -1779,11 +1859,14 @@ def _find_matching_rust_brace(source: str, open_pos: int):
             i = n if stop < 0 else stop + len(close_delim)
             continue
         ch = source[i]
-        if (
-            ch == '"' or
-            (ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"')
+        if ch == '"' or (
+            ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"'
         ):
-            i += 2 if ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"' else 1
+            i += (
+                2
+                if ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"'
+                else 1
+            )
             escape = False
             while i < n:
                 c = source[i]
@@ -1823,6 +1906,6 @@ def _rust_raw_string_close_delim(source: str, pos: int):
         j += 1
 
     if j < n and source[j] == '"':
-        hashes = source[pos + prefix_len:j]
+        hashes = source[pos + prefix_len : j]
         return '"' + hashes
     return None

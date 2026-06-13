@@ -10,6 +10,7 @@ are used to control subparser configurations. The normal scriptconfig
 have a ``main`` classmethod, which is the logic invoked when the subcommand is
 called.
 """
+
 import scriptconfig as scfg
 import ubelt as ub
 import os
@@ -29,11 +30,13 @@ class XdevCLI(ModalCLI):
         """
         Info about xdev
         """
+
         __command__ = 'info'
 
         @classmethod
         def main(cls, cmdline=False, **kwargs):
             import xdev
+
             print('sys.version_info = {!r}'.format(sys.version_info))
             print('xdev.__version__ = {!r}'.format(xdev.__version__))
             print('xdev.__file__ = {!r}'.format(xdev.__file__))
@@ -45,6 +48,7 @@ class XdevCLI(ModalCLI):
         Useful for writing subscripts (e.g. python -c code) in shell files
         without having to resort to ugly indentation.
         """
+
         __command__ = 'codeblock'
         __epilog__ = """
         Example Usage
@@ -65,8 +69,12 @@ class XdevCLI(ModalCLI):
         And in future versions of Python this may not be necessary at all
         https://github.com/python/cpython/pull/103998
         """
-        text = scfg.Value('', type=str, position=1,
-                          help='text to remove indentation from (i.e. dedent)')
+        text = scfg.Value(
+            '',
+            type=str,
+            position=1,
+            help='text to remove indentation from (i.e. dedent)',
+        )
 
         @classmethod
         def main(cls, cmdline=False, **kwargs):
@@ -82,32 +90,64 @@ class XdevCLI(ModalCLI):
         """
         Search and replace text in files
         """
+
         __command__ = 'sed'
         __default__ = {
-            'regexpr': scfg.Value('', type=str, position=1, help=ub.paragraph(
-                '''
+            'regexpr': scfg.Value(
+                '',
+                type=str,
+                position=1,
+                help=ub.paragraph(
+                    """
                 The pattern to search for.
-                ''')),
-            'repl': scfg.Value('', type=str, position=2, help=ub.paragraph(
-                '''
+                """
+                ),
+            ),
+            'repl': scfg.Value(
+                '',
+                type=str,
+                position=2,
+                help=ub.paragraph(
+                    """
                 The pattern to replace with.
-                ''')),
-            'dpath': scfg.Value(None, position=3, help=ub.paragraph(
-                '''
+                """
+                ),
+            ),
+            'dpath': scfg.Value(
+                None,
+                position=3,
+                help=ub.paragraph(
+                    """
                 The directory to recursively search or a file pattern to match.
-                '''
-            ), alias=['path']),
-            'dry': scfg.Value('ask', position=4, help=ub.paragraph(
-                '''
+                """
+                ),
+                alias=['path'],
+            ),
+            'dry': scfg.Value(
+                'ask',
+                position=4,
+                help=ub.paragraph(
+                    """
                 if 1, show what would be done. if 0, execute the change, if "ask",
                 then show the dry run and then ask for confirmation.
-                '''
-            )),
-            'include': scfg.Value(None, help='If specified, only consider results with matching basenames'),
-            'exclude': scfg.Value(None, help='If specified, do not consider results with matching basenames'),
-            'dirblocklist': scfg.Value(None, help=(
-                'Any directory matching this pattern will be removed from '
-                'traveral.')),
+                """
+                ),
+            ),
+            'include': scfg.Value(
+                None,
+                help='If specified, only consider results with matching basenames',
+            ),
+            'exclude': scfg.Value(
+                None,
+                help='If specified, do not consider results with matching basenames',
+            ),
+            'dirblocklist': scfg.Value(
+                None,
+                help=(
+                    'Any directory matching this pattern will be removed from '
+                    'traveral.'
+                ),
+            ),
             'recursive': scfg.Value(True),
             'verbose': scfg.Value(2),
         }
@@ -115,6 +155,7 @@ class XdevCLI(ModalCLI):
         @classmethod
         def main(cls, cmdline=False, **kwargs):
             from xdev import search_replace
+
             config = cls.cli(cmdline=cmdline, data=kwargs)
             if config['verbose'] >= 2:
                 rprint(f'config = {ub.urepr(config, nl=1, sort=0)}')
@@ -122,6 +163,7 @@ class XdevCLI(ModalCLI):
 
             if config['dry'] in {'ask', 'auto'}:
                 from rich.prompt import Confirm
+
                 config['dry'] = True
                 search_replace.sed(**config)
                 flag = Confirm.ask('Do you want to execute this sed?')
@@ -148,16 +190,32 @@ class XdevCLI(ModalCLI):
         -------
         xdev find "*.py"
         """
+
         __command__ = 'find'
         __default__ = {
             'pattern': scfg.Value('', position=1),
-            'dpath': scfg.Value(None, position=2, help='the path to search. Defaults to cwd', alias=['path']),
-            'include': scfg.Value(None, help='If specified, only consider results with matching basenames'),
-            'exclude': scfg.Value(None, help='If specified, do not consider results with matching basenames'),
-            'dirblocklist': scfg.Value(None, help=(
-                'Any directory matching this pattern will be removed from '
-                'traveral.')),
-            'type': scfg.Value('f', help="can be f and/or d"),
+            'dpath': scfg.Value(
+                None,
+                position=2,
+                help='the path to search. Defaults to cwd',
+                alias=['path'],
+            ),
+            'include': scfg.Value(
+                None,
+                help='If specified, only consider results with matching basenames',
+            ),
+            'exclude': scfg.Value(
+                None,
+                help='If specified, do not consider results with matching basenames',
+            ),
+            'dirblocklist': scfg.Value(
+                None,
+                help=(
+                    'Any directory matching this pattern will be removed from '
+                    'traveral.'
+                ),
+            ),
+            'type': scfg.Value('f', help='can be f and/or d'),
             'recursive': scfg.Value(True),
             'followlinks': scfg.Value(False),
         }
@@ -165,6 +223,7 @@ class XdevCLI(ModalCLI):
         @classmethod
         def main(cls, cmdline=False, **kwargs):
             from xdev import search_replace
+
             config = cls.cli(cmdline=cmdline, data=kwargs)
             for found in search_replace.find(**config):
                 print(found)
@@ -182,6 +241,7 @@ class XdevCLI(ModalCLI):
         -------
         xdev tree .
         """
+
         __command__ = 'tree'
 
         __default__ = {
@@ -191,12 +251,14 @@ class XdevCLI(ModalCLI):
             'dirblocklist': scfg.Value(None),
             'ignore_dotprefix': scfg.Value(True, isflag=True),
             'max_depth': scfg.Value(
-                None, help='maximum depth to recurse', short_alias=['L']),
+                None, help='maximum depth to recurse', short_alias=['L']
+            ),
         }
 
         @classmethod
         def main(cls, cmdline=False, **kwargs):
             import xdev
+
             config = cls.cli(cmdline=cmdline, data=kwargs)
             xdev.tree_repr(**config)
             # print()
@@ -220,18 +282,31 @@ class XdevCLI(ModalCLI):
         xdev pint "12345 megabytes" "GiB" --precision=2
         xdev pint "12345 megabytes" "gib" --precision=2
         """
+
         __command__ = 'pint'
         __alias__ = ['convert_unit']
         __default__ = {
-            'input_expr': scfg.Value(None, position=1, help='A parsable pint expression with magnitude and units'),
-            'output_unit': scfg.Value(None, position=2, help='The output unit to convert to'),
-            'precision': scfg.Value(2, type=int, help='number of decimal places to use', short_alias=['p']),
+            'input_expr': scfg.Value(
+                None,
+                position=1,
+                help='A parsable pint expression with magnitude and units',
+            ),
+            'output_unit': scfg.Value(
+                None, position=2, help='The output unit to convert to'
+            ),
+            'precision': scfg.Value(
+                2,
+                type=int,
+                help='number of decimal places to use',
+                short_alias=['p'],
+            ),
         }
 
         @classmethod
         def main(cls, cmdline=False, **kwargs):
             args = cls.cli(cmdline=cmdline, data=kwargs)
             import pint  # type: ignore
+
             ureg = pint.UnitRegistry()
             ureg.define('gb = 1 * gigabyte = _ = GB')
             ureg.define('mb = 1 * megabyte = _ = MB')
@@ -274,6 +349,7 @@ class XdevCLI(ModalCLI):
         MODPATH=$(xdev pyfile ubelt)
         echo "MODPATH = $MODPATH"
         """
+
         __command__ = 'pyfile'
         __alias__ = ['modpath']
         # input_expr = scfg.Value(None, position=1)
@@ -303,15 +379,19 @@ class XdevCLI(ModalCLI):
         xdev edit xdev
         xdev edit numpy
         """
+
         __command__ = 'editfile'
         __alias__ = ['edit']
         __default__ = {
-            'target': scfg.Value(None, position=1, help='a path or a module name'),
+            'target': scfg.Value(
+                None, position=1, help='a path or a module name'
+            ),
         }
 
         @classmethod
         def main(cls, cmdline=False, **kwargs):
             import xdev
+
             args = cls.cli(cmdline=cmdline, data=kwargs)
             xdev.editfile(args.target)
 
@@ -322,30 +402,49 @@ class XdevCLI(ModalCLI):
         This is useful for "fixing" quotations after running a code formater like
         black on a module.
         """
+
         __command__ = 'format_quotes'
         __default__ = {
-            'path': scfg.Value('', position=1, help=ub.paragraph(
-                '''
-                ''')),
-            'diff': scfg.Value(True, help=ub.paragraph(
-                '''
+            'path': scfg.Value(
+                '',
+                position=1,
+                help=ub.paragraph(
+                    """
+                """
+                ),
+            ),
+            'diff': scfg.Value(
+                True,
+                help=ub.paragraph(
+                    """
                 The pattern to replace with.
-                ''')),
-            'write': scfg.Value(False, isflag=True, short_alias=['w'], help=ub.paragraph(
-                '''
+                """
+                ),
+            ),
+            'write': scfg.Value(
+                False,
+                isflag=True,
+                short_alias=['w'],
+                help=ub.paragraph(
+                    """
                 The directory to recursively search or a file pattern to match.
-                '''
-            )),
-            'verbose': scfg.Value(3, help=ub.paragraph(
-                '''
-                '''
-            )),
+                """
+                ),
+            ),
+            'verbose': scfg.Value(
+                3,
+                help=ub.paragraph(
+                    """
+                """
+                ),
+            ),
             'recursive': scfg.Value(True),
         }
 
         @classmethod
         def main(cls, cmdline=False, **kwargs):
             from xdev import format_quotes
+
             config = cls.cli(cmdline=cmdline, data=kwargs)
             format_quotes.format_quotes(**config)
 
@@ -357,15 +456,20 @@ class XdevCLI(ModalCLI):
         -------
         The generic freshpyenv.sh bash script also installed with this package.
         """
+
         __command__ = 'freshpyenv'
         __default__ = {
-            'image': scfg.Value('__default__', help='The docker image to use. (e.g. --image=python:3.12)')
+            'image': scfg.Value(
+                '__default__',
+                help='The docker image to use. (e.g. --image=python:3.12)',
+            )
         }
 
         @classmethod
         def main(cls, cmdline=False, **kwargs):
             config = cls.cli(cmdline=cmdline, data=kwargs)
             import ubelt as ub
+
             ub.cmd(f'freshpyenv.sh --image={config["image"]}', system=True)
 
     class DocstrStubgenCLI(scfg.DataConfig):
@@ -377,19 +481,26 @@ class XdevCLI(ModalCLI):
         This is an experimental command and currently requires a specialized patch
         to mypy to work correctly.
         """
+
         __command__ = 'docstubs'
         __alias__ = ['doctypes']
         __default__ = {
-            'module': scfg.Value(None, position=1, help=ub.paragraph(
-                '''
+            'module': scfg.Value(
+                None,
+                position=1,
+                help=ub.paragraph(
+                    """
                 The name of a module in the PYTHONPATH or an explicit path to that
                 module.
-                ''')),
+                """
+                ),
+            ),
         }
 
         @classmethod
         def main(cls, cmdline=False, **kwargs):
             from xdev.cli import docstr_stubgen
+
             config = cls.cli(cmdline=cmdline, data=kwargs)
             print(f'config={config}')
             modname_or_path = config['module']
@@ -407,14 +518,16 @@ class XdevCLI(ModalCLI):
 
             # Generate a py.typed file to mark the package as typed
             if modpath.is_dir():
-                pytyped_fpath = (modpath / 'py.typed')
+                pytyped_fpath = modpath / 'py.typed'
                 print(f'touch pytyped_fpath={pytyped_fpath}')
                 pytyped_fpath.touch()
 
     class AvailablePackageCLI(scfg.DataConfig):
         __command__ = 'available_package_versions'
         __alias__ = ['availpkg']
-        __default__ = available_package_versions.AvailablePackageConfig.__default__
+        __default__ = (
+            available_package_versions.AvailablePackageConfig.__default__
+        )
         __doc__ = available_package_versions.AvailablePackageConfig.__doc__
 
         @classmethod
@@ -429,8 +542,11 @@ class XdevCLI(ModalCLI):
         By default prints useful regex constructs I have a hard time
         remembering.
         """
+
         __command__ = 'regex'
-        backend = scfg.Value('python', choices=['python', 'vim'], help='regex flavor')
+        backend = scfg.Value(
+            'python', choices=['python', 'vim'], help='regex flavor'
+        )
 
         @classmethod
         def main(cls, cmdline=False, **kwargs):
@@ -444,17 +560,23 @@ class XdevCLI(ModalCLI):
             config = cls.cli(cmdline=cmdline, data=kwargs)
             rprint(f'config = {ub.urepr(config, nl=1)}')
             from xdev.regex_builder import RegexBuilder
+
             b = RegexBuilder.coerce(config.backend)
-            rprint(f'b.constructs = {ub.urepr(b.constructs, nl=1, sk=1, align=":")}')
+            rprint(
+                f'b.constructs = {ub.urepr(b.constructs, nl=1, sk=1, align=":")}'
+            )
 
     from xdev.cli.cli_formatter import CLIFormatterCLI
 
-    from xdev.cli.expand_import_star import ExpandImportStarCLI as expand_import_star
+    from xdev.cli.expand_import_star import (
+        ExpandImportStarCLI as expand_import_star,
+    )
 
 
 def rprint(*args):
     try:
         import rich
+
         rich.print(*args)
     except ImportError:
         print(*args)
@@ -462,6 +584,7 @@ def rprint(*args):
 
 def main():
     import xdev
+
     cli = XdevCLI()
     cli.version = xdev.__version__
     # XDEV_LOOSE_CLI = os.environ.get('XDEV_LOOSE_CLI', '')

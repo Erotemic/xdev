@@ -15,34 +15,82 @@ class DirectoryStatsCLI(scfg.DataConfig):
     CommandLine:
         python ~/code/xdev/xdev/cli/repo_stats.py .
     """
+
     __command__ = 'dirstats'
 
-    dpath = scfg.Value('.', type=str, help='path to the git repo. If prefixed with ``module:``, then treated as a python module', position=1)
+    dpath = scfg.Value(
+        '.',
+        type=str,
+        help='path to the git repo. If prefixed with ``module:``, then treated as a python module',
+        position=1,
+    )
 
-    exclude_dnames = scfg.Value(None, help='A coercable multi-pattern. If "py:auto" chooses sensible defaults for a Python dev.', nargs='+', alias=['block_dnames'])
+    exclude_dnames = scfg.Value(
+        None,
+        help='A coercable multi-pattern. If "py:auto" chooses sensible defaults for a Python dev.',
+        nargs='+',
+        alias=['block_dnames'],
+    )
 
-    exclude_fnames = scfg.Value(None, help='A coercable multi-pattern. If "py:auto" chooses sensible defaults for a Python dev.', nargs='+', alias=['block_fnames'])
+    exclude_fnames = scfg.Value(
+        None,
+        help='A coercable multi-pattern. If "py:auto" chooses sensible defaults for a Python dev.',
+        nargs='+',
+        alias=['block_fnames'],
+    )
 
-    include_dnames = scfg.Value(None, help='A coercable multi-pattern. Only directory names matching this pattern will be considered', nargs='+')
-    include_fnames = scfg.Value(None, help='A coercable multi-pattern. Only file names matching this pattern will be considered', nargs='+')
+    include_dnames = scfg.Value(
+        None,
+        help='A coercable multi-pattern. Only directory names matching this pattern will be considered',
+        nargs='+',
+    )
+    include_fnames = scfg.Value(
+        None,
+        help='A coercable multi-pattern. Only file names matching this pattern will be considered',
+        nargs='+',
+    )
 
-    parse_content = scfg.Value(True, isflag=True, help='if True count total lines for text-like files. Language flags add richer parsers.')
+    parse_content = scfg.Value(
+        True,
+        isflag=True,
+        help='if True count total lines for text-like files. Language flags add richer parsers.',
+    )
     max_files = scfg.Value(None)
     # parse_meta_stats = scfg.Value(True, isflag=True, help='if True parse stats about the content of each file')
 
-    max_walk_depth = scfg.Value(None, short_alias=['L'], help='maximum depth to walk')
-    max_display_depth = scfg.Value(None, short_alias=['D'], help='maximum depth to display')
+    max_walk_depth = scfg.Value(
+        None, short_alias=['L'], help='maximum depth to walk'
+    )
+    max_display_depth = scfg.Value(
+        None, short_alias=['D'], help='maximum depth to display'
+    )
 
     verbose = scfg.Value(0, isflag=True, short_alias=['v'])
     version = scfg.Value(False, isflag=True, short_alias=['V'])
-    python = scfg.Value(False, isflag=True, help='enable Python defaults and code/doc line analysis', alias=['pydev'])
-    rust = scfg.Value(False, isflag=True, help='enable Rust defaults and code/comment/test line analysis', alias=['rsdev'])
+    python = scfg.Value(
+        False,
+        isflag=True,
+        help='enable Python defaults and code/doc line analysis',
+        alias=['pydev'],
+    )
+    rust = scfg.Value(
+        False,
+        isflag=True,
+        help='enable Rust defaults and code/comment/test line analysis',
+        alias=['rsdev'],
+    )
 
-    ignore_dotprefix = scfg.Value(True, isflag=True, help='if True ignore directories and folders with a dot prefix')
+    ignore_dotprefix = scfg.Value(
+        True,
+        isflag=True,
+        help='if True ignore directories and folders with a dot prefix',
+    )
 
     def __post_init__(config):
         if config.dpath.startswith('module:'):  # type: ignore
-            config.dpath = ub.modname_to_modpath(config.dpath.split('module:', 1)[1])  # type: ignore
+            config.dpath = ub.modname_to_modpath(
+                config.dpath.split('module:', 1)[1]
+            )  # type: ignore
 
         if config.exclude_fnames is None:
             config.exclude_fnames = []
@@ -84,6 +132,7 @@ class DirectoryStatsCLI(scfg.DataConfig):
         cls.main = func
         return func
 
+
 __cli__ = DirectoryStatsCLI
 
 
@@ -99,15 +148,24 @@ def main(cmdline=1, **kwargs):
     config = DirectoryStatsCLI.cli(cmdline=cmdline, data=kwargs, strict=True)  # type: ignore
 
     import rich
+
     if config.verbose:
         kwargs = {'dpath': ub.modname_to_modpath('kwarray')}
     rich.print('config = ' + ub.urepr(config, nl=1))
 
     from xdev.directory_walker import DirectoryWalker  # NOQA
+
     kwargs = ub.udict(config) & {  # type: ignore
-        'dpath', 'exclude_dnames', 'exclude_fnames', 'include_dnames',
-        'include_fnames', 'max_walk_depth', 'parse_content', 'max_files',
-        'python', 'rust'
+        'dpath',
+        'exclude_dnames',
+        'exclude_fnames',
+        'include_dnames',
+        'include_fnames',
+        'max_walk_depth',
+        'parse_content',
+        'max_files',
+        'python',
+        'rust',
     }
     self = DirectoryWalker(**kwargs)
     self.build()

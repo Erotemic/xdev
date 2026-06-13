@@ -104,6 +104,7 @@ References:
     .. [PypiIPDB] https://pypi.org/project/ipdb/
     .. [IpythonIssue62] https://github.com/ipython/ipython/issues/62
 """
+
 import sys
 from functools import partial
 from xdoctest.dynamic_analysis import get_parent_frame, get_stack_frame
@@ -115,16 +116,25 @@ def _stop_rich_live_contexts():
     # Stop any rich live context.
     if 'rich' in sys.modules:
         import rich
+
         console = rich.get_console()
         try:
             if console._live is not None:  # type: ignore
                 console._live.__exit__(None, None, None)  # type: ignore
         except AttributeError:
-            print('FIXME: Failed to handle rich live context. Probably due to a rich version bump')
+            print(
+                'FIXME: Failed to handle rich live context. Probably due to a rich version bump'
+            )
 
 
-def embed(parent_locals=None, parent_globals=None, exec_lines=None,
-          remove_pyqt_hook=True, n=0, debug=False):
+def embed(
+    parent_locals=None,
+    parent_globals=None,
+    exec_lines=None,
+    remove_pyqt_hook=True,
+    n=0,
+    debug=False,
+):
     """
     Starts interactive session. Similar to keyboard command in matlab.
     Wrapper around IPython.embed.
@@ -154,6 +164,7 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
 
     if debug:
         import ubelt as ub
+
         print(f'parent_globals.keys = {ub.urepr(parent_globals.keys(), nl=1)}')
         print(f'parent_locals.keys = {ub.urepr(parent_locals.keys(), nl=1)}')
         print(f'parent_frame = {ub.urepr(parent_frame, nl=1)}')
@@ -175,6 +186,7 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
             if remove_pyqt_hook:
                 try:
                     import guitool  # type: ignore
+
                     guitool.remove_pyqt_input_hook()
                 except (ImportError, ValueError, AttributeError) as ex:
                     print('ex = {!r}'.format(ex))
@@ -186,46 +198,50 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
     if 1:
         # Disable common annoyance loggers
         import logging
+
         logging.getLogger('parso').setLevel(logging.INFO)
 
     from xdev._ipython_ext import embed2
+
     # import IPython
     import xdev  # NOQA
     import xdev as xd  # NOQA
 
-    #from IPython.config.loader import Config
+    # from IPython.config.loader import Config
     # cfg = Config()
-    #config_dict = {}
-    #if exec_lines is not None:
+    # config_dict = {}
+    # if exec_lines is not None:
     #    config_dict['exec_lines'] = exec_lines
-    #IPython.embed(**config_dict)
+    # IPython.embed(**config_dict)
     # print('[xdev.embed]  Get stack location with: ')
     # print('[xdev.embed] get_parent_frame(n=8).f_code.co_name')
-    print('[xdev.embed] use xdev.fix_embed_globals() to address https://github.com/ipython/ipython/issues/62')
+    print(
+        '[xdev.embed] use xdev.fix_embed_globals() to address https://github.com/ipython/ipython/issues/62'
+    )
     print('[xdev.embed] to debug in a fresh IPython context, run:')
     print('')
     print('xdev.snapshot()')
     print('')
     print('             and then follow instructions')
     print('[xdev.embed] set EXIT_NOW or qqq=1 to hard exit on unembed')
-    #print('set iup to True to draw plottool stuff')
+    # print('set iup to True to draw plottool stuff')
     # print('[util] call %pylab qt4 to get plottool stuff working')
     once = True
     # Allow user to set iup and redo the loop
     while once or vars().get('iup', False):
         if not once:
             # SUPER HACKY WAY OF GETTING FIGURES ON THE SCREEN BETWEEN UPDATES
-            #vars()['iup'] = False
+            # vars()['iup'] = False
             # ALL YOU NEED TO DO IS %pylab qt4
             print('re-emebeding')
-            #import plottool as pt
-            #pt.update()
-            #(pt.present())
+            # import plottool as pt
+            # pt.update()
+            # (pt.present())
             for _ in range(100):
-                time.sleep(.01)
+                time.sleep(0.01)
 
         once = False
-        #vars().get('iup', False):
+        # vars().get('iup', False):
         print('[util] calling IPython.embed()')
         """
         Notes:
@@ -234,13 +250,13 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
 
             # instance comes from  IPython.config.configurable.SingletonConfigurable.instance
         """
-        #c = IPython.Config()
-        #c.InteractiveShellApp.exec_lines = [
+        # c = IPython.Config()
+        # c.InteractiveShellApp.exec_lines = [
         #    '%pylab qt4',
         #    '%gui qt4',
         #    "print 'System Ready!'",
-        #]
-        #IPython.embed(config=c)
+        # ]
+        # IPython.embed(config=c)
         parent_ns = parent_globals.copy()
         parent_ns.update(parent_locals)
         # locals().update(parent_ns)
@@ -250,15 +266,15 @@ def embed(parent_locals=None, parent_globals=None, exec_lines=None,
         except RuntimeError as ex:
             print('ex = {!r}'.format(ex))
             print('Failed to open ipython')
-        #config = IPython.terminal.ipapp.load_default_config()
-        #config.InteractiveShellEmbed = config.TerminalInteractiveShell
-        #module = sys.modules[parent_globals['__name__']]
-        #config['module'] = module
-        #config['module'] = module
-        #embed2(stack_depth=n + 2 + 1)
-        #IPython.embed(config=config)
-        #IPython.embed(config=config)
-        #IPython.embed(module=module)
+        # config = IPython.terminal.ipapp.load_default_config()
+        # config.InteractiveShellEmbed = config.TerminalInteractiveShell
+        # module = sys.modules[parent_globals['__name__']]
+        # config['module'] = module
+        # config['module'] = module
+        # embed2(stack_depth=n + 2 + 1)
+        # IPython.embed(config=config)
+        # IPython.embed(config=config)
+        # IPython.embed(module=module)
         # Exit python immediately if specifed
         if parent_ns.get('EXIT_NOW', False) or parent_ns.get('qqq', False):
             print('[xdev.embed] EXIT_NOW specified')
@@ -273,11 +289,20 @@ def _devcheck_frames():
     # TODO: how do we find the right frame when executing code directly in
     # IPython?
     import ubelt as ub
+
     for n in range(0, 3):
         frame = get_parent_frame(n=n)
         print(f'n={n}')
-        print('frame.f_code.co_filename = {}'.format(ub.urepr(frame.f_code.co_filename, nl=1)))
-        print('frame.f_code.co_name = {}'.format(ub.urepr(frame.f_code.co_name, nl=1)))
+        print(
+            'frame.f_code.co_filename = {}'.format(
+                ub.urepr(frame.f_code.co_filename, nl=1)
+            )
+        )
+        print(
+            'frame.f_code.co_name = {}'.format(
+                ub.urepr(frame.f_code.co_name, nl=1)
+            )
+        )
     ...
 
 
@@ -294,6 +319,7 @@ def load_snapshot(fpath, parent_globals=None):
     """
     import pickle
     import ubelt as ub
+
     if parent_globals is None:
         parent_globals = get_parent_frame(n=1).f_globals
     fpath = ub.Path(fpath)
@@ -353,6 +379,7 @@ def snapshot(parent_ns=None, n=0):
     import pickle
     import types
     import ubelt as ub
+
     if parent_ns is None:
         parent_globals = get_parent_frame(n=n).f_globals
         parent_locals = get_parent_frame(n=n).f_locals
@@ -366,11 +393,13 @@ def snapshot(parent_ns=None, n=0):
 
     for k, v in parent_ns.items():
         if isinstance(v, types.ModuleType):
-            imports.append({
-                'modname': getattr(v, '__name__', None),
-                'modpath': getattr(v, '__file__', None),
-                'alias': k,
-            })
+            imports.append(
+                {
+                    'modname': getattr(v, '__name__', None),
+                    'modpath': getattr(v, '__file__', None),
+                    'alias': k,
+                }
+            )
         else:
             try:
                 variables[k] = pickle.dumps(v)
@@ -402,8 +431,10 @@ def snapshot(parent_ns=None, n=0):
     snapshot_data = pickle.dumps(snapshot_state)
     fpath.write_bytes(snapshot_data)
 
-    print(ub.highlight_code(ub.codeblock(
-        f'''
+    print(
+        ub.highlight_code(
+            ub.codeblock(
+                f"""
         # To debug in a fresh IPython session run:
 
         ipython -i -c "if 1:
@@ -411,7 +442,11 @@ def snapshot(parent_ns=None, n=0):
             from xdev.embeding import load_snapshot
             load_snapshot(fpath, globals())
         "
-        '''), 'bash'))
+        """
+            ),
+            'bash',
+        )
+    )
     # import pickle
     # import ubelt as ub
     # fpath = ub.Path(fpath)
@@ -436,6 +471,7 @@ def embed_if_requested(n=0):
     import os
     import ubelt as ub
     import xdev
+
     if os.environ.get('XDEV_EMBED', '') or ub.argflag('--xdev-embed'):
         xdev.embed(n=n + 1)
 
@@ -447,6 +483,7 @@ class EmbedOnException:
     SeeAlso:
         :func:`embed`
     """
+
     def __init__(self, before_embed=None):
         self.before_embed = before_embed
 
@@ -463,8 +500,12 @@ class EmbedOnException:
             print('!!! EMBED ON EXCEPTION !!!')
             if __self.before_embed is not None:
                 __self.before_embed()
-            print('[util_dbg] %r in context manager!: %s ' % (__type, str(__value)))
+            print(
+                '[util_dbg] %r in context manager!: %s '
+                % (__type, str(__value))
+            )
             import traceback
+
             traceback.print_exception(__type, __value, __trace)
             # Grab the context of the frame where the failure occurred
             __trace_globals = __trace.tb_frame.f_globals
@@ -531,6 +572,7 @@ if __name__ == '__main__':
 
     def test_embed_traceback():
         import xdev
+
         x = 1
         # xdev.embed()
         with xdev.EmbedOnException():

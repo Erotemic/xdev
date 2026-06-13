@@ -16,9 +16,12 @@ class PypackageSummaryCLI(scfg.DataConfig):
         https://docs.python.org/3/library/modulefinder.html
 
     """
+
     __command__ = 'pypackage_summary'
 
-    dpath = scfg.Value('.', type=str, help='Path to the Python module or package')
+    dpath = scfg.Value(
+        '.', type=str, help='Path to the Python module or package'
+    )
     # param1 = scfg.Value(None, help='param1')
 
     @classmethod
@@ -35,10 +38,12 @@ class PypackageSummaryCLI(scfg.DataConfig):
         """
         import rich
         from rich.markup import escape
+
         config = cls.cli(argv=argv, data=kwargs, strict=True)  # type: ignore
         rich.print('config = ' + escape(ub.urepr(config, nl=1)))
 
         from xdev.directory_walker import DirectoryWalker  # NOQA
+
         kwargs = ub.udict(config) & {  # type: ignore
             'dpath',
             # 'exclude_dnames', 'exclude_fnames', 'include_dnames',
@@ -66,89 +71,310 @@ class PypackageSummaryCLI(scfg.DataConfig):
                 all_nested_imports.extend(pystats['nested_import'])
 
         import sys
+
         known_module_groups = {}
         known_module_groups['stdlib'] = sys.stdlib_module_names  # type: ignore
         known_module_groups['scientific'] = {
-            'pandas', 'numpy', 'scipy', 'shapely', 'matplotlib',
+            'pandas',
+            'numpy',
+            'scipy',
+            'shapely',
+            'matplotlib',
         }
         known_module_groups['kitware'] = {
-            'kwcoco', 'kwarray', 'kwplot', 'kwimage',
-            'delayed_image', 'scriptconfig'
+            'kwcoco',
+            'kwarray',
+            'kwplot',
+            'kwimage',
+            'delayed_image',
+            'scriptconfig',
         }
         known_module_groups['ubiquitous'] = {
-            'rich', 'dateutil', 'networkx', 'more_itertools'
+            'rich',
+            'dateutil',
+            'networkx',
+            'more_itertools',
         }
 
         known_module_groups['ubiquitous2'] = {
-            'aiohttp', 'ansible', 'arrow', 'attrs', 'awscli', 'azure-cli',
-            'beautifulsoup4', 'black', 'boto3', 'botocore', 'celery', 'click',
-            'colorama', 'concurrent.futures', 'coverage', 'cryptography',
-            'dateutil', 'delegator.py', 'django', 'docker', 'elasticsearch',
-            'fabric', 'factory-boy', 'faker', 'fastapi', 'feedparser', 'flask',
-            'freezegun', 'google-cloud-sdk', 'google-cloud-storage', 'grpcio',
-            'gunicorn', 'helm', 'html5lib', 'httpie', 'httpx', 'hypothesis',
-            'invoke', 'isort', 'jinja2', 'kombu', 'kubernetes', 'libcloud',
-            'loguru', 'lxml', 'markdown', 'mock', 'more_itertools', 'mypy',
-            'nats', 'networkx', 'oauthlib', 'openpyxl', 'openstacksdk',
-            'paramiko', 'pexpect', 'pika', 'pillow', 'pip', 'plumbum', 'protobuf',
-            'psutil', 'pulumi', 'pydantic', 'pygments', 'pyinstaller', 'pyjwt',
-            'pymongo', 'pyodbc', 'pyopenssl', 'pytest', 'pytest-cov',
-            'python-dateutil', 'python-dotenv', 'pytz', 'pyyaml', 'pyzmq',
-            'redis', 'requests', 'requests-oauthlib', 'responses', 'rich', 'salt',
-            'scp', 'sentry-sdk', 'setuptools', 'sh', 'six', 'sqlalchemy',
-            'sshtunnel', 'starlette', 'structlog', 'subprocess32', 'terraform',
-            'tornado', 'tqdm', 'typing_extensions', 'tzlocal', 'urllib3',
-            'uvicorn', 'uvloop', 'vcrpy', 'virtualenv', 'websockets', 'wheel',
-            'xlrd', 'xlwt'
+            'aiohttp',
+            'ansible',
+            'arrow',
+            'attrs',
+            'awscli',
+            'azure-cli',
+            'beautifulsoup4',
+            'black',
+            'boto3',
+            'botocore',
+            'celery',
+            'click',
+            'colorama',
+            'concurrent.futures',
+            'coverage',
+            'cryptography',
+            'dateutil',
+            'delegator.py',
+            'django',
+            'docker',
+            'elasticsearch',
+            'fabric',
+            'factory-boy',
+            'faker',
+            'fastapi',
+            'feedparser',
+            'flask',
+            'freezegun',
+            'google-cloud-sdk',
+            'google-cloud-storage',
+            'grpcio',
+            'gunicorn',
+            'helm',
+            'html5lib',
+            'httpie',
+            'httpx',
+            'hypothesis',
+            'invoke',
+            'isort',
+            'jinja2',
+            'kombu',
+            'kubernetes',
+            'libcloud',
+            'loguru',
+            'lxml',
+            'markdown',
+            'mock',
+            'more_itertools',
+            'mypy',
+            'nats',
+            'networkx',
+            'oauthlib',
+            'openpyxl',
+            'openstacksdk',
+            'paramiko',
+            'pexpect',
+            'pika',
+            'pillow',
+            'pip',
+            'plumbum',
+            'protobuf',
+            'psutil',
+            'pulumi',
+            'pydantic',
+            'pygments',
+            'pyinstaller',
+            'pyjwt',
+            'pymongo',
+            'pyodbc',
+            'pyopenssl',
+            'pytest',
+            'pytest-cov',
+            'python-dateutil',
+            'python-dotenv',
+            'pytz',
+            'pyyaml',
+            'pyzmq',
+            'redis',
+            'requests',
+            'requests-oauthlib',
+            'responses',
+            'rich',
+            'salt',
+            'scp',
+            'sentry-sdk',
+            'setuptools',
+            'sh',
+            'six',
+            'sqlalchemy',
+            'sshtunnel',
+            'starlette',
+            'structlog',
+            'subprocess32',
+            'terraform',
+            'tornado',
+            'tqdm',
+            'typing_extensions',
+            'tzlocal',
+            'urllib3',
+            'uvicorn',
+            'uvloop',
+            'vcrpy',
+            'virtualenv',
+            'websockets',
+            'wheel',
+            'xlrd',
+            'xlwt',
         }
 
         # From deep seek, might not be quite right.
         known_module_groups['top_100_third_party_libraries'] = [
             # Web Development
-            'flask', 'django', 'fastapi', 'starlette', 'uvicorn', 'gunicorn',
-            'requests', 'aiohttp', 'httpx', 'websockets', 'bottle', 'sanic',
-            'tornado', 'pyramid', 'cherrypy', 'falcon', 'quart', 'socketserver',
-
+            'flask',
+            'django',
+            'fastapi',
+            'starlette',
+            'uvicorn',
+            'gunicorn',
+            'requests',
+            'aiohttp',
+            'httpx',
+            'websockets',
+            'bottle',
+            'sanic',
+            'tornado',
+            'pyramid',
+            'cherrypy',
+            'falcon',
+            'quart',
+            'socketserver',
             # Data Science and Machine Learning
-            'numpy', 'pandas', 'scipy', 'matplotlib', 'seaborn', 'plotly',
-            'bokeh', 'scikit-learn', 'tensorflow', 'keras', 'pytorch',
-            'pytorch-lightning', 'xgboost', 'lightgbm', 'catboost', 'statsmodels',
-            'opencv-python', 'pillow', 'h5py', 'theano', 'nltk', 'spacy',
-            'gensim', 'transformers', 'datasets', 'torchvision', 'torchaudio',
-
+            'numpy',
+            'pandas',
+            'scipy',
+            'matplotlib',
+            'seaborn',
+            'plotly',
+            'bokeh',
+            'scikit-learn',
+            'tensorflow',
+            'keras',
+            'pytorch',
+            'pytorch-lightning',
+            'xgboost',
+            'lightgbm',
+            'catboost',
+            'statsmodels',
+            'opencv-python',
+            'pillow',
+            'h5py',
+            'theano',
+            'nltk',
+            'spacy',
+            'gensim',
+            'transformers',
+            'datasets',
+            'torchvision',
+            'torchaudio',
             # Data Visualization
-            'plotly', 'bokeh', 'altair', 'pygal', 'folium', 'geopandas',
-            'dash', 'streamlit', 'panel', 'holoviews',
-
+            'plotly',
+            'bokeh',
+            'altair',
+            'pygal',
+            'folium',
+            'geopandas',
+            'dash',
+            'streamlit',
+            'panel',
+            'holoviews',
             # Database and ORM
-            'sqlalchemy', 'psycopg2', 'mysql-connector-python', 'pymysql',
-            'sqlite3', 'redis', 'pymongo', 'cassandra-driver', 'elasticsearch',
-            'influxdb', 'neo4j', 'peewee', 'pony', 'tortoise-orm',
-
+            'sqlalchemy',
+            'psycopg2',
+            'mysql-connector-python',
+            'pymysql',
+            'sqlite3',
+            'redis',
+            'pymongo',
+            'cassandra-driver',
+            'elasticsearch',
+            'influxdb',
+            'neo4j',
+            'peewee',
+            'pony',
+            'tortoise-orm',
             # Testing and Debugging
-            'pytest', 'unittest', 'nose', 'coverage', 'pytest-cov', 'hypothesis',
-            'factory-boy', 'freezegun', 'mock', 'responses', 'vcrpy', 'sentry-sdk',
-            'loguru', 'structlog', 'line-profiler', 'memory-profiler',
-
+            'pytest',
+            'unittest',
+            'nose',
+            'coverage',
+            'pytest-cov',
+            'hypothesis',
+            'factory-boy',
+            'freezegun',
+            'mock',
+            'responses',
+            'vcrpy',
+            'sentry-sdk',
+            'loguru',
+            'structlog',
+            'line-profiler',
+            'memory-profiler',
             # Automation and Scripting
-            'fabric', 'invoke', 'paramiko', 'ansible', 'salt', 'sh', 'plumbum',
-            'pexpect', 'subprocess32', 'click', 'fire', 'typer', 'argparse',
-            'docopt', 'cement', 'cliff',
-
+            'fabric',
+            'invoke',
+            'paramiko',
+            'ansible',
+            'salt',
+            'sh',
+            'plumbum',
+            'pexpect',
+            'subprocess32',
+            'click',
+            'fire',
+            'typer',
+            'argparse',
+            'docopt',
+            'cement',
+            'cliff',
             # DevOps and Cloud
-            'docker', 'kubernetes', 'helm', 'terraform', 'pulumi', 'boto3',
-            'awscli', 'google-cloud-storage', 'azure-cli', 'openstacksdk',
-            'libcloud', 'paramiko', 'scp', 'sshtunnel', 'pyopenssl',
-
+            'docker',
+            'kubernetes',
+            'helm',
+            'terraform',
+            'pulumi',
+            'boto3',
+            'awscli',
+            'google-cloud-storage',
+            'azure-cli',
+            'openstacksdk',
+            'libcloud',
+            'paramiko',
+            'scp',
+            'sshtunnel',
+            'pyopenssl',
             # Utilities and General Purpose
-            'rich', 'tqdm', 'pyyaml', 'toml', 'python-dotenv', 'arrow',
-            'python-dateutil', 'pytz', 'tzlocal', 'cryptography', 'pyjwt',
-            'oauthlib', 'requests-oauthlib', 'urllib3', 'beautifulsoup4',
-            'lxml', 'html5lib', 'feedparser', 'markdown', 'pygments',
-            'six', 'attrs', 'pydantic', 'dataclasses', 'typing-extensions',
-            'mypy', 'black', 'isort', 'flake8', 'autopep8', 'yapf', 'bandit',
-            'safety', 'pip-tools', 'poetry', 'pipenv', 'setuptools', 'wheel',
-            'virtualenv', 'conda', 'pyinstaller', 'cx-freeze', 'nuitka',
+            'rich',
+            'tqdm',
+            'pyyaml',
+            'toml',
+            'python-dotenv',
+            'arrow',
+            'python-dateutil',
+            'pytz',
+            'tzlocal',
+            'cryptography',
+            'pyjwt',
+            'oauthlib',
+            'requests-oauthlib',
+            'urllib3',
+            'beautifulsoup4',
+            'lxml',
+            'html5lib',
+            'feedparser',
+            'markdown',
+            'pygments',
+            'six',
+            'attrs',
+            'pydantic',
+            'dataclasses',
+            'typing-extensions',
+            'mypy',
+            'black',
+            'isort',
+            'flake8',
+            'autopep8',
+            'yapf',
+            'bandit',
+            'safety',
+            'pip-tools',
+            'poetry',
+            'pipenv',
+            'setuptools',
+            'wheel',
+            'virtualenv',
+            'conda',
+            'pyinstaller',
+            'cx-freeze',
+            'nuitka',
         ]
 
         simple_imports = [s.split('.')[0] for s in all_imports]
@@ -163,7 +389,9 @@ class PypackageSummaryCLI(scfg.DataConfig):
         print(f'hist_groups = {ub.urepr(hist_groups, nl=2)}')
 
         simple_nested_imports = [s.split('.')[0] for s in all_nested_imports]
-        simple_nested_import_hist = ub.udict(ub.dict_hist(simple_nested_imports))
+        simple_nested_import_hist = ub.udict(
+            ub.dict_hist(simple_nested_imports)
+        )
         simple_nested_import_hist = simple_nested_import_hist.sorted_values()
         ungrouped = ub.udict(simple_nested_import_hist)
         nested_hist_groups = {}
@@ -175,10 +403,18 @@ class PypackageSummaryCLI(scfg.DataConfig):
 
         ungrouped
 
-        std_simple_import_hist = ub.udict(simple_import_hist) & sys.stdlib_module_names  # type: ignore
-        tpl_simple_import_hist = ub.udict(simple_import_hist) - sys.stdlib_module_names  # type: ignore
-        print(f'std_simple_import_hist = {ub.urepr(std_simple_import_hist, nl=1)}')
-        print(f'tpl_simple_import_hist = {ub.urepr(tpl_simple_import_hist, nl=1)}')
+        std_simple_import_hist = (
+            ub.udict(simple_import_hist) & sys.stdlib_module_names
+        )  # type: ignore
+        tpl_simple_import_hist = (
+            ub.udict(simple_import_hist) - sys.stdlib_module_names
+        )  # type: ignore
+        print(
+            f'std_simple_import_hist = {ub.urepr(std_simple_import_hist, nl=1)}'
+        )
+        print(
+            f'tpl_simple_import_hist = {ub.urepr(tpl_simple_import_hist, nl=1)}'
+        )
 
         print(f'simple_import_hist = {ub.urepr(simple_import_hist, nl=1)}')
 
@@ -203,6 +439,7 @@ def parse_file_stats(fpath):
         return stats
 
     from xdev import static_analysis
+
     analyzer = static_analysis.CodeAnalyzer.parse_file(fpath)
 
     stats = ub.ddict(list)
@@ -217,6 +454,7 @@ def parse_file_stats(fpath):
     # stats['num_classes'] = len(analyzer.classes)
     # stats['num_functions'] = len(analyzer.functions)
     return stats
+
 
 __cli__ = PypackageSummaryCLI
 

@@ -11,6 +11,7 @@ def get_stack_frame(N=0, strict=True):
         strict (bool): (default = True)
     """
     import inspect
+
     frame_cur = inspect.currentframe()
     for idx in range(N + 1):
         # always skip the frame of this function
@@ -128,6 +129,7 @@ def distext(obj):
     """
     import dis
     import io
+
     file = io.StringIO()
     dis.dis(obj, file=file)
     file.seek(0)
@@ -207,7 +209,9 @@ def iter_object_tree(obj):
                 # item in the traversal.
                 yield None
             else:
-                if isinstance(value, indexable_cls) or hasattr(value, '__dict__'):
+                if isinstance(value, indexable_cls) or hasattr(
+                    value, '__dict__'
+                ):
                     objid = id(value)
                     if objid not in seen_:
                         seen_.add(objid)
@@ -218,6 +222,7 @@ def test_object_pickleability(obj):
     # ub.IndexableWalker
 
     import pickle
+
     serialized = pickle.dumps(obj)
     recon = pickle.loads(serialized)  # NOQA
 
@@ -230,6 +235,7 @@ def test_object_pickleability(obj):
 
     def condition(path, value):
         import pickle
+
         dumped = pickle.dumps(value)
         try:
             recon = pickle.loads(dumped)  # NOQA
@@ -274,7 +280,9 @@ def test_object_pickleability(obj):
                 store = keyfn(value)
                 found.append((path, store))
 
-                if isinstance(value, indexable_cls) or hasattr(value, '__dict__'):
+                if isinstance(value, indexable_cls) or hasattr(
+                    value, '__dict__'
+                ):
                     objid = id(value)
                     if objid not in seen_:
                         seen_.add(objid)
@@ -295,17 +303,24 @@ def gen_docstr_from_context(keys, lut):
 
 def generate_typeannot(value):
     import ubelt as ub
+
     if isinstance(value, (set, list)):
         unique_val_types = ub.group_items(value, key=type)
         T1 = type(value).__name__
-        VT = '|'.join([generate_typeannot(vs[0]) for t, vs in unique_val_types.items()])
+        VT = '|'.join(
+            [generate_typeannot(vs[0]) for t, vs in unique_val_types.items()]
+        )
         typestr = f'{T1}[{VT}]'
     elif isinstance(value, dict):
         unique_key_types = ub.group_items(value.keys(), key=type)
         unique_val_types = ub.group_items(value.values(), key=type)
         # Oversimplification
-        kt = '|'.join([generate_typeannot(vs[0]) for t, vs  in unique_key_types.items()])
-        vt = '|'.join([generate_typeannot(vs[0]) for t, vs in unique_val_types.items()])
+        kt = '|'.join(
+            [generate_typeannot(vs[0]) for t, vs in unique_key_types.items()]
+        )
+        vt = '|'.join(
+            [generate_typeannot(vs[0]) for t, vs in unique_val_types.items()]
+        )
         typestr = f'Dict[{kt}, {vt}]'
     else:
         typestr = type(value).__name__

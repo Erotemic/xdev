@@ -34,18 +34,26 @@ class PyVersionCLI(scfg.DataConfig):
     xdev pyversion xdev --backend=import
     xdev pyversion xdev --backend=importlib
     """
+
     __command__ = 'pyversion'
     __alias__ = ['modversion']
 
-    modname = scfg.Value(None, position=1, help='The name of the module or package')
+    modname = scfg.Value(
+        None, position=1, help='The name of the module or package'
+    )
 
-    backend = scfg.Value('auto', help=ub.paragraph(
-        '''
+    backend = scfg.Value(
+        'auto',
+        help=ub.paragraph(
+            """
         The method to lookup the version. The core methods are 'import'
         which imports the module and looks for a ``__version__`` attribute
         or 'importlib', which uses pip metadata. Can also be 'auto'
         which tries to find the first one that works.
-        '''), choices=['auto', 'import', 'importlib', 'pkg_resources'])
+        """
+        ),
+        choices=['auto', 'import', 'importlib', 'pkg_resources'],
+    )
 
     verbose = scfg.Value(False, isflag=True, help='if 1 prints out more info')
 
@@ -55,12 +63,13 @@ class PyVersionCLI(scfg.DataConfig):
         if args.verbose:
             from rich.markup import escape
             import rich
+
             rich.print(f'args = {escape(ub.urepr(args, nl=1))}')
 
         modname = args['modname']
 
         if args['backend'] == 'auto':
-            candidate_backends  = ['importlib', 'import', 'pkg_resources']
+            candidate_backends = ['importlib', 'import', 'pkg_resources']
         else:
             candidate_backends = [args['backend']]
 
@@ -70,33 +79,35 @@ class PyVersionCLI(scfg.DataConfig):
                 version = module.__version__
                 if args.verbose:
                     one_liner = ub.codeblock(
-                        f'''
+                        f"""
                         python -c "import {modname}; print({modname}.__version__)"
-                        '''
+                        """
                     )
                     print('One Liner:')
                     print(one_liner)
             elif backend == 'importlib':
                 # import importlib.resources
                 import importlib.metadata
+
                 version = importlib.metadata.distribution(modname).version
                 if args.verbose:
                     one_liner = ub.codeblock(
-                        f'''
+                        f"""
                         python -c "import importlib.metadata; print(importlib.metadata.distribution({modname!r}).version)"
-                        '''
+                        """
                     )
                     print('One Liner:')
                     print(one_liner)
             elif backend == 'pkg_resources':
                 # pkg resources is deprecated.
                 import pkg_resources  # type: ignore
+
                 version = pkg_resources.get_distribution(modname).version
                 if args.verbose:
                     one_liner = ub.codeblock(
-                        f'''
+                        f"""
                         python -c "import pkg_resources; print(pkg_resources.get_distribution({modname!r}).version)"
-                        '''
+                        """
                     )
                     print('One Liner:')
                     print(one_liner)

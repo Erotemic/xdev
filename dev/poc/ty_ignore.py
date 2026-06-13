@@ -27,19 +27,18 @@ TY_CONCISE_PATTERNS = [
     #   kwimage/structs/heatmap.py:1745:16: error[not-subscriptable] ...
     #
     re.compile(
-        r"^(?P<path>.*):(?P<line>\d+):(?P<col>\d+):\s+"
-        r"(?P<level>error|warning|warn|info|note)"
-        r"(?:\[[^\]]+\])?\b"
+        r'^(?P<path>.*):(?P<line>\d+):(?P<col>\d+):\s+'
+        r'(?P<level>error|warning|warn|info|note)'
+        r'(?:\[[^\]]+\])?\b'
     ),
-
     # Older / alternate format:
     #
     #   error[not-subscriptable] kwimage/structs/heatmap.py:1745:16: ...
     #
     re.compile(
-        r"^(?P<level>error|warning|warn|info|note)"
-        r"(?:\[[^\]]+\])?\s+"
-        r"(?P<path>.*):(?P<line>\d+):(?P<col>\d+):"
+        r'^(?P<level>error|warning|warn|info|note)'
+        r'(?:\[[^\]]+\])?\s+'
+        r'(?P<path>.*):(?P<line>\d+):(?P<col>\d+):'
     ),
 ]
 
@@ -75,8 +74,8 @@ def parse_ty_lines(output: str, target: Path) -> set[int]:
             if match is None:
                 continue
 
-            if paths_refer_to_same_file(match.group("path"), target):
-                line_numbers.add(int(match.group("line")))
+            if paths_refer_to_same_file(match.group('path'), target):
+                line_numbers.add(int(match.group('line')))
 
             break
 
@@ -84,7 +83,7 @@ def parse_ty_lines(output: str, target: Path) -> set[int]:
 
 
 def add_type_ignores(path: Path, line_numbers: set[int]) -> int:
-    lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+    lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
 
     changed = 0
 
@@ -95,45 +94,45 @@ def add_type_ignores(path: Path, line_numbers: set[int]) -> int:
 
         line = lines[index]
 
-        if line.endswith("\r\n"):
+        if line.endswith('\r\n'):
             body = line[:-2]
-            newline = "\r\n"
-        elif line.endswith("\n"):
+            newline = '\r\n'
+        elif line.endswith('\n'):
             body = line[:-1]
-            newline = "\n"
+            newline = '\n'
         else:
             body = line
-            newline = ""
+            newline = ''
 
-        if "# type: ignore" in body:
+        if '# type: ignore' in body:
             continue
 
-        lines[index] = f"{body}  # type: ignore{newline}"
+        lines[index] = f'{body}  # type: ignore{newline}'
         changed += 1
 
     if changed:
-        path.write_text("".join(lines), encoding="utf-8")
+        path.write_text(''.join(lines), encoding='utf-8')
 
     return changed
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("file", type=Path)
+    parser.add_argument('file', type=Path)
     parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Print the lines that would be changed, but do not edit the file.",
+        '--dry-run',
+        action='store_true',
+        help='Print the lines that would be changed, but do not edit the file.',
     )
     args = parser.parse_args()
 
     path = args.file
 
     if not path.exists():
-        print(f"error: file does not exist: {path}", file=sys.stderr)
+        print(f'error: file does not exist: {path}', file=sys.stderr)
         return 2
 
-    cmd = ["ty", "check", "--output-format=concise", str(path)]
+    cmd = ['ty', 'check', '--output-format=concise', str(path)]
     result = subprocess.run(
         cmd,
         text=True,
@@ -143,26 +142,26 @@ def main() -> int:
 
     combined_output = result.stdout
     if result.stderr:
-        combined_output += "\n" + result.stderr
+        combined_output += '\n' + result.stderr
 
     line_numbers = parse_ty_lines(combined_output, path)
 
     if not line_numbers:
-        print("No ty diagnostics found for this file.")
+        print('No ty diagnostics found for this file.')
         return result.returncode
 
     if args.dry_run:
         print(
-            "Would add # type: ignore to lines: "
-            + ", ".join(map(str, sorted(line_numbers)))
+            'Would add # type: ignore to lines: '
+            + ', '.join(map(str, sorted(line_numbers)))
         )
         return result.returncode
 
     changed = add_type_ignores(path, line_numbers)
-    print(f"Added # type: ignore to {changed} line(s) in {path}")
+    print(f'Added # type: ignore to {changed} line(s) in {path}')
 
     return result.returncode
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     raise SystemExit(main())

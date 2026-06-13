@@ -6,7 +6,7 @@ from xdev.directory_walker import parse_file_stats
 
 
 RUST_SAMPLE = ub.codeblock(
-    r'''
+    r"""
     #[cfg(test)]
     mod tests {
         // test comment
@@ -23,11 +23,14 @@ RUST_SAMPLE = ub.codeblock(
 
     /// main docs
     pub fn documented() {}
-    ''')
+    """
+)
 
 
 def test_rust_legacy_backend_preserves_aggregate_stats():
-    stats = rust_analysis.parse_rust_content_stats(RUST_SAMPLE, backend='legacy')
+    stats = rust_analysis.parse_rust_content_stats(
+        RUST_SAMPLE, backend='legacy'
+    )
     assert stats['code_lines'] > 0
     assert stats['comment_lines'] == 4
     assert stats['doc_lines'] == 1
@@ -40,7 +43,8 @@ def test_rust_treesitter_backend_splits_main_and_test_lines():
     pytest.importorskip('tree_sitter_rust')
 
     stats = rust_analysis.parse_rust_content_stats(
-        RUST_SAMPLE, backend='tree-sitter')
+        RUST_SAMPLE, backend='tree-sitter'
+    )
 
     assert stats == {
         'main_code': 5,
@@ -58,8 +62,7 @@ def test_parse_file_stats_can_use_legacy_rust_backend(tmp_path):
     fpath = tmp_path / 'main.rs'
     fpath.write_text(RUST_SAMPLE)
 
-    stats = parse_file_stats(
-        fpath, parse_content=True, rust_backend='legacy')
+    stats = parse_file_stats(fpath, parse_content=True, rust_backend='legacy')
 
     assert stats['rs.files'] == 1
     assert stats['rs.total_lines'] == RUST_SAMPLE.count('\n')
@@ -76,7 +79,8 @@ def test_parse_file_stats_treesitter_uses_short_column_names(tmp_path):
     fpath.write_text(RUST_SAMPLE)
 
     stats = parse_file_stats(
-        fpath, parse_content=True, rust_backend='tree-sitter')
+        fpath, parse_content=True, rust_backend='tree-sitter'
+    )
 
     assert stats['rs.files'] == 1
     assert stats['rs.total'] == RUST_SAMPLE.count('\n')
