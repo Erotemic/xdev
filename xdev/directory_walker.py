@@ -16,6 +16,16 @@ STAT_COLUMN_ORDER = [
     'total',
 ]
 
+LINE_ANALYSIS_COLUMNS = frozenset({
+    'main_code',
+    'main_comments',
+    'test_code',
+    'test_comments',
+    'code_lines',
+    'comment_lines',
+    'doc_lines',
+})
+
 
 def _order_columns(df, extra_last=('name',)):
     """Keep dirstats tables compact and stable."""
@@ -26,11 +36,46 @@ def _order_columns(df, extra_last=('name',)):
     return df[preferred + middle + extra_last]
 
 
+def _summarize_stats_for_display(stats):
+    """Return one coherent compact stats row from prefixed file stats.
+
+    Raw file stats are keyed by extension, e.g. ``rs.total`` and
+    ``md.total``.  Full extension tables preserve every extension row, but
+    compact path summaries should keep line-oriented columns in a coherent
+    file universe.  Prefer extensions that actually contributed line totals or
+    source-analysis breakdowns; fall back to all extensions when no line
+    information is present.
+    """
+    selected_exts = set()
+    all_exts = set()
+    for key in stats.keys():
+        if '.' not in key:
+            ext = ''
+            kind = key
+        else:
+            ext, kind = key.split('.', 1)
+        all_exts.add(ext)
+        if kind == 'total' or kind in LINE_ANALYSIS_COLUMNS:
+            selected_exts.add(ext)
+
+    if not selected_exts:
+        selected_exts = all_exts
+
+    summary = {}
+    for key, value in stats.items():
+        if '.' not in key:
+            ext = ''
+            kind = key
+        else:
+            ext, kind = key.split('.', 1)
+        if ext in selected_exts:
+            summary[kind] = summary.get(kind, 0) + value
+    return summary
+
+
 def _stats_total(stats):
-    """Total logical text lines from a node stats dict."""
-    return sum(
-        v for k, v in stats.items() if k.endswith('.total') or k == 'total'
-    )
+    """Display total logical text lines from a node stats dict."""
+    return _summarize_stats_for_display(stats).get('total', 0)
 
 
 class DirectoryWalker:
@@ -61,6 +106,7 @@ class DirectoryWalker:
         parse_content=False,
         python=False,
         rust=False,
+        textlines=None,
         show_progress=True,
         ignore_empty_dirs=False,
         sort=False,
@@ -97,6 +143,12 @@ class DirectoryWalker:
 
             rust (bool):
                 if True, enable Rust code/comment line analysis, with test splitting.
+
+            textlines (None | str | Iterable[str]):
+                Additional generic text extensions to count raw ``total``
+                lines for when language analyzers are enabled.  Extensions may
+                be given with or without leading dots.  Comma-separated strings
+                such as ``'md,rst'`` are accepted.
 
             sort (bool):
                 if True, sort files and directories before adding them to the
@@ -139,6 +191,7 @@ class DirectoryWalker:
         self.parse_content = parse_content
         self.python = python
         self.rust = rust
+        self.textline_exts = _coerce_textline_exts(textlines)
         self.max_files = max_files
         self.show_progress = show_progress
         self.ignore_empty_dirs = ignore_empty_dirs
@@ -231,10 +284,16 @@ class DirectoryWalker:
         return piv
 
     def _summary_row_for_node(self, node, *, humanize=True):
-        """Return the compact aggregate row for a graph node."""
-        piv = self._stats_table_for_node(node, humanize=False)
-        if len(piv):
-            row = piv.loc['∑ total'].to_dict()
+        """Return the compact aggregate row for a graph node.
+
+        When source-analysis columns such as ``main_code`` are present, keep
+        ``files`` / ``size`` / ``total`` in the same extension universe as the
+        breakdown columns.  Otherwise, aggregate all text-like totals.
+        """
+        node_data = self.graph.nodes[node]  # type: ignore
+        stats = node_data.get('stats', {})
+        if stats:
+            row = _summarize_stats_for_display(stats)
         else:
             row = {'files': 0, 'size': 0}
         clean = {}
@@ -426,8 +485,7 @@ class DirectoryWalker:
         if root_node:
             child_rows = []
             for node in self.graph.succ[root_node]:  # type: ignore
-                disp_piv = _node_table(node)
-                row = disp_piv.iloc[-1].to_dict()
+                row = self._summary_row_for_node(node, humanize=True)
                 row['name'] = self.graph.nodes[node]['name']  # type: ignore
                 child_rows.append(row)
             if child_rows:
@@ -659,6 +717,7 @@ class DirectoryWalker:
                         parse_content=self.parse_content,
                         parse_python=self.python,
                         parse_rust=self.rust,
+                        textline_exts=self.textline_exts,
                         fs=fs,
                     )
                     node_data['stats'] = stats
@@ -674,6 +733,7 @@ class DirectoryWalker:
                 parse_content=self.parse_content,
                 parse_python=self.python,
                 parse_rust=self.rust,
+                textline_exts=self.textline_exts,
             )
             return stats
 
@@ -1124,20 +1184,87 @@ class DirectoryWalker:
         return matches[0]
 
 
+def _coerce_textline_exts(textline_exts):
+    """Normalize generic text-line extension configuration.
+
+    Returns:
+        None | set[str]: ``None`` means no explicit generic text-line
+        extension filter was requested.  Otherwise returns normalized suffixes
+        with leading dots, e.g. ``{'.md', '.rst'}``.
+    """
+    if textline_exts is None:
+        return None
+    if textline_exts is False:
+        return set()
+
+    if isinstance(textline_exts, str):
+        import csv
+
+        raw_items = next(csv.reader([textline_exts], skipinitialspace=True))
+    else:
+        raw_items = []
+        for item in textline_exts:
+            if item is None:
+                continue
+            if isinstance(item, str) and ',' in item:
+                import csv
+
+                raw_items.extend(
+                    next(csv.reader([item], skipinitialspace=True))
+                )
+            else:
+                raw_items.append(item)
+
+    exts = set()
+    for item in raw_items:
+        if item is None:
+            continue
+        part = str(item).strip().lower()
+        if not part:
+            continue
+        if part in {'none', 'false', '0'}:
+            continue
+        if part in {'*', 'all'}:
+            raise ValueError(
+                'textline_exts no longer accepts "all"; omit the option to '
+                'use broad text probing when no language analyzer is active'
+            )
+        if not part.startswith('.'):
+            part = '.' + part
+        exts.add(part)
+    return exts
+
+
 def parse_file_stats(
     fpath,
     parse_content=True,
     parse_python=False,
     parse_rust=False,
     fs=None,
+    rust_backend=None,
+    textline_exts=None,
 ):
     """
     Get information about a file.
 
-    ``parse_content`` counts ``total`` lines for UTF-8 text-like files.
-    Language flags add richer analysis for selected source formats.
+    ``parse_content`` enables content parsing.  Without language analyzers it
+    preserves the historical behavior of counting ``total`` lines for all
+    UTF-8-readable text-like files.  With language analyzers enabled, raw
+    ``total`` is counted for analyzed source extensions and for any generic
+    extensions explicitly listed in ``textline_exts``.
+
+    Args:
+        rust_backend (None | str): Explicit Rust backend to use for ``.rs``
+            files. If specified, Rust parsing is enabled even when
+            ``parse_rust`` is false. ``'legacy'`` preserves the historical
+            aggregate Rust columns and ``'tree-sitter'`` emits the compact
+            main/test Rust columns.
+        textline_exts (None | Iterable[str] | str): Generic text extensions
+            that should also receive raw ``total`` line counts when language
+            analyzers are active. Examples: ``'md,rst'`` or ``['md', 'rst']``.
     """
     ext = fpath.suffix
+    norm_ext = ext.lower()
     prefix = ext.lstrip('.') + '.'
     stats = {}
     try:
@@ -1158,47 +1285,78 @@ def parse_file_stats(
     stats['files'] = 1
 
     if not is_broken and parse_content:
-        # ``Path.walk`` reports symlinked directories in ``fnames`` when it is
-        # not following symlinks. Treat those entries as file-like for size
-        # accounting, but do not try to read their contents.
-        try:
-            if fs is None:
-                is_readable_file = fpath.is_file()
-            else:
-                stat_type = stat_obj.get('type', None)
-                is_readable_file = stat_type is None or stat_type == 'file'
-        except OSError:
-            is_readable_file = False
+        language_line_exts = set()
+        if parse_python:
+            language_line_exts.add('.py')
+        if parse_rust or rust_backend is not None:
+            language_line_exts.add('.rs')
+        normalized_textline_exts = _coerce_textline_exts(textline_exts)
 
-        if is_readable_file:
+        has_language_analyzer = bool(language_line_exts)
+        is_language_ext = norm_ext in language_line_exts
+        if normalized_textline_exts is None:
+            # Historical behavior when no language analyzer is active: try all
+            # UTF-8-readable files.  With a language analyzer, avoid inflating
+            # ``total`` with every incidental text-like file unless explicitly
+            # requested via ``textline_exts`` / ``--textlines``.
+            is_generic_textline_ext = not has_language_analyzer
+        else:
+            is_generic_textline_ext = norm_ext in normalized_textline_exts
+        should_read_content = is_language_ext or is_generic_textline_ext
+
+        if should_read_content:
+            # ``Path.walk`` reports symlinked directories in ``fnames`` when it
+            # is not following symlinks. Treat those entries as file-like for
+            # size accounting, but do not try to read their contents.
             try:
                 if fs is None:
-                    text = fpath.read_text(encoding='utf8')
+                    is_readable_file = fpath.is_file()
                 else:
-                    with fs.open(
-                        os.fspath(fpath), 'rt', encoding='utf8'
-                    ) as file:
-                        text = file.read()
-            except (UnicodeDecodeError, IsADirectoryError, PermissionError):
-                # Binary, non-UTF8, unreadable, or directory-like entries count
-                # as files/bytes but not text.
-                ...
-            else:
-                stats['total'] = _text_total_lines(text)
+                    stat_type = stat_obj.get('type', None)
+                    is_readable_file = stat_type is None or stat_type == 'file'
+            except OSError:
+                is_readable_file = False
 
-                if parse_python and ext == '.py':
-                    try:
-                        stats.update(parse_python_content_stats(text))
-                    except Exception:
-                        ...
+            if is_readable_file:
+                try:
+                    if fs is None:
+                        text = fpath.read_text(encoding='utf8')
+                    else:
+                        with fs.open(
+                            os.fspath(fpath), 'rt', encoding='utf8'
+                        ) as file:
+                            text = file.read()
+                except (UnicodeDecodeError, IsADirectoryError, PermissionError):
+                    # Binary, non-UTF8, unreadable, or directory-like entries
+                    # count as files/bytes but not text.
+                    ...
+                else:
+                    stats['total'] = _text_total_lines(text)
 
-                elif parse_rust and ext == '.rs':
-                    try:
-                        stats.update(
-                            parse_rust_content_stats(text, fpath=fpath)
-                        )
-                    except Exception:
-                        ...
+                    if parse_python and norm_ext == '.py':
+                        try:
+                            stats.update(parse_python_content_stats(text))
+                        except Exception:
+                            ...
+
+                    elif (
+                        (parse_rust or rust_backend is not None)
+                        and norm_ext == '.rs'
+                    ):
+                        try:
+                            if rust_backend is None:
+                                rust_stats = parse_rust_content_stats(
+                                    text, fpath=fpath
+                                )
+                            else:
+                                from xdev import rust_analysis
+
+                                rust_stats = rust_analysis.parse_rust_content_stats(
+                                    text, backend=rust_backend
+                                )
+                            stats.update(rust_stats)
+                        except Exception:
+                            ...
 
     stats = {prefix + k: v for k, v in stats.items()}
     return stats
@@ -1626,7 +1784,8 @@ def parse_rust_content_stats(source: str, fpath=None):
 
     This counts non-empty lines after removing Rust comments, while preserving
     comment-like text inside normal strings, raw strings, byte strings, and C
-    strings. Rust nested block comments are handled.
+    strings. Rust nested block comments are handled. Trailing inline comments
+    after code are not counted as comment lines.
 
     Returns:
         Dict[str, int]: contains ``main_code`` / ``main_comments`` and
@@ -1658,7 +1817,7 @@ def parse_rust_content_stats(source: str, fpath=None):
         >>> stats = parse_rust_content_stats(source)
         >>> print(f'stats = {ub.urepr(stats, nl=1)}')
         >>> assert stats['main_code'] == 6
-        >>> assert stats['main_comments'] == 3
+        >>> assert stats['main_comments'] == 6
     """
     import collections
 
@@ -1672,7 +1831,7 @@ def parse_rust_content_stats(source: str, fpath=None):
         nonlocal line
         if ch == '\n':
             line += 1
-        elif not ch.isspace():
+        elif not ch.isspace() and not line_has_code[line]:
             comment_lines.add(line)
 
     def mark_code_span(start, stop):
@@ -1768,6 +1927,7 @@ def parse_rust_content_stats(source: str, fpath=None):
         i += 1
 
     code_lines = {k for k, v in line_has_code.items() if v}
+    comment_lines = comment_lines - code_lines
     test_lines = _rust_test_line_numbers(source, fpath=fpath)
 
     test_code_lines = len(code_lines & test_lines)

@@ -142,21 +142,9 @@ def rust_line_sets(parsed: ParsedRustSource) -> RustLineSets:
     ):
         line_comment_spans = comment_by_line.get(line_no, [])
 
-        # Comment and doc line accounting.
-        for comment_start, comment_end, is_doc in line_comment_spans:
-            segment_start = max(line_start, comment_start)
-            segment_end = min(line_end, comment_end)
-            if segment_start >= segment_end:
-                continue
-            if not has_nonspace(source, segment_start, segment_end):
-                continue
-            comment_lines.add(line_no)
-            if span_intersects_any((segment_start, segment_end), test_spans):
-                test_comment_lines.add(line_no)
-            else:
-                main_comment_lines.add(line_no)
-
         # Code line accounting after removing tree-sitter comment spans.
+        # Build these first so comment accounting can ignore trailing inline
+        # comments that occur after real code on the same physical line.
         cursor = line_start
         code_segments = []
         for comment_start, comment_end, _is_doc in sorted(line_comment_spans):
@@ -168,14 +156,47 @@ def rust_line_sets(parsed: ParsedRustSource) -> RustLineSets:
         if cursor < line_end:
             code_segments.append((cursor, line_end))
 
-        for segment_start, segment_end in code_segments:
-            if not has_nonspace(source, segment_start, segment_end):
-                continue
+        line_code_spans = [
+            (segment_start, segment_end)
+            for segment_start, segment_end in code_segments
+            if has_nonspace(source, segment_start, segment_end)
+        ]
+        line_has_code = bool(line_code_spans)
+
+        # Partition each physical line into at most one breakdown bucket.
+        # A line with any real code is a code line, not also a comment line,
+        # even when comments appear before, after, or around the code.  Blank
+        # lines stay out of the breakdown.  Main/test is also exclusive: a
+        # mixed physical line is treated as test if any code/comment segment
+        # intersects a test span.
+        if line_has_code:
             code_lines.add(line_no)
-            if span_intersects_any((segment_start, segment_end), test_spans):
+            if any(
+                span_intersects_any(segment, test_spans)
+                for segment in line_code_spans
+            ):
                 test_code_lines.add(line_no)
             else:
                 main_code_lines.add(line_no)
+        else:
+            line_comment_segments = []
+            for comment_start, comment_end, _is_doc in line_comment_spans:
+                segment_start = max(line_start, comment_start)
+                segment_end = min(line_end, comment_end)
+                if segment_start >= segment_end:
+                    continue
+                if not has_nonspace(source, segment_start, segment_end):
+                    continue
+                line_comment_segments.append((segment_start, segment_end))
+            if line_comment_segments:
+                comment_lines.add(line_no)
+                if any(
+                    span_intersects_any(segment, test_spans)
+                    for segment in line_comment_segments
+                ):
+                    test_comment_lines.add(line_no)
+                else:
+                    main_comment_lines.add(line_no)
 
     return RustLineSets(
         code_lines=code_lines,
@@ -473,7 +494,7 @@ def parse_rust_content_stats_legacy(source: str) -> dict[str, int]:
         nonlocal line
         if ch == '\n':
             line += 1
-        elif not ch.isspace():
+        elif not ch.isspace() and not line_has_code[line]:
             comment_lines.add(line)
             if is_doc:
                 doc_lines.add(line)
@@ -570,8 +591,14 @@ def parse_rust_content_stats_legacy(source: str) -> dict[str, int]:
 
         i += 1
 
+    code_lines = {
+        line_no for line_no, has_code in line_has_code.items() if has_code
+    }
+    comment_lines = comment_lines - code_lines
+    doc_lines = doc_lines - code_lines
+
     return {
-        'code_lines': sum(line_has_code.values()),
+        'code_lines': len(code_lines),
         'comment_lines': len(comment_lines),
         'doc_lines': len(doc_lines),
     }

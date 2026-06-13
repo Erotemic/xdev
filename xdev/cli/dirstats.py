@@ -79,6 +79,17 @@ class DirectoryStatsCLI(scfg.DataConfig):
         help='enable Rust defaults and code/comment/test line analysis',
         alias=['rsdev'],
     )
+    textlines = scfg.Value(
+        None,
+        type=str,
+        help=(
+            'Optional comma-separated generic text extensions to count raw '
+            'total lines for when language analyzers are active, e.g. '
+            '--textlines=md,rst. Without --python/--rust, omitted preserves '
+            'broad UTF-8 text probing.'
+        ),
+        alias=['text_lines'],
+    )
 
     ignore_dotprefix = scfg.Value(
         True,
@@ -116,8 +127,9 @@ class DirectoryStatsCLI(scfg.DataConfig):
             ]
 
         if config.rust:
-            # Effective Rust LOC requires content parsing. Keep the file
-            # selection broad so text-like docs/configs still get total lines.
+            # Effective Rust LOC requires content parsing. Generic text line
+            # totals are intentionally opt-in via --textlines when language
+            # analyzers are active.
             config.parse_content = True  # type: ignore
 
             config.exclude_fnames += [  # type: ignore
@@ -166,6 +178,7 @@ def main(cmdline=1, **kwargs):
         'max_files',
         'python',
         'rust',
+        'textlines',
     }
     self = DirectoryWalker(**kwargs)
     self.build()
