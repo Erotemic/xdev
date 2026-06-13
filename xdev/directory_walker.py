@@ -166,6 +166,159 @@ class DirectoryWalker:
     def write_network_text(self, **kwargs):
         nx.write_network_text(self.graph, rich.print, end='', **kwargs)
 
+
+    def _stats_table_for_node(self, node, humanize=False):
+        """
+        Return an extension-by-kind stats table for one graph node.
+
+        The table is intentionally compact and uses the same column naming
+        convention as the CLI display: ``main_*`` / ``test_*`` / ``total``.
+        """
+        import pandas as pd  # type: ignore
+
+        node_data = self.graph.nodes[node]  # type: ignore
+        stats = node_data.get('stats', {})
+        stat_rows = []
+        for key, value in stats.items():
+            ext, kind = key.split('.', 1)
+            if not ext:
+                ext = '*null*'
+            stat_rows.append({'ext': ext, 'kind': kind, 'value': value})
+
+        if stat_rows:
+            table = pd.DataFrame(stat_rows)
+            piv = table.pivot_table(
+                index='ext', columns='kind', values='value', aggfunc='sum', fill_value=0)
+            if 'size' in piv.columns:
+                piv = piv.sort_values('size')
+        else:
+            piv = pd.DataFrame(
+                [],
+                index=pd.Index([], name='ext'),
+                columns=pd.Index(['files', 'size'], name='kind'),
+            )
+
+        if len(piv):
+            totals = piv.sum(axis=0)
+        else:
+            totals = pd.Series({'files': 0, 'size': 0})
+        piv.loc['∑ total'] = totals
+
+        for col in piv.columns:
+            if col != 'size':
+                try:
+                    piv[col] = piv[col].fillna(0).astype(int)
+                except (TypeError, ValueError):
+                    pass
+
+        if humanize and 'size' in piv.columns:
+            piv = piv.copy()
+            piv['size'] = piv['size'].fillna(0).astype(int).apply(byte_str)
+
+        piv = _order_columns(piv, extra_last=())
+        return piv
+
+    def _summary_row_for_node(self, node, *, humanize=True):
+        """Return the compact aggregate row for a graph node."""
+        piv = self._stats_table_for_node(node, humanize=False)
+        if len(piv):
+            row = piv.loc['∑ total'].to_dict()
+        else:
+            row = {'files': 0, 'size': 0}
+        clean = {}
+        for key, value in row.items():
+            if key == 'size':
+                try:
+                    size = int(value)
+                except (TypeError, ValueError):
+                    size = 0
+                clean[key] = byte_str(size) if humanize else size
+            else:
+                try:
+                    clean[key] = int(value)
+                except (TypeError, ValueError):
+                    clean[key] = value
+        return clean
+
+    def stats_table(self, max_depth=1, include_files=True, max_rows=None, humanize=True):
+        """
+        Return a path-by-stats table suitable for plain-text reports.
+
+        Args:
+            max_depth (int | None): maximum graph depth to include. ``None``
+                includes every node under the root.
+            include_files (bool): if False, only directory rows are emitted.
+            max_rows (int | None): optional row limit for very large reports.
+            humanize (bool): if True, format byte sizes for display.
+        """
+        import pandas as pd  # type: ignore
+
+        if self.graph is None:
+            raise RuntimeError('stats_table() requires build() first')
+        root = self.root
+        rows = []
+
+        def rec(node, depth):
+            if max_rows is not None and len(rows) >= max_rows:
+                return
+            node_data = self.graph.nodes[node]  # type: ignore
+            if depth > 0 and (include_files or node_data['type'] == 'dir'):
+                row = self._summary_row_for_node(node, humanize=humanize)
+                try:
+                    rel = node.relative_to(root)
+                    name = rel.as_posix()
+                except Exception:
+                    name = os.fspath(node)
+                row['name'] = name
+                rows.append(row)
+            if max_depth is not None and depth >= max_depth:
+                return
+            if node_data['type'] == 'dir':
+                for child in self.graph.succ[node]:  # type: ignore
+                    rec(child, depth + 1)
+
+        rec(root, 0)
+        df = pd.DataFrame(rows)
+        if len(df):
+            df = _order_columns(df, extra_last=('name',))
+        else:
+            df = pd.DataFrame(columns=STAT_COLUMN_ORDER + ['name'])
+        return df
+
+    def extension_stats_table(self, humanize=True):
+        """Return extension-level stats for the root node."""
+        if self.graph is None:
+            raise RuntimeError('extension_stats_table() requires build() first')
+        return self._stats_table_for_node(self.root, humanize=humanize)
+
+    def dirstats_text(self, max_depth=1, max_rows=None, include_files=True):
+        """Return a stable plain-text dirstats report."""
+        lines = []
+        lines.append(f'Stats root: {self.root}')
+        lines.append(f'Max display depth: {max_depth if max_depth is not None else "full"}')
+        lines.append('')
+        lines.append('Path summary:')
+        path_df = self.stats_table(
+            max_depth=max_depth,
+            include_files=include_files,
+            max_rows=max_rows,
+            humanize=True,
+        )
+        if len(path_df):
+            lines.append(path_df.to_string(index=False))
+            if max_rows is not None and len(path_df) >= max_rows:
+                lines.append(f'... truncated after {max_rows} rows ...')
+        else:
+            lines.append('(no child paths)')
+        lines.append('')
+        lines.append('Extension summary:')
+        ext_df = self.extension_stats_table(humanize=True)
+        if len(ext_df):
+            lines.append(ext_df.to_string())
+        else:
+            lines.append('(no extension stats)')
+        return '\n'.join(lines)
+
     def write_report(self, max_nodes=10, **nxtxt_kwargs):
         """
         Args:
@@ -467,7 +620,7 @@ class DirectoryWalker:
         fs = self.fs
 
         # Get size stats for each file.
-        pman = ProgressManager()
+        pman = ProgressManager(enabled=self.show_progress)
         with pman:
             prog = pman.progiter(desc='Parse File Info', total=len(g))  # type: ignore
             for fpath, node_data in g.nodes(data=True):  # type: ignore
@@ -1232,6 +1385,49 @@ def byte_str(num, unit='auto', precision=2):
     res = fmtstr.format(num_unit, unit)
     return res
 
+
+
+
+def dirstats_report_text(
+    dpath,
+    *,
+    exclude_dnames=None,
+    exclude_fnames=None,
+    include_dnames=None,
+    include_fnames=None,
+    max_walk_depth=None,
+    max_display_depth=1,
+    max_rows=None,
+    parse_content=True,
+    python=False,
+    rust=False,
+    include_files=True,
+    show_progress=False,
+):
+    """
+    Build and return a stable plain-text dirstats report.
+
+    This is the programmatic counterpart to the interactive ``dirstats`` CLI.
+    It is intended for scripts that need deterministic report text without
+    progress bars or rich console formatting.
+    """
+    walker = DirectoryWalker(
+        dpath,
+        exclude_dnames=exclude_dnames,
+        exclude_fnames=exclude_fnames,
+        include_dnames=include_dnames,
+        include_fnames=include_fnames,
+        max_walk_depth=max_walk_depth,
+        parse_content=parse_content,
+        python=python,
+        rust=rust,
+        show_progress=show_progress,
+    ).build()
+    return walker.dirstats_text(
+        max_depth=max_display_depth,
+        max_rows=max_rows,
+        include_files=include_files,
+    )
 
 def _null_coerce(cls, arg, **kwargs):
     if arg is None:
