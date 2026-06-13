@@ -166,7 +166,6 @@ class DirectoryWalker:
     def write_network_text(self, **kwargs):
         nx.write_network_text(self.graph, rich.print, end='', **kwargs)
 
-
     def _stats_table_for_node(self, node, humanize=False):
         """
         Return an extension-by-kind stats table for one graph node.
@@ -1213,6 +1212,7 @@ def parse_python_content_stats(source: str):
         'main_comments': len(comment_lines),
     }
 
+
 def strip_comments_and_newlines(source):
     """
     Removes hashtag comments from underlying source
@@ -1386,8 +1386,6 @@ def byte_str(num, unit='auto', precision=2):
     return res
 
 
-
-
 def dirstats_report_text(
     dpath,
     *,
@@ -1428,6 +1426,7 @@ def dirstats_report_text(
         max_rows=max_rows,
         include_files=include_files,
     )
+
 
 def _null_coerce(cls, arg, **kwargs):
     if arg is None:
@@ -1540,7 +1539,7 @@ class DirectoryDiff:
 
 
 def parse_rust_content_stats(source: str, fpath=None):
-    """
+    r"""
     Count effective Rust lines of code.
 
     This counts non-empty lines after removing Rust comments, while preserving
@@ -1553,25 +1552,29 @@ def parse_rust_content_stats(source: str, fpath=None):
         or ``#[cfg(test)]`` / ``#[test]`` spans. Doc comments are counted as
         comments.
 
+    CommandLine:
+        xdoctest -m xdev.directory_walker parse_rust_content_stats
+
     Example:
         >>> import ubelt as ub
         >>> source = ub.codeblock(
-        >>>     r'''
-        >>>     // module comment
-        >>>
-        >>>     fn main() {
-        >>>         println!("http://example.com"); // trailing comment
-        >>>         let text = "/* not comment */";
-        >>>         let raw = r#"// not comment"#;
-        >>>         /*
-        >>>           block comment
-        >>>           /* nested */
-        >>>         */
-        >>>         /// doc comment
-        >>>         pub fn documented() {}
-        >>>     }
-        >>>     ''')
+        ...     r'''
+        ...     // module comment
+        ...
+        ...     fn main() {
+        ...         println!("http://example.com"); // trailing comment
+        ...         let text = "/* not comment */";
+        ...         let raw = r#"// not comment"#;
+        ...         /*
+        ...           block comment
+        ...           /* nested */
+        ...         */
+        ...         /// doc comment
+        ...         pub fn documented() {}
+        ...     }
+        ...     ''')
         >>> stats = parse_rust_content_stats(source)
+        >>> print(f'stats = {ub.urepr(stats, nl=1)}')
         >>> assert stats['main_code'] == 6
         >>> assert stats['main_comments'] == 3
     """
