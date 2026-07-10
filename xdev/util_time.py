@@ -3,6 +3,7 @@ Ported from kwutil
 
 This may just move to ubelt proper? Some of the pint integration is sus though.
 """
+
 import datetime as datetime_mod
 import numbers
 import time
@@ -17,12 +18,10 @@ from datetime import tzinfo
 """
 
 
-class TimeValueError(ValueError):
-    ...
+class TimeValueError(ValueError): ...
 
 
-class TimeTypeError(TypeError):
-    ...
+class TimeTypeError(TypeError): ...
 
 
 class datetime(datetime_cls):
@@ -63,8 +62,16 @@ class datetime(datetime_cls):
         """
         dt = coerce_datetime(data, **kwargs)
         try:
-            self = cls(dt.year, dt.month, dt.day, dt.hour, dt.minute,
-                       dt.second, dt.microsecond, dt.tzinfo)
+            self = cls(
+                dt.year,
+                dt.month,
+                dt.day,
+                dt.hour,
+                dt.minute,
+                dt.second,
+                dt.microsecond,
+                dt.tzinfo,
+            )
         except AttributeError:
             self = dt
         return self
@@ -81,6 +88,7 @@ class datetime(datetime_cls):
             end = None
         """
         from xdev.util_random import ensure_rng
+
         rng = ensure_rng(rng)
         min_dt = None
         max_dt = None
@@ -134,6 +142,7 @@ class timedelta(datetime_mod.timedelta):
             Self
         """
         from xdev.util_random import ensure_rng
+
         rng = ensure_rng(rng)
         max_range = int(timedelta.max.total_seconds() // 100)
         seconds = rng.randint(-max_range, max_range)
@@ -196,6 +205,7 @@ class timedelta(datetime_mod.timedelta):
             pd.Timedelta
         """
         import pandas as pd  # type: ignore
+
         return pd.Timedelta(self)
 
     def isoformat(self):
@@ -274,7 +284,11 @@ def isoformat(dt, sep='T', timespec='seconds', pathsafe=True):
             suffix = 'Z'
         elif off_seconds % 3600 == 0:
             tz_hour = int(off_seconds // 3600)
-            suffix = '{:02d}'.format(tz_hour) if tz_hour < 0 else '+{:02d}'.format(tz_hour)
+            suffix = (
+                '{:02d}'.format(tz_hour)
+                if tz_hour < 0
+                else '+{:02d}'.format(tz_hour)
+            )
         else:
             suffix = _format_offset(off)
         text += suffix
@@ -289,23 +303,27 @@ def _format_offset(off):
     s = ''
     if off is not None:
         if off.days < 0:
-            sign = "-"
+            sign = '-'
             off = -off
         else:
-            sign = "+"
+            sign = '+'
         hh, mm = divmod(off, datetime_mod.timedelta(hours=1))
         mm, ss = divmod(mm, datetime_mod.timedelta(minutes=1))
-        s += "%s%02d:%02d" % (sign, hh, mm)
+        s += '%s%02d:%02d' % (sign, hh, mm)
         if ss or ss.microseconds:
-            s += ":%02d" % ss.seconds
+            s += ':%02d' % ss.seconds
 
             if ss.microseconds:
                 s += '.%06d' % ss.microseconds
     return s
 
 
-def coerce_datetime(data, default_timezone='utc', nan_policy='return-None',
-                    none_policy='return-None'):
+def coerce_datetime(
+    data,
+    default_timezone='utc',
+    nan_policy='return-None',
+    none_policy='return-None',
+):
     """
     Parses a timestamp and always returns a timestamp with a timezone.
     If only a date is specified, the time is defaulted to 00:00:00
@@ -344,10 +362,11 @@ def coerce_datetime(data, default_timezone='utc', nan_policy='return-None',
         >>> assert dt.isoformat() == '2020-01-01T00:00:00+00:00'
     """
     from dateutil import parser as date_parser  # type: ignore
+
     if data is None:
         return _handle_null_policy(
-            none_policy, TimeTypeError,
-            'cannot coerce None to a datetime')
+            none_policy, TimeTypeError, 'cannot coerce None to a datetime'
+        )
     elif isinstance(data, str):
         # Canse use ubelt.timeparse(data, default_timezone=default_timezone) here.
         if data == 'now':
@@ -361,8 +380,8 @@ def coerce_datetime(data, default_timezone='utc', nan_policy='return-None',
     elif isinstance(data, numbers.Number):
         if math.isnan(data):
             return _handle_null_policy(
-                nan_policy, TimeTypeError,
-                'cannot coerce nan to a datetime')
+                nan_policy, TimeTypeError, 'cannot coerce nan to a datetime'
+            )
 
         tz = coerce_timezone(default_timezone)
         dt = datetime_cls.fromtimestamp(data, tz=tz)
@@ -374,8 +393,9 @@ def coerce_datetime(data, default_timezone='utc', nan_policy='return-None',
     return dt
 
 
-def _handle_null_policy(policy, ex_type=TypeError,
-                        ex_msg='cannot accept null input'):
+def _handle_null_policy(
+    policy, ex_type=TypeError, ex_msg='cannot accept null input'
+):
     """
     For handling a nan or None policy.
 
@@ -489,6 +509,7 @@ def coerce_timedelta(delta, nan_policy='raise', none_policy='raise'):
             delta = datetime_mod.timedelta(seconds=delta)
         except TypeError:
             import sys
+
             np = sys.modules.get('numpy', None)
             if np is None:
                 raise
@@ -502,8 +523,10 @@ def coerce_timedelta(delta, nan_policy='raise', none_policy='raise'):
         except ValueError:
             if isinstance(delta, float) and math.isnan(delta):
                 return _handle_null_policy(
-                    nan_policy, TimeTypeError,
-                    'cannot coerce nan to a timedelta')
+                    nan_policy,
+                    TimeTypeError,
+                    'cannot coerce nan to a timedelta',
+                )
             raise
     elif isinstance(delta, str):
         # TODO: handle isoformat
@@ -518,10 +541,12 @@ def coerce_timedelta(delta, nan_policy='raise', none_policy='raise'):
         except Exception:
             # Separate the expression into a magnitude and a unit
             import re
+
             expr_pat = re.compile(
                 r'^(?P<magnitude>[-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)'
                 '(?P<spaces> *)'
-                '(?P<unit>.*)$')
+                '(?P<unit>.*)$'
+            )
             match = expr_pat.match(delta.strip())  # type: ignore
             if match:
                 parsed = match.groupdict()
@@ -548,6 +573,7 @@ def coerce_timedelta(delta, nan_policy='raise', none_policy='raise'):
             else:
                 import pytimeparse  # type: ignore
                 import warnings
+
                 warnings.warn('warning: pytimeparse fallback')
                 seconds = pytimeparse.parse(delta)
                 if seconds is None:
@@ -557,8 +583,8 @@ def coerce_timedelta(delta, nan_policy='raise', none_policy='raise'):
     else:
         if delta is None:
             return _handle_null_policy(
-                none_policy, TimeTypeError,
-                'cannot coerce None to a timedelta')
+                none_policy, TimeTypeError, 'cannot coerce None to a timedelta'
+            )
         raise TimeTypeError(f'cannot coerce {type(delta)} to a timedelta')
     return delta
 
@@ -578,7 +604,9 @@ def coerce_timezone(tz):
         if tz == 'utc':
             tzinfo = datetime_mod.timezone.utc
         elif tz == 'local':
-            tzinfo = datetime_mod.timezone(datetime_mod.timedelta(seconds=-time.timezone))
+            tzinfo = datetime_mod.timezone(
+                datetime_mod.timedelta(seconds=-time.timezone)
+            )
         else:
             raise NotImplementedError
     return tzinfo
@@ -615,6 +643,7 @@ def ensure_timezone(dt, default='utc'):
 @ub.memoize
 def _time_unit_registery():
     import pint  # type: ignore
+
     # Empty registry
     ureg = pint.UnitRegistry(None)
     ureg.define('second = []')
@@ -646,7 +675,7 @@ def _time_unit_registery():
     ureg.define('ms = millisecond')
     ureg.define('us = microsecond')
 
-    @ ub.urepr.extensions.register(pint.Unit)  # type: ignore
+    @ub.urepr.extensions.register(pint.Unit)  # type: ignore
     def format_unit(data, **kwargs):
         numer = [k for k, v in data._units.items() if v > 0]
         denom = [k for k, v in data._units.items() if v < 0]
@@ -669,6 +698,7 @@ def _time_unit_registery():
         return ub.repr2(data.magnitude, **kwargs) + ' ' + ub.repr2(data.u)
 
     return ureg
+
 
 _time_unit_registery()
 
@@ -783,11 +813,18 @@ def _devcheck_portion():
     """
     import xdev
     import portion  # type: ignore
+
     delta = abs(xdev.util_time.timedelta.coerce('1 year'))
     start = xdev.util_time.datetime.coerce('2020-01-01')
-    interval1 = portion.Interval.from_atomic(portion.CLOSED, start, start + delta, portion.CLOSED)
-    interval2 = portion.Interval.from_atomic(portion.CLOSED, start + delta * 0.5, start + delta * 1.5, portion.CLOSED)
-    interval3 = portion.Interval.from_atomic(portion.CLOSED, start + delta * 3, start + delta * 4, portion.CLOSED)
+    interval1 = portion.Interval.from_atomic(
+        portion.CLOSED, start, start + delta, portion.CLOSED
+    )
+    interval2 = portion.Interval.from_atomic(
+        portion.CLOSED, start + delta * 0.5, start + delta * 1.5, portion.CLOSED
+    )
+    interval3 = portion.Interval.from_atomic(
+        portion.CLOSED, start + delta * 3, start + delta * 4, portion.CLOSED
+    )
 
     interval1 & interval2
     interval1 & interval3

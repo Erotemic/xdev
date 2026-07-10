@@ -41,34 +41,39 @@ Ignore:
     print(lib.current_sourcecode())
 """
 
-
 try:
-    from mypy.stubgen import (ASTStubGenerator, find_self_initializers, FUNC, EMPTY,  # type: ignore
-                              METHODS_WITH_RETURN_VALUE,)
-    from mypy.stubgen import (is_none_expr)  # type: ignore
     from mypy.nodes import (  # type: ignore
+        # FuncBase, Block,
+        # Statement, OverloadedFuncDef, ARG_POS,
+        ARG_STAR,
+        ARG_STAR2,
+        # ARG_NAMED,
         # Expression, IntExpr, UnaryExpr, StrExpr, BytesExpr, NameExpr, FloatExpr, MemberExpr,
         # TupleExpr, ListExpr, ComparisonExpr, CallExpr, IndexExpr, EllipsisExpr,
         # ClassDef, MypyFile, Decorator, AssignmentStmt, TypeInfo,
         # IfStmt, ImportAll, ImportFrom, Import,
         IS_ABSTRACT,
         FuncDef,
-        # FuncBase, Block,
-        # Statement, OverloadedFuncDef, ARG_POS,
-        ARG_STAR, ARG_STAR2,
-        # ARG_NAMED,
     )
-    from mypy.types import (  # type: ignore
-        # Type, TypeStrVisitor,
-        CallableType,
-        # UnboundType, NoneType, TupleType, TypeList, Instance,
-        AnyType,
-        get_proper_type
+    from mypy.stubgen import (
+        EMPTY,  # type: ignore
+        FUNC,
+        METHODS_WITH_RETURN_VALUE,
+        ASTStubGenerator,
+        find_self_initializers,
+        is_none_expr,  # type: ignore
     )
     from mypy.traverser import (  # type: ignore
         all_yield_expressions,
         has_return_statement,
-        has_yield_expression
+        has_yield_expression,
+    )
+    from mypy.types import (  # type: ignore
+        # UnboundType, NoneType, TupleType, TypeList, Instance,
+        AnyType,
+        # Type, TypeStrVisitor,
+        CallableType,
+        get_proper_type,
     )
 except Exception:
     ASTStubGenerator = object  # type: ignore
@@ -76,7 +81,10 @@ except Exception:
     METHODS_WITH_RETURN_VALUE = []  # type: ignore
 
 import sys
-from typing import (List,)
+from typing import (
+    List,
+)
+
 # from mypy.stubgenc import generate_stub_for_c_module
 # from mypy.stubutil import (
 #     default_py2_interpreter, CantImport, generate_guarded,
@@ -84,7 +92,6 @@ from typing import (List,)
 #     report_missing, fail_missing, remove_misplaced_type_comments, common_dir_prefix
 # )
 import ubelt as ub
-
 
 Stub = ...  # hack for mypy. Not sure why it is generated in the first place.
 
@@ -194,13 +201,16 @@ def generate_typed_stubs(modpath):
     # import pathlib
     # import ubelt as ub
     import os
-    from mypy import stubgen  # type: ignore
-    from mypy import defaults  # type: ignore
-    from xdoctest import static_analysis
+
     # from os.path import join
     import ubelt as ub
+    from mypy import (
+        defaults,  # type: ignore
+        stubgen,  # type: ignore
+    )
+    from xdoctest import static_analysis
 
-    # modname = 'scriptconfig'
+    # modname = 'kwconf'
     # module = ub.import_module_from_name(modname)
     # modpath = ub.Path(module.__file__).parent
 
@@ -208,8 +218,11 @@ def generate_typed_stubs(modpath):
     #     p.unlink()
     modpath = ub.Path(modpath)
 
-    files = list(static_analysis.package_modpaths(
-        modpath, recursive=True, with_libs=0, with_pkg=0))  # type: ignore
+    files = list(
+        static_analysis.package_modpaths(
+            modpath, recursive=True, with_libs=0, with_pkg=0
+        )
+    )  # type: ignore
 
     # print('files = {}'.format(ub.repr2(files, nl=1)))
     # files = [f for f in files if 'deprecated' not in f]
@@ -243,7 +256,9 @@ def generate_typed_stubs(modpath):
     # generate_stubs(options)
 
     mypy_opts = stubgen.mypy_options(options)
-    py_modules, pyc_modules, c_modules = stubgen.collect_build_targets(options, mypy_opts)
+    py_modules, pyc_modules, c_modules = stubgen.collect_build_targets(
+        options, mypy_opts
+    )
 
     # Collect info from docs (if given):
     sigs = class_sigs = None  # type: Optional[Dict[str, str]]
@@ -251,14 +266,16 @@ def generate_typed_stubs(modpath):
         sigs, class_sigs = stubgen.collect_docs_signatures(options.doc_dir)  # type: ignore
 
     # Use parsed sources to generate stubs for Python modules.
-    stubgen.generate_asts_for_modules(py_modules, options.parse_only, mypy_opts, options.verbose)
+    stubgen.generate_asts_for_modules(
+        py_modules, options.parse_only, mypy_opts, options.verbose
+    )
 
     generated = {}
 
     verbose = 3
 
     for mod in py_modules:
-        assert mod.path is not None, "Not found module was not skipped"
+        assert mod.path is not None, 'Not found module was not skipped'
         # print(f'mod.module={mod.module}')
         # import xdev
         # xdev.embed()
@@ -274,19 +291,25 @@ def generate_typed_stubs(modpath):
         # print(f'options.output_dir={options.output_dir}')
         # print(f'target={target}')
         files.append(target)
-        with stubgen.generate_guarded(mod.module, target, options.ignore_errors, options.verbose):
+        with stubgen.generate_guarded(
+            mod.module, target, options.ignore_errors, options.verbose
+        ):
             # stubgen.generate_stub_from_ast(mod, target, options.parse_only,
             #                                # options.pyversion,
             #                                options.include_private,
             #                                options.export_less)
 
-            gen = ExtendedStubGenerator(mod.runtime_all,
-                                        # pyversion=options.pyversion,
-                                        include_private=options.include_private,
-                                        analyzed=not options.parse_only,
-                                        export_less=options.export_less)
+            gen = ExtendedStubGenerator(
+                mod.runtime_all,
+                # pyversion=options.pyversion,
+                include_private=options.include_private,
+                analyzed=not options.parse_only,
+                export_less=options.export_less,
+            )
             gen.module = mod.module  # type: ignore
-            assert mod.ast is not None, "This function must be used only with analyzed modules"
+            assert mod.ast is not None, (
+                'This function must be used only with analyzed modules'
+            )
             mod.ast.accept(gen)
             # print('gen.import_tracker.required_names = {!r}'.format(gen.import_tracker.required_names))
             # print(gen.import_tracker.import_lines())
@@ -295,28 +318,49 @@ def generate_typed_stubs(modpath):
 
             known_one_letter_types = {
                 # 'T', 'K', 'A', 'B', 'C', 'V',
-                'DT', 'KT', 'VT', 'T', 'T1', 'T2', 'T3', 'T4', 'T5',
+                'DT',
+                'KT',
+                'VT',
+                'T',
+                'T1',
+                'T2',
+                'T3',
+                'T4',
+                'T5',
                 # Hack for kwcoco
                 'ObjT',
             }
-            for type_var_name in sorted(set(gen.import_tracker.required_names) & set(known_one_letter_types)):
+            for type_var_name in sorted(
+                set(gen.import_tracker.required_names)
+                & set(known_one_letter_types)
+            ):
                 gen.add_typing_import('TypeVar')  # type: ignore
                 # gen.add_import_line('from typing import {}\n'.format('TypeVar'))
-                gen._output = ['{} = TypeVar("{}")\n'.format(type_var_name, type_var_name)] + gen._output
+                gen._output = [
+                    '{} = TypeVar("{}")\n'.format(type_var_name, type_var_name)
+                ] + gen._output
 
             custom_types = {'Hasher', 'Sliceable'}
-            for type_var_name in sorted(set(gen.import_tracker.required_names) & set(custom_types)):
+            for type_var_name in sorted(
+                set(gen.import_tracker.required_names) & set(custom_types)
+            ):
                 gen.add_typing_import('TypeVar')  # type: ignore
                 # gen.add_import_line('from typing import {}\n'.format('TypeVar'))
-                gen._output = ['{} = TypeVar("{}")\n'.format(type_var_name, type_var_name)] + gen._output
+                gen._output = [
+                    '{} = TypeVar("{}")\n'.format(type_var_name, type_var_name)
+                ] + gen._output
 
             # Check for a special user header variable we pull in verbatim
             import mypy  # type: ignore
+
             user_header = None
             for d in mod.ast.defs:
                 if isinstance(d, mypy.nodes.AssignmentStmt):  # type: ignore
                     try:
-                        if len(d.lvalues) == 1 and d.lvalues[0].name == '__docstubs__':
+                        if (
+                            len(d.lvalues) == 1
+                            and d.lvalues[0].name == '__docstubs__'
+                        ):
                             user_header = d.rvalue.value
                     except AttributeError:
                         ...
@@ -351,7 +395,9 @@ def delete_unpaired_pyi_files(modpath):
     Cleanup pyi files corresponding to renamed or removed py files.
     """
     import os
+
     import xdev
+
     walker = xdev.DirectoryWalker(modpath, exclude_dnames=['__pycache__'])
     walker._walk()
     dangling_pyi_fpaths = []
@@ -363,7 +409,10 @@ def delete_unpaired_pyi_files(modpath):
 
     if dangling_pyi_fpaths:
         from rich.prompt import Confirm
-        ans = Confirm.ask(f'Found {len(dangling_pyi_fpaths)} unpaired pyi files. Delete them?')
+
+        ans = Confirm.ask(
+            f'Found {len(dangling_pyi_fpaths)} unpaired pyi files. Delete them?'
+        )
         if ans:
             for p in dangling_pyi_fpaths:
                 p.delete()
@@ -374,7 +423,6 @@ def remove_duplicate_imports(text):
     from parso.normalizer import Normalizer
 
     class DuplicateImportRemover(Normalizer):
-
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.import_from_nodes = []
@@ -386,7 +434,10 @@ def remove_duplicate_imports(text):
             self.node = node
             if node.type == 'import_from':
                 self.import_from_nodes.append(node)
-                is_top_level = node.parent.type == 'simple_stmt' and node.parent.parent.type == 'file_input'
+                is_top_level = (
+                    node.parent.type == 'simple_stmt'
+                    and node.parent.parent.type == 'file_input'
+                )
                 if is_top_level:
                     code = node.get_code()
                     if code in self.seen_import_from_code:
@@ -394,7 +445,10 @@ def remove_duplicate_imports(text):
                     self.seen_import_from_code.add(code)
             elif node.type == 'import_name':
                 self.import_from_nodes.append(node)
-                is_top_level = node.parent.type == 'simple_stmt' and node.parent.parent.type == 'file_input'
+                is_top_level = (
+                    node.parent.type == 'simple_stmt'
+                    and node.parent.parent.type == 'file_input'
+                )
                 if is_top_level:
                     code = node.get_code()
                     if code in self.seen_import_name_code:
@@ -417,6 +471,7 @@ def remove_duplicate_imports(text):
 def postprocess_hacks(text, mod):
     import autoflake  # type: ignore
     import yapf  # type: ignore
+
     # Hack to remove lines caused by Py2 compat
     text = text.replace('Generator = object\n', '')
     text = text.replace('select = NotImplemented\n', '')
@@ -437,7 +492,7 @@ def postprocess_hacks(text, mod):
     if mod.path.endswith('util_path.py'):
         # hack for forward reference
         text = text.replace(' -> Path:', " -> 'Path':")
-        text = text.replace('class Path(_PathBase)', "class Path")
+        text = text.replace('class Path(_PathBase)', 'class Path')
 
     # Not sure why this happens
     text = text.replace('from io import io\n', '')
@@ -447,14 +502,18 @@ def postprocess_hacks(text, mod):
     if 'DictBase' in text:
         # Hack for util_dict
         text = text.replace('DictBase = OrderedDict\n', '')
-        text = text.replace('DictBase = dict\n', 'DictBase = OrderedDict if sys.version_info[0:2] <= (3, 6) else dict')
+        text = text.replace(
+            'DictBase = dict\n',
+            'DictBase = OrderedDict if sys.version_info[0:2] <= (3, 6) else dict',
+        )
 
     if 1:
         text = remove_duplicate_imports(text)
 
     # Format the PYI file nicely
-    text = autoflake.fix_code(text, remove_unused_variables=True,
-                              remove_all_unused_imports=True)
+    text = autoflake.fix_code(
+        text, remove_unused_variables=True, remove_all_unused_imports=True
+    )
 
     # import autopep8
     # text = autopep8.fix_code(text, options={
@@ -464,10 +523,8 @@ def postprocess_hacks(text, mod):
 
     style = yapf.yapf_api.style.CreatePEP8Style()
     text, _ = yapf.yapf_api.FormatCode(
-        text,
-        filename='<stdin>',
-        style_config=style,
-        lines=None)
+        text, filename='<stdin>', style_config=style, lines=None
+    )
     # print(text)
     return text
 
@@ -476,10 +533,12 @@ def postprocess_hacks(text, mod):
 def stdlib_names():
     # https://stackoverflow.com/questions/6463918/how-to-get-a-list-of-all-the-python-standard-library-modules
     import sys
+
     try:
         names = sys.stdlib_module_names  # type: ignore
     except AttributeError:
         from isort import stdlibs  # type: ignore
+
         names = list(stdlibs.py3.stdlib)
     return names
 
@@ -499,47 +558,130 @@ def common_module_names():
     names = stdlib_names().copy()
     names = list(names)
     # https://github.com/hugovk/top-pypi-packages
-    names.extend([
-        'numpy', 'torch', 'pandas', 'h5py', 'networkx', 'torch.nn',
-
-        'shapely',
-
-        # Hack: determine this from env
-        'kwcoco',
-        'kwimage',
-        'kwarray',
-
-        'xdoctest',
-        'xdoctest.doctest_part',
-
-        'scipy', 'sklearn', 'matplotlib', 'seaborn', 'attrs',
-
-        'keras', 'ujson', 'black', 'mypy', 'simplejson', 'parso', 'tensorflow',
-        'cython', 'git', 'openpyxl',
-
-        'concurrent.futures',
-        'hashlib._hashlib',
-
-        'kwcoco.util.delayed_poc.delayed_nodes',
-        'kwcoco.coco_objects1d',
-        'kwcoco.metrics.confusion_measures',
-    ])
-    names.extend([
-        'jinja2', 'boto3', 'requests', 'dateutil', 'yaml', 'boto3', 'botocore',
-        'urllib3', 'requests', 'setuptools', 's3transfer', 'six', 'certifi',
-        'idna', 'pyyaml', 'wheel', 'cryptography', 'awscli', 'rsa', 'pip',
-        'pyparsing', 'jmespath', 'pyasn1', 'packaging', 'zipp', 'pyjwt',
-        'colorama', 'pytz', 'click', 'cffi', 'protobuf', 'oauthlib', 'jinja2',
-        'pycparser', 'markupsafe', 'cachetools', 'wrapt', 'docutils',
-        'isodate', 'psutil', 'pyarrow', 'chardet', 'sqlalchemy', 'tomli',
-        'decorator', 'werkzeug', 'msrest', 'aiohttp', 'grpcio', 'multidict',
-        'scipy', 'py', 'yarl', 'pluggy', 'filelock', 'pillow', 'soupsieve',
-        'aiobotocore', 'jsonschema', 'lxml', 'pytest', '_pytest', 'beautifulsoup4',
-        'tqdm', 'greenlet', 'platformdirs', 'fsspec', 'pyopenssl', 'tabulate',
-        's3fs', 'flask', 'toml', 'asn1crypto', 'future', 'frozenlist',
-        'pyrsistent', 'aiosignal', 'pygments', 'pynacl', 'itsdangerous',
-        'httplib2', 'iniconfig', 'docker',
-    ])
+    names.extend(
+        [
+            'numpy',
+            'torch',
+            'pandas',
+            'h5py',
+            'networkx',
+            'torch.nn',
+            'shapely',
+            # Hack: determine this from env
+            'kwcoco',
+            'kwimage',
+            'kwarray',
+            'xdoctest',
+            'xdoctest.doctest_part',
+            'scipy',
+            'sklearn',
+            'matplotlib',
+            'seaborn',
+            'attrs',
+            'keras',
+            'ujson',
+            'black',
+            'mypy',
+            'simplejson',
+            'parso',
+            'tensorflow',
+            'cython',
+            'git',
+            'openpyxl',
+            'concurrent.futures',
+            'hashlib._hashlib',
+            'kwcoco.util.delayed_poc.delayed_nodes',
+            'kwcoco.coco_objects1d',
+            'kwcoco.metrics.confusion_measures',
+        ]
+    )
+    names.extend(
+        [
+            'jinja2',
+            'boto3',
+            'requests',
+            'dateutil',
+            'yaml',
+            'boto3',
+            'botocore',
+            'urllib3',
+            'requests',
+            'setuptools',
+            's3transfer',
+            'six',
+            'certifi',
+            'idna',
+            'pyyaml',
+            'wheel',
+            'cryptography',
+            'awscli',
+            'rsa',
+            'pip',
+            'pyparsing',
+            'jmespath',
+            'pyasn1',
+            'packaging',
+            'zipp',
+            'pyjwt',
+            'colorama',
+            'pytz',
+            'click',
+            'cffi',
+            'protobuf',
+            'oauthlib',
+            'jinja2',
+            'pycparser',
+            'markupsafe',
+            'cachetools',
+            'wrapt',
+            'docutils',
+            'isodate',
+            'psutil',
+            'pyarrow',
+            'chardet',
+            'sqlalchemy',
+            'tomli',
+            'decorator',
+            'werkzeug',
+            'msrest',
+            'aiohttp',
+            'grpcio',
+            'multidict',
+            'scipy',
+            'py',
+            'yarl',
+            'pluggy',
+            'filelock',
+            'pillow',
+            'soupsieve',
+            'aiobotocore',
+            'jsonschema',
+            'lxml',
+            'pytest',
+            '_pytest',
+            'beautifulsoup4',
+            'tqdm',
+            'greenlet',
+            'platformdirs',
+            'fsspec',
+            'pyopenssl',
+            'tabulate',
+            's3fs',
+            'flask',
+            'toml',
+            'asn1crypto',
+            'future',
+            'frozenlist',
+            'pyrsistent',
+            'aiosignal',
+            'pygments',
+            'pynacl',
+            'itsdangerous',
+            'httplib2',
+            'iniconfig',
+            'docker',
+        ]
+    )
     return names
 
 
@@ -564,38 +706,34 @@ def common_unreferenced():
         'numpy': [
             'ndarray',
         ],
-
         'numbers': [
-            'Number', 'Real', 'Integral', 'Rational', 'Complex',
+            'Number',
+            'Real',
+            'Integral',
+            'Rational',
+            'Complex',
         ],
-
         'concurrent.futures': [
-            'ThreadPoolExecutor', 'ProcessPoolExecutor', 'Future',
+            'ThreadPoolExecutor',
+            'ProcessPoolExecutor',
+            'Future',
         ],
-
         'numpy.random': [
             'RandomState',
         ],
-
         # https://github.com/ramonhagenaars/nptyping/blob/master/USERDOCS.md#Shape-expressions
         'numpy.typing': [
             'ArrayLike',
         ],
-
         'torch': [
             'Tensor',
         ],
-
         'typing': [
             'Callable',
             'Any',
             'IO',
         ],
-
-        'collections': [
-            'OrderedDict', 'defaultdict'
-        ],
-
+        'collections': ['OrderedDict', 'defaultdict'],
         'types': [
             'TracebackType',
         ],
@@ -603,7 +741,10 @@ def common_unreferenced():
 
     try:
         import nptyping  # type: ignore
-        modname_to_refs['nptyping'] = ['NDArray', 'Shape', 'DType'] + list(set(nptyping.typing_.dtype_per_name.keys()) - {'Number'})
+
+        modname_to_refs['nptyping'] = ['NDArray', 'Shape', 'DType'] + list(
+            set(nptyping.typing_.dtype_per_name.keys()) - {'Number'}
+        )
     except ModuleNotFoundError as ex:
         print('Warning: ex = {}'.format(ub.urepr(ex, nl=1)))
         pass
@@ -617,7 +758,10 @@ def common_unreferenced():
         {'name': 'NoParam', 'modname': 'ubelt.util_const'},
         {'name': '_NoParamType', 'modname': 'ubelt.util_const'},
         {'name': 'NoParamType', 'modname': 'ubelt.util_const'},
-        {'name': 'GeometricTransform', 'modname': 'skimage.transform._geometric'},
+        {
+            'name': 'GeometricTransform',
+            'modname': 'skimage.transform._geometric',
+        },
     ]
     for modname, refs in modname_to_refs.items():
         for ref in refs:
@@ -642,6 +786,7 @@ def hacked_typing_info(type_name):
         type_name = type_name.replace('callable', 'Callable')
 
     import re
+
     type_name = re.sub(r'\bor\b', '|', type_name)
 
     if type_name == '?':
@@ -652,10 +797,19 @@ def hacked_typing_info(type_name):
         add_import_line('from typing import {}\n'.format('Union'))
 
     common_typing_types = [
-        'Iterable', 'Callable', 'Dict',
-        'List', 'Union', 'Type', 'Mapping',
-        'Tuple', 'Optional', 'Sequence',
-        'Iterator', 'Set', 'Dict'
+        'Iterable',
+        'Callable',
+        'Dict',
+        'List',
+        'Union',
+        'Type',
+        'Mapping',
+        'Tuple',
+        'Optional',
+        'Sequence',
+        'Iterator',
+        'Set',
+        'Dict',
     ]
 
     # See: https://github.com/python/typeshed/blob/main/stdlib/_typeshed/__init__.pyi
@@ -672,7 +826,6 @@ def hacked_typing_info(type_name):
         'FileDescriptor',
         'FileDescriptorLike',
         'FileDescriptorOrPath',
-
     ]
 
     for typing_arg in common_typing_types:
@@ -713,7 +866,9 @@ def hacked_typing_info(type_name):
         for alias in item['alias']:
             prefix = alias + '.'
             if prefix in type_name:
-                add_import_line('import {} as {}\n'.format(item['modname'], alias))
+                add_import_line(
+                    'import {} as {}\n'.format(item['modname'], alias)
+                )
 
     for modname in common_modnames:
         prefix = modname + '.'
@@ -723,7 +878,9 @@ def hacked_typing_info(type_name):
     common_unref = common_unreferenced()
     for item in common_unref:
         if item['name'] in type_name:
-            add_import_line('from {} import {}\n'.format(item['modname'], item['name']))
+            add_import_line(
+                'from {} import {}\n'.format(item['modname'], item['name'])
+            )
 
     if 1:
         # HACKS
@@ -767,12 +924,13 @@ def hacked_typing_info(type_name):
 
 
 class ExtendedStubGenerator(ASTStubGenerator):
-
     def _hack_for_info(self, info):
         type_name = info['type']
         if type_name is not None:
-
-            if type_name == 'NoParamType' and self.path == 'ubelt/util_const.py':
+            if (
+                type_name == 'NoParamType'
+                and self.path == 'ubelt/util_const.py'
+            ):
                 # hack: Ignore util const
                 return
 
@@ -786,30 +944,37 @@ class ExtendedStubGenerator(ASTStubGenerator):
                 self.add_import_line(line)
             for hack in results['hacks']:
                 if hack == 'sliceable':
-                    hacked = ub.codeblock(
-                        '''
+                    hacked = (
+                        ub.codeblock(
+                            """
                         from typing import Any
                         from typing_extensions import Protocol
 
                         class Sliceable(Protocol):
                             def __getitem__(self: 'Sliceable', key: Any) -> Any:
                                 ...
-                        ''') + '\n'
+                        """
+                        )
+                        + '\n'
+                    )
 
                     self.add_import_line(hacked)
                 else:
                     raise NotImplementedError(hack)
             info['type'] = results['type_name']
 
-    def visit_func_def(self, o: FuncDef, is_abstract: bool = False,
-                       is_overload: bool = False) -> None:
+    def visit_func_def(
+        self, o: FuncDef, is_abstract: bool = False, is_overload: bool = False
+    ) -> None:
 
         from mypy import fastparse  # type: ignore
+
         DEBUG = 0
         if DEBUG:
             print('o.name = {!r}'.format(o.name))
 
         import ubelt as ub
+
         # Parse extra information out of the docstring
         name_to_parsed_docstr_info = {}
         return_parsed_docstr_info = None
@@ -828,6 +993,7 @@ class ExtendedStubGenerator(ASTStubGenerator):
         force_yield = False
         if real_func is not None and real_func.__doc__ is not None:
             from xdoctest.docstr import docscrape_google
+
             parsed_args = None
             # parsed_ret = None
 
@@ -838,29 +1004,47 @@ class ExtendedStubGenerator(ASTStubGenerator):
                 lines = block[0]
                 if key == 'Returns':
                     # print(f'lines={lines}')
-                    for retdict in docscrape_google.parse_google_retblock(lines):
+                    for retdict in docscrape_google.parse_google_retblock(
+                        lines
+                    ):
                         # print(f'retdict={retdict}')
                         self._hack_for_info(retdict)
                         return_parsed_docstr_info = (key, retdict['type'])
                     if return_parsed_docstr_info is None:
-                        print('Warning: return block for {} might be malformed'.format(real_func))
+                        print(
+                            'Warning: return block for {} might be malformed'.format(
+                                real_func
+                            )
+                        )
                 if key == 'Yields':
-                    for retdict in docscrape_google.parse_google_retblock(lines):
+                    for retdict in docscrape_google.parse_google_retblock(
+                        lines
+                    ):
                         self._hack_for_info(retdict)
                         return_parsed_docstr_info = (key, retdict['type'])
                         force_yield = True
                     if return_parsed_docstr_info is None:
-                        print('Warning: return block for {} might be malformed'.format(real_func))
+                        print(
+                            'Warning: return block for {} might be malformed'.format(
+                                real_func
+                            )
+                        )
                 if key == 'Args':
                     # hack for *args
-                    lines = '\n'.join([line.lstrip('*') for line in lines.split('\n')])
+                    lines = '\n'.join(
+                        [line.lstrip('*') for line in lines.split('\n')]
+                    )
                     # print('lines = {!r}'.format(lines))
-                    parsed_args = list(docscrape_google.parse_google_argblock(lines))
+                    parsed_args = list(
+                        docscrape_google.parse_google_argblock(lines)
+                    )
                     for info in parsed_args:
                         self._hack_for_info(info)
                         name = info['name'].replace('*', '')
                         name_to_parsed_docstr_info[name] = info
-            parsed_rets = list(docscrape_google.parse_google_returns(real_func.__doc__))
+            parsed_rets = list(
+                docscrape_google.parse_google_returns(real_func.__doc__)
+            )
             ret_infos = []
             for info in parsed_rets:
                 try:
@@ -870,12 +1054,18 @@ class ExtendedStubGenerator(ASTStubGenerator):
                 except Exception:
                     pass
 
-        if (self.is_private_name(o.name, o.fullname)  # type: ignore
-                or self.is_not_in_all(o.name)  # type: ignore
-                or (self.is_recorded_name(o.name) and not is_overload)):  # type: ignore
+        if (
+            self.is_private_name(o.name, o.fullname)  # type: ignore
+            or self.is_not_in_all(o.name)  # type: ignore
+            or (self.is_recorded_name(o.name) and not is_overload)
+        ):  # type: ignore
             self.clear_decorators()
             return
-        if not self._indent and self._state not in (EMPTY, FUNC) and not o.is_awaitable_coroutine:  # type: ignore
+        if (
+            not self._indent
+            and self._state not in (EMPTY, FUNC)
+            and not o.is_awaitable_coroutine
+        ):  # type: ignore
             self.add('\n')
         if not self.is_top_level():
             # This handles class-level attributes.
@@ -897,7 +1087,13 @@ class ExtendedStubGenerator(ASTStubGenerator):
                 else:
                     pseudo_inits.append((name, None))
             # Maybe we shouldnt do this if there is an Attributes section?
-            pseudo_inits.extend(list(ub.dict_diff(self_inits_lut, _docstring_class_attr_infos).items()))
+            pseudo_inits.extend(
+                list(
+                    ub.dict_diff(
+                        self_inits_lut, _docstring_class_attr_infos
+                    ).items()
+                )
+            )
 
             for init, value in pseudo_inits:
                 if init in self.method_names:
@@ -910,14 +1106,18 @@ class ExtendedStubGenerator(ASTStubGenerator):
                 if init in _docstring_class_attr_infos:
                     typename = _docstring_class_attr_infos[init]['type']
                     try:
-                        annotation = fastparse.parse_type_string(typename, 'Any', 0, 0)
+                        annotation = fastparse.parse_type_string(
+                            typename, 'Any', 0, 0
+                        )
                     except Exception:
                         print(f'FAILED ON typename={typename} for {init}')
                         annotation = None
                 elif init in name_to_parsed_docstr_info:
                     typename = name_to_parsed_docstr_info[init]['type']
                     try:
-                        annotation = fastparse.parse_type_string(typename, 'Any', 0, 0)
+                        annotation = fastparse.parse_type_string(
+                            typename, 'Any', 0, 0
+                        )
                     except Exception:
                         print(f'FAILED ON typename={typename} for {init}')
                         annotation = None
@@ -930,7 +1130,10 @@ class ExtendedStubGenerator(ASTStubGenerator):
         for s in self._decorators:
             self.add(s)
         self.clear_decorators()
-        self.add("%s%sdef %s(" % (self._indent, 'async ' if o.is_coroutine else '', o.name))  # type: ignore
+        self.add(
+            '%s%sdef %s('
+            % (self._indent, 'async ' if o.is_coroutine else '', o.name)
+        )  # type: ignore
         self.record_name(o.name)  # type: ignore
 
         DEVELOPER_DEBUGGING = 0
@@ -942,6 +1145,7 @@ class ExtendedStubGenerator(ASTStubGenerator):
                 print('o = {!r}'.format(o))
                 print('o.arguments = {!r}'.format(o.arguments))
                 import xdev
+
                 xdev.embed()
 
         # ------------------------------------------
@@ -960,11 +1164,16 @@ class ExtendedStubGenerator(ASTStubGenerator):
                 # matches the type of the given doctype and extend the
                 # doctype if needbe. For now we are hacking it to
                 # handle None specificaly.
-                if hasattr(arg_.initializer, 'name') and arg_.initializer.name == 'None':
+                if (
+                    hasattr(arg_.initializer, 'name')
+                    and arg_.initializer.name == 'None'
+                ):
                     info = name_to_parsed_docstr_info[name]
                     if info['type'] is not None:
                         doctype_str = info['type'].replace(' ', '')
-                        if all(n not in doctype_str for n in {'None', 'Optional'}):
+                        if all(
+                            n not in doctype_str for n in {'None', 'Optional'}
+                        ):
                             info['type'] = info['type'] + ' | None'
                             # FIXME: mypy removed this API
                             # self.add_typing_import('Union')
@@ -975,23 +1184,34 @@ class ExtendedStubGenerator(ASTStubGenerator):
             var = arg_.variable
             kind = arg_.kind
             name = var.name
-            annotated_type = (o.unanalyzed_type.arg_types[i]  # type: ignore
-                              if isinstance(o.unanalyzed_type, CallableType) else None)  # type: ignore
+            annotated_type = (
+                o.unanalyzed_type.arg_types[i]  # type: ignore
+                if isinstance(o.unanalyzed_type, CallableType)
+                else None
+            )  # type: ignore
 
             if annotated_type is None:
                 if name in name_to_parsed_docstr_info:
                     name = name.replace('*', '')
-                    doc_type_str = name_to_parsed_docstr_info[name].get('type', None)
+                    doc_type_str = name_to_parsed_docstr_info[name].get(
+                        'type', None
+                    )
                     if doc_type_str is not None:
                         doc_type_str = doc_type_str.split(', default')[0]
                         # annotated_type = doc_type_str
                         # import mypy.types as mypy_types
                         # globals_ = {**mypy_types.__dict__}
                         try:
-                            got = fastparse.parse_type_string(doc_type_str, 'Any', 0, 0)
+                            got = fastparse.parse_type_string(
+                                doc_type_str, 'Any', 0, 0
+                            )
                         except Exception as ex:
                             print('ex = {!r}'.format(ex))
-                            print('Failed to parse doc_type_str = {!r}'.format(doc_type_str))
+                            print(
+                                'Failed to parse doc_type_str = {!r}'.format(
+                                    doc_type_str
+                                )
+                            )
                         else:
                             annotated_type = got
                         #     print('PARSED: annotated_type = {!r}'.format(annotated_type))
@@ -1001,22 +1221,28 @@ class ExtendedStubGenerator(ASTStubGenerator):
             # name their 0th argument other than self/cls
             is_self_arg = i == 0 and name == 'self'
             is_cls_arg = i == 0 and name == 'cls'
-            annotation = ""
+            annotation = ''
             if annotated_type and not is_self_arg and not is_cls_arg:
                 # Luckily, an argument explicitly annotated with "Any" has
                 # type "UnboundType" and will not match.
                 if not isinstance(get_proper_type(annotated_type), AnyType):
-                    annotation = ": {}".format(self.print_annotation(annotated_type))
+                    annotation = ': {}'.format(
+                        self.print_annotation(annotated_type)
+                    )
 
             # xdev change, where we try to port the defaults over to the stubs
             # as well (otherwise they dont show up in the function help text)
             XDEV_KEEP_SOME_DEFAULTS = True
 
             if arg_.initializer:
-                if kind.is_named() and not any(arg.startswith('*') for arg in args):
+                if kind.is_named() and not any(
+                    arg.startswith('*') for arg in args
+                ):
                     args.append('*')
                 if not annotation:
-                    typename = self.get_str_type_of_node(arg_.initializer, True, False)  # type: ignore
+                    typename = self.get_str_type_of_node(
+                        arg_.initializer, True, False
+                    )  # type: ignore
                     if typename == '':
                         if XDEV_KEEP_SOME_DEFAULTS:
                             # TODO
@@ -1028,18 +1254,26 @@ class ExtendedStubGenerator(ASTStubGenerator):
                 else:
                     if XDEV_KEEP_SOME_DEFAULTS:
                         import mypy  # type: ignore
+
                         # arg_.initializer.is_special_form
-                        if isinstance(arg_.initializer, (mypy.nodes.IntExpr, mypy.nodes.FloatExpr)):  # type: ignore
+                        if isinstance(
+                            arg_.initializer,
+                            (mypy.nodes.IntExpr, mypy.nodes.FloatExpr),
+                        ):  # type: ignore
                             annotation += '={!r}'.format(arg_.initializer.value)
                         elif isinstance(arg_.initializer, mypy.nodes.StrExpr):  # type: ignore
                             annotation += '={!r}'.format(arg_.initializer.value)
                         elif isinstance(arg_.initializer, mypy.nodes.NameExpr):  # type: ignore
                             annotation += '={}'.format(arg_.initializer.name)
                         elif isinstance(arg_.initializer, mypy.nodes.UnaryExpr):  # type: ignore
-                            annotation += '={}'.format(arg_.initializer.expr.value)
+                            annotation += '={}'.format(
+                                arg_.initializer.expr.value
+                            )
                         else:
                             # fallback, unhandled default
-                            print(f'todo: Unhandled arg_.initializer={type(arg_.initializer)}')
+                            print(
+                                f'todo: Unhandled arg_.initializer={type(arg_.initializer)}'
+                            )
                             annotation += '=...'
                     else:
                         annotation += ' = ...'
@@ -1059,7 +1293,10 @@ class ExtendedStubGenerator(ASTStubGenerator):
                 retname = None  # implicit Any
             else:
                 retname = self.print_annotation(o.unanalyzed_type.ret_type)  # type: ignore
-        elif o.abstract_status == IS_ABSTRACT or o.name in METHODS_WITH_RETURN_VALUE:  # type: ignore
+        elif (
+            o.abstract_status == IS_ABSTRACT
+            or o.name in METHODS_WITH_RETURN_VALUE
+        ):  # type: ignore
             # Always assume abstract methods return Any unless explicitly annotated. Also
             # some dunder methods should not have a None return type.
             retname = None  # implicit Any
@@ -1084,10 +1321,12 @@ class ExtendedStubGenerator(ASTStubGenerator):
                 # self.add_typing_import('Any')  # fixme
                 return_name = 'Any'
             # generator_name = self.typing_name('Generator')
-            generator_name = "collections.abc.Generator"
+            generator_name = 'collections.abc.Generator'
             if return_parsed_docstr_info is not None:
                 yield_name = return_parsed_docstr_info[1]
-            retname = f'{generator_name}[{yield_name}, {send_name}, {return_name}]'
+            retname = (
+                f'{generator_name}[{yield_name}, {send_name}, {return_name}]'
+            )
             # print('o.name = {}'.format(ub.repr2(o.name, nl=1)))
             # print('retname = {!r}'.format(retname))
             # print('retfield = {!r}'.format(retfield))
@@ -1111,12 +1350,13 @@ class ExtendedStubGenerator(ASTStubGenerator):
         # print(f'retfield={retfield}')
 
         self.add(', '.join(args))
-        self.add("){}: ...\n".format(retfield))
+        self.add('){}: ...\n'.format(retfield))
         self._state = FUNC
 
     def process_decorator(self, o) -> None:
-        from mypy.stubgen import get_qualified_name  # type: ignore
         from mypy.nodes import CallExpr  # type: ignore
+        from mypy.stubgen import get_qualified_name  # type: ignore
+
         parent_mod = ub.import_module_from_name(self.module)  # type: ignore
         for decorator in o.original_decorators:
             if parent_mod.__name__ == 'kwarray.arrayapi':
@@ -1124,7 +1364,11 @@ class ExtendedStubGenerator(ASTStubGenerator):
                 # This is for decorators that wrap functions in static methods.
                 # mypy doesn't handle this natively, but we can handle it in
                 # pyi files
-                HACKED_STATICMETHODS = {'_apimethod', '_torchmethod', '_numpymethod'}
+                HACKED_STATICMETHODS = {
+                    '_apimethod',
+                    '_torchmethod',
+                    '_numpymethod',
+                }
                 if isinstance(decorator, CallExpr):
                     qualname = decorator.callee.name
                 else:
@@ -1155,12 +1399,17 @@ class ExtendedStubGenerator(ASTStubGenerator):
         real_class = getattr(parent_mod, o.name, None)
         if real_class is not None and real_class.__doc__ is not None:
             from xdoctest.docstr import docscrape_google
+
             blocks = docscrape_google.split_google_docblocks(real_class.__doc__)
             for key, block in blocks:
                 lines = block[0]
                 if key == 'Attributes':
-                    lines = '\n'.join([line.lstrip('*') for line in lines.split('\n')])
-                    parsed_args = list(docscrape_google.parse_google_argblock(lines))
+                    lines = '\n'.join(
+                        [line.lstrip('*') for line in lines.split('\n')]
+                    )
+                    parsed_args = list(
+                        docscrape_google.parse_google_argblock(lines)
+                    )
                     for info in parsed_args:
                         self._hack_for_info(info)
                         name = info['name'].replace('*', '')
@@ -1192,10 +1441,12 @@ def modpath_coerce(modpath_coercable):
         >>> assert modpath_coerce(modpath) == modpath
         >>> assert modpath_coerce(xdev.__name__) == modpath
     """
-    import ubelt as ub
+    import pathlib
     import types
     from os.path import exists
-    import pathlib
+
+    import ubelt as ub
+
     if isinstance(modpath_coercable, types.ModuleType):
         modpath = modpath_coercable.__file__
     elif isinstance(modpath_coercable, pathlib.Path):
@@ -1206,7 +1457,9 @@ def modpath_coerce(modpath_coercable):
             if exists(modpath_coercable):
                 modpath = modpath_coercable
             else:
-                raise ValueError('Cannot find module={}'.format(modpath_coercable))
+                raise ValueError(
+                    'Cannot find module={}'.format(modpath_coercable)
+                )
     else:
         raise TypeError('{}'.format(type(modpath_coercable)))
     modpath = ub.util_import.normalize_modpath(modpath)

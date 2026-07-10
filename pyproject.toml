@@ -62,7 +62,8 @@ packages.find.include = [
 ]
 
 [tool.uv]
-exclude-newer = "2026-05-22"
+exclude-newer = "2026-05-23T04:00:00Z"
+exclude-newer-package = { kwconf = false }
 
 [tool.ruff]
 target-version = "py310"

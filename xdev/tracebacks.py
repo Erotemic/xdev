@@ -59,25 +59,28 @@ class WarningsWithTracebacks:
         >>>     my_function()
         >>> driver()
     """
+
     _enter_count = 0
 
     def __init__(self, thread_safe=True):
         if thread_safe:
             import threading
+
             self._lock = threading.Lock()
         else:
             from contextlib import nullcontext
+
             self._lock = nullcontext()
 
     def __enter__(self):
         with self._lock:
             # Apply patching if it's the first entry in this thread
             if self._enter_count == 0:
-                print("ENTER")
+                print('ENTER')
                 self._orig_formatwarning = warnings.formatwarning
                 warnings.formatwarning = self._monkeypatch_formatwarning_tb  # type: ignore
             else:
-                print("NOT ENTER")
+                print('NOT ENTER')
             self._enter_count += 1
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -87,6 +90,7 @@ class WarningsWithTracebacks:
 
     def _monkeypatch_formatwarning_tb(self, *args, **kwargs):
         import traceback
+
         s = self._orig_formatwarning(*args, **kwargs)
         if len(s.strip()):
             tb = traceback.format_stack()
@@ -106,6 +110,7 @@ if __name__ == '__main__':
     CommandLine:
         python ~/code/xdev/xdev/tracebacks.py
     """
+
     # Test, as xdoctest doesn't work correctly for patched warning testing.
     def main():
         warnings.warn('This warning1 has no traceback')

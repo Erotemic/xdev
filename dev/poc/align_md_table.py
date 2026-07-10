@@ -18,6 +18,7 @@ Examples:
     # from a file
     align_md_table.py --file table.md
 """
+
 from __future__ import annotations
 
 import argparse
@@ -145,7 +146,9 @@ def _align_block(lines: List[str]) -> str:
     rows = [r + [''] * (n_cols - len(r)) for r in rows]
 
     # Find the alignment row (typically the second row).
-    align_idx = next((i for i, r in enumerate(rows) if _row_is_alignment(r)), None)
+    align_idx = next(
+        (i for i, r in enumerate(rows) if _row_is_alignment(r)), None
+    )
     if align_idx is not None:
         alignments = [_classify_align_cell(c)[0] for c in rows[align_idx]]
     else:
@@ -162,18 +165,23 @@ def _align_block(lines: List[str]) -> str:
     # Alignment markers need at least 3 dashes (plus optional colons).
     for c in range(n_cols):
         markers_min = 3 + sum(
-            1 for a in [alignments[c]] if a in ('left', 'right'))
+            1 for a in [alignments[c]] if a in ('left', 'right')
+        )
         markers_min += 1 if alignments[c] == 'center' else 0
         widths[c] = max(widths[c], markers_min)
 
     out_rows: List[str] = []
     for i, row in enumerate(rows):
         if i == align_idx:
-            cells = [_format_alignment_cell(widths[c], alignments[c])
-                     for c in range(n_cols)]
+            cells = [
+                _format_alignment_cell(widths[c], alignments[c])
+                for c in range(n_cols)
+            ]
         else:
-            cells = [_pad_cell(row[c], widths[c], alignments[c])
-                     for c in range(n_cols)]
+            cells = [
+                _pad_cell(row[c], widths[c], alignments[c])
+                for c in range(n_cols)
+            ]
         out_rows.append('| ' + ' | '.join(cells) + ' |')
     return '\n'.join(out_rows)
 
@@ -198,11 +206,14 @@ def main(argv=None) -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
-        'text', nargs='?', default=None,
+        'text',
+        nargs='?',
+        default=None,
         help='markdown table (or document containing one) as a string',
     )
     parser.add_argument(
-        '-f', '--file',
+        '-f',
+        '--file',
         help='read the markdown from this file instead of stdin / argv',
     )
     args = parser.parse_args(argv)

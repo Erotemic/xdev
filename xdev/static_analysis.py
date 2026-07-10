@@ -59,8 +59,10 @@ class CodeAnalyzer(ast.NodeVisitor):
         ╙── my_function
             └─╼ re
     """
+
     def __init__(self, fpath=None, modname=None):
         import networkx as nx
+
         self.fpath = fpath
         self.modname = modname
         self.graph = nx.DiGraph()  # Directed graph to represent nesting
@@ -73,7 +75,7 @@ class CodeAnalyzer(ast.NodeVisitor):
 
     @classmethod
     def parse_file(CodeAnalyzer, fpath):
-        with open(fpath, "r") as file:
+        with open(fpath, 'r') as file:
             source_code = file.read()
 
         # Create an instance of the analyzer and visit the AST
@@ -85,7 +87,7 @@ class CodeAnalyzer(ast.NodeVisitor):
         """
         Add a node to the graph with the given name and type.
         """
-        self.graph.add_node(name, type=node_type, name=name.split(".")[-1])
+        self.graph.add_node(name, type=node_type, name=name.split('.')[-1])
 
     def _add_edge(self, parent, child):
         """
@@ -109,14 +111,18 @@ class CodeAnalyzer(ast.NodeVisitor):
         """
         Construct the full name of a node based on the current scope.
         """
-        return ".".join(self.current_scope + [name]) if self.current_scope else name
+        return (
+            '.'.join(self.current_scope + [name])
+            if self.current_scope
+            else name
+        )
 
     def visit_FunctionDef(self, node):
         # Construct the full name of the function
         full_name = self._get_full_name(node.name)
 
         # Add the function node to the graph
-        self._add_node(full_name, "function")
+        self._add_node(full_name, 'function')
 
         # If there is a parent scope, add an edge from the parent to this function
         if self.current_scope:
@@ -132,7 +138,7 @@ class CodeAnalyzer(ast.NodeVisitor):
         full_name = self._get_full_name(node.name)
 
         # Add the class node to the graph
-        self._add_node(full_name, "class")
+        self._add_node(full_name, 'class')
 
         # If there is a parent scope, add an edge from the parent to this class
         if self.current_scope:
@@ -147,7 +153,7 @@ class CodeAnalyzer(ast.NodeVisitor):
         # Extract imported modules
         for alias in node.names:
             full_name = alias.name
-            self._add_node(full_name, "import")
+            self._add_node(full_name, 'import')
 
             # If there is a parent scope, add an edge from the parent to this import
             if self.current_scope:
@@ -162,15 +168,15 @@ class CodeAnalyzer(ast.NodeVisitor):
         # Handle relative import names
         if level > 0:
             if self.modname:
-                mod_parts = self.modname.split(".")
-                base_module = ".".join(mod_parts[:-level])
-                module = f"{base_module}.{module}" if module else base_module
+                mod_parts = self.modname.split('.')
+                base_module = '.'.join(mod_parts[:-level])
+                module = f'{base_module}.{module}' if module else base_module
             else:
-                module = "." * level + (module if module else "")
+                module = '.' * level + (module if module else '')
 
         for alias in node.names:
-            full_name = f"{module}.{alias.name}" if module else alias.name
-            self._add_node(full_name, "import")
+            full_name = f'{module}.{alias.name}' if module else alias.name
+            self._add_node(full_name, 'import')
 
             # If there is a parent scope, add an edge from the parent to this import
             if self.current_scope:
@@ -178,7 +184,7 @@ class CodeAnalyzer(ast.NodeVisitor):
         self.generic_visit(node)  # Continue visiting child nodes
 
 
-def parse_requirements(fname="requirements.txt", versions=False):
+def parse_requirements(fname='requirements.txt', versions=False):
     """
     TODO: keep in sync with xcookie.
 
@@ -202,7 +208,7 @@ def parse_requirements(fname="requirements.txt", versions=False):
     return packages
 
 
-def parse_line(line, dpath=""):
+def parse_line(line, dpath=''):
     """
     Parse information from a line in a requirements text file
 
@@ -210,54 +216,54 @@ def parse_line(line, dpath=""):
     line = '-e git+https://a.com/somedep@sometag#egg=SomeDep'
     """
     # Remove inline comments
-    comment_pos = line.find(" #")
+    comment_pos = line.find(' #')
     if comment_pos > -1:
         line = line[:comment_pos]
 
-    if line.startswith("-r "):
+    if line.startswith('-r '):
         # Allow specifying requirements in other files
-        target = join(dpath, line.split(" ")[1])
+        target = join(dpath, line.split(' ')[1])
         for info in parse_require_file(target):
             yield info
     else:
         # See: https://www.python.org/dev/peps/pep-0508/
-        info = {"line": line}
-        if line.startswith("-e "):
-            info["package"] = line.split("#egg=")[1]
+        info = {'line': line}
+        if line.startswith('-e '):
+            info['package'] = line.split('#egg=')[1]
         else:
-            if "--find-links" in line:
+            if '--find-links' in line:
                 # setuptools does not seem to handle find links
-                line = line.split("--find-links")[0]
-            if ";" in line:
-                pkgpart, platpart = line.split(";")
+                line = line.split('--find-links')[0]
+            if ';' in line:
+                pkgpart, platpart = line.split(';')
                 # Handle platform specific dependencies
                 # setuptools.readthedocs.io/en/latest/setuptools.html
                 # #declaring-platform-specific-dependencies
                 plat_deps = platpart.strip()
-                info["platform_deps"] = plat_deps
+                info['platform_deps'] = plat_deps
             else:
                 pkgpart = line
                 platpart = None
 
             # Remove versioning from the package
-            pat = "(" + "|".join([">=", "==", ">"]) + ")"
+            pat = '(' + '|'.join(['>=', '==', '>']) + ')'
             parts = re.split(pat, pkgpart, maxsplit=1)
             parts = [p.strip() for p in parts]
 
-            info["package"] = parts[0]
+            info['package'] = parts[0]
             if len(parts) > 1:
                 op, rest = parts[1:]
                 version = rest  # NOQA
-                info["version"] = (op, version)
+                info['version'] = (op, version)
         yield info
 
 
 def parse_require_file(fpath):
     dpath = dirname(fpath)
-    with open(fpath, "r") as f:
+    with open(fpath, 'r') as f:
         for line in f.readlines():
             line = line.strip()
-            if line and not line.startswith("#"):
+            if line and not line.startswith('#'):
                 for info in parse_line(line, dpath=dpath):
                     yield info
 
@@ -265,21 +271,21 @@ def parse_require_file(fpath):
 def gen_packages_items(require_fpath, versions='loose'):
     if exists(require_fpath):
         for info in parse_require_file(require_fpath):
-            parts = [info["package"]]
-            if versions and "version" in info:
-                if versions == "strict":
+            parts = [info['package']]
+            if versions and 'version' in info:
+                if versions == 'strict':
                     # In strict mode, we pin to the minimum version
-                    if info["version"]:
+                    if info['version']:
                         # Only replace the first >= instance
-                        verstr = "".join(info["version"]).replace(">=", "==", 1)
+                        verstr = ''.join(info['version']).replace('>=', '==', 1)
                         parts.append(verstr)
                 else:
-                    parts.extend(info["version"])
-            if not sys.version.startswith("3.4"):
+                    parts.extend(info['version'])
+            if not sys.version.startswith('3.4'):
                 # apparently package_deps are broken in 3.4
-                plat_deps = info.get("platform_deps")
+                plat_deps = info.get('platform_deps')
                 if plat_deps is not None:
-                    parts.append(";" + plat_deps)
-            item = "".join(parts)
+                    parts.append(';' + plat_deps)
+            item = ''.join(parts)
             if item:
                 yield item

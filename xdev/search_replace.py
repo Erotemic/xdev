@@ -3,7 +3,13 @@ Python implementations of sed, grep, and find
 
 Porting from ~/local/rob/rob/rob_nav.py / ubelt
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
+
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
 import os
 import ubelt as ub
 from os.path import relpath, split, join, abspath
@@ -20,6 +26,7 @@ class GrepResult(ub.NiceRepr):
     """
     Manage and format results from grep
     """
+
     def __init__(self, fpath, pattern=None):
         self.pattern = pattern
         self.fpath = fpath
@@ -51,7 +58,7 @@ class GrepResult(ub.NiceRepr):
         app('----------------------')
         color = 'red'
         app(ret)
-        for (lx, line) in zip(self.found_lxs, self.found_lines):
+        for lx, line in zip(self.found_lxs, self.found_lines):
             line = line.replace('\n', '')
             if color and self.pattern:
                 found = self.pattern.search(line)
@@ -62,8 +69,17 @@ class GrepResult(ub.NiceRepr):
         return '\n'.join(summary)
 
 
-def sed(regexpr, repl, dpath=None, include=None, exclude=None,
-        dirblocklist=None, recursive=True, dry=False, verbose=1):
+def sed(
+    regexpr,
+    repl,
+    dpath=None,
+    include=None,
+    exclude=None,
+    dirblocklist=None,
+    recursive=True,
+    dry=False,
+    verbose=1,
+):
     r"""
     Execute a sed on multiple files.
 
@@ -89,8 +105,14 @@ def sed(regexpr, repl, dpath=None, include=None, exclude=None,
     num_skipped = 0
     fpaths_changed = []
 
-    fpath_generator = find(dpath=dpath, type='f', include=include,
-                           exclude=exclude, dirblocklist=dirblocklist, recursive=recursive)
+    fpath_generator = find(
+        dpath=dpath,
+        type='f',
+        include=include,
+        exclude=exclude,
+        dirblocklist=dirblocklist,
+        recursive=recursive,
+    )
     for fpath in fpath_generator:
         try:
             changed_lines = sedfile(fpath, regexpr, repl, dry=dry)
@@ -109,8 +131,15 @@ def sed(regexpr, repl, dpath=None, include=None, exclude=None,
         print('total lines changed = {!r}'.format(num_changed))
 
 
-def grep(regexpr, dpath=None, include=None, exclude=None, recursive=True,
-         dirblocklist=None, verbose=1):
+def grep(
+    regexpr,
+    dpath=None,
+    include=None,
+    exclude=None,
+    recursive=True,
+    dirblocklist=None,
+    verbose=1,
+):
     r"""
     Execute a grep on multiple files.
 
@@ -134,9 +163,14 @@ def grep(regexpr, dpath=None, include=None, exclude=None, recursive=True,
     """
     grep_results = []
 
-    fpath_generator = find(dpath=dpath, type='f', include=include,
-                           exclude=exclude, recursive=recursive,
-                           dirblocklist=dirblocklist)
+    fpath_generator = find(
+        dpath=dpath,
+        type='f',
+        include=include,
+        exclude=exclude,
+        recursive=recursive,
+        dirblocklist=dirblocklist,
+    )
 
     for fpath in fpath_generator:
         grepres = grepfile(fpath, regexpr, verbose=verbose)
@@ -152,8 +186,16 @@ def grep(regexpr, dpath=None, include=None, exclude=None, recursive=True,
     return grep_results
 
 
-def find(pattern=None, dpath=None, include=None, exclude=None,
-         dirblocklist=None, type=None, recursive=True, followlinks=False):
+def find(
+    pattern=None,
+    dpath=None,
+    include=None,
+    exclude=None,
+    dirblocklist=None,
+    type=None,
+    recursive=True,
+    followlinks=False,
+):
     """
     Find all paths in a root subject to a search criterion
 
@@ -239,9 +281,17 @@ def find(pattern=None, dpath=None, include=None, exclude=None,
         dpath = '.'  # os.getcwd()
 
     # Define helper for checking inclusion / exclusion
-    include = None if include is None else MultiPattern.coerce(include, hint='glob')
-    exclude = None if exclude is None else MultiPattern.coerce(exclude, hint='glob')
-    dirblocklist = None if dirblocklist is None else MultiPattern.coerce(dirblocklist, hint='glob')
+    include = (
+        None if include is None else MultiPattern.coerce(include, hint='glob')
+    )
+    exclude = (
+        None if exclude is None else MultiPattern.coerce(exclude, hint='glob')
+    )
+    dirblocklist = (
+        None
+        if dirblocklist is None
+        else MultiPattern.coerce(dirblocklist, hint='glob')
+    )
     main_pattern = Pattern.coerce(pattern, hint='glob')
 
     def is_included(name):
@@ -266,10 +316,10 @@ def find(pattern=None, dpath=None, include=None, exclude=None,
         walkgen = os.walk(dpath, followlinks=followlinks)
 
     for root, dnames, fnames in walkgen:
-
         if dirblocklist is not None:
             dnames[:] = [
-                dname for dname in dnames if not dirblocklist.match(dname)]
+                dname for dname in dnames if not dirblocklist.match(dname)
+            ]
 
         if with_files:
             for fname in fnames:
@@ -313,6 +363,7 @@ def sedfile(fpath, regexpr, repl, dry=False, verbose=1):
         >>> assert changed_lines3 != changed_lines2
     """
     import xdev
+
     mode_text = ['(real-run)', '(dry-run)'][dry]
 
     pattern = Pattern.coerce(regexpr, hint='regex')
@@ -336,9 +387,11 @@ def sedfile(fpath, regexpr, repl, dry=False, verbose=1):
         # This does not preserve exception type
         # raise Exception('Failed to sedfile fpath = {!r}'.format(fpath)) from ex
 
-    changed_lines = [(newline, line)
-                     for newline, line in zip(new_file_lines, file_lines)
-                     if  newline != line]
+    changed_lines = [
+        (newline, line)
+        for newline, line in zip(new_file_lines, file_lines)
+        if newline != line
+    ]
     nChanged = len(changed_lines)
     if nChanged > 0:
         try:
@@ -348,8 +401,11 @@ def sedfile(fpath, regexpr, repl, dry=False, verbose=1):
             rel_fpath = abspath(fpath)
 
         if verbose:
-            print(' * {} changed {} lines in {!r} '.format(
-                mode_text, nChanged, rel_fpath))
+            print(
+                ' * {} changed {} lines in {!r} '.format(
+                    mode_text, nChanged, rel_fpath
+                )
+            )
             print(' * --------------------')
         new_file = ''.join(new_file_lines)
         old_file = ''.join(file_lines)
@@ -389,7 +445,7 @@ def grepfile(fpath, regexpr, verbose=1):
         try:
             lines = file.readlines()
         except UnicodeDecodeError:
-            print("UNABLE TO READ fpath={}".format(fpath))
+            print('UNABLE TO READ fpath={}'.format(fpath))
         else:
             grep_result = GrepResult(fpath, pattern)
             grep_result.max_line = len(lines)
@@ -421,6 +477,7 @@ def greptext(text, regexpr, fpath=None, verbose=1):
         None | GrepResult
     """
     from xdev.patterns import Pattern
+
     # from xdev.search_replace import GrepResult
     grep_result = None
     pattern = Pattern.coerce(regexpr, hint='regex')
@@ -428,7 +485,7 @@ def greptext(text, regexpr, fpath=None, verbose=1):
     try:
         lines = text.splitlines()
     except UnicodeDecodeError:
-        print("UNABLE TO READ fpath={}".format(fpath))
+        print('UNABLE TO READ fpath={}'.format(fpath))
     else:
         grep_result = GrepResult(fpath, pattern)
         grep_result.max_line = len(lines)
@@ -449,7 +506,7 @@ def greptext(text, regexpr, fpath=None, verbose=1):
 def _create_test_filesystem():
     dpath = ub.ensure_app_cache_dir('xdev/test_search_replace')
     text1 = ub.paragraph(
-        '''
+        """
         Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
         tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
         veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
@@ -457,10 +514,11 @@ def _create_test_filesystem():
         velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint
         occaecat cupidatat non proident, sunt in culpa qui officia deserunt
         mollit anim id est laborum.
-        ''')
+        """
+    )
 
     text2 = ub.codeblock(
-        '''
+        """
         def fib(n):
             a, b = 0, 1
             while a < n:
@@ -469,10 +527,11 @@ def _create_test_filesystem():
                 print()
 
         fib(1000)
-        ''')
+        """
+    )
 
     text3 = ub.codeblock(
-        '''
+        """
         This file contains Lorem and fib
 
         Newlines
@@ -482,7 +541,8 @@ def _create_test_filesystem():
         lorem
 
         fib
-        ''')
+        """
+    )
 
     text4 = ''
 
@@ -506,6 +566,7 @@ def _create_test_filesystem():
 
     return info
 
+
 if __name__ == '__main__':
     """
     CommandLine:
@@ -513,4 +574,5 @@ if __name__ == '__main__':
         xdoctest ~/code/xdev/xdev/search_replace.py
     """
     import xdoctest
+
     xdoctest.doctest_module(__file__)

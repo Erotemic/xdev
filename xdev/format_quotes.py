@@ -19,6 +19,7 @@ TODO:
 
         * Spaces between operators and commas: `autopep8 --select E225,E226,E231 --in-place <fpath>`
 """
+
 import ubelt as ub
 import re
 import xdev
@@ -110,10 +111,12 @@ def format_quotes_in_text(text, backend='parso'):
             content = value[1:-1]
 
         info['has_internal_quote'] = (
-            SINGLE_QUOTE in content or DOUBLE_QUOTE in content)
+            SINGLE_QUOTE in content or DOUBLE_QUOTE in content
+        )
 
         info['has_internal_triple_quote'] = (
-            TRIPLE_SINGLE_QUOTE in content or TRIPLE_DOUBLE_QUOTE in content)
+            TRIPLE_SINGLE_QUOTE in content or TRIPLE_DOUBLE_QUOTE in content
+        )
 
         new_value = value
 
@@ -122,12 +125,12 @@ def format_quotes_in_text(text, backend='parso'):
             if info['is_docstring']:
                 if not info['has_internal_triple_quote']:
                     new_value = re.sub(
-                        TRIPLE_SINGLE_QUOTE, TRIPLE_DOUBLE_QUOTE, value)
+                        TRIPLE_SINGLE_QUOTE, TRIPLE_DOUBLE_QUOTE, value
+                    )
         if info['quote_type'] == 'double':
             if not info['is_docstring']:
                 if not info['has_internal_quote']:
-                    new_value = re.sub(
-                        DOUBLE_QUOTE, SINGLE_QUOTE, value)
+                    new_value = re.sub(DOUBLE_QUOTE, SINGLE_QUOTE, value)
         return new_value
 
     if backend == 'parso':
@@ -137,10 +140,11 @@ def format_quotes_in_text(text, backend='parso'):
         class MyNormalizer(Normalizer):
             def visit(self, node):
                 if node.type == 'string':
-
                     try:
                         is_docstring = node.parent.parent.parent.type in {
-                            'funcdef', 'classdef'}
+                            'funcdef',
+                            'classdef',
+                        }
                     except Exception:
                         is_docstring = False
                         ...
@@ -149,7 +153,9 @@ def format_quotes_in_text(text, backend='parso'):
                     # print(f'is_docstring={is_docstring}')
                     # print(f'node.type={node.type}')
                     # print(f'node.value={node.value}')
-                    new_value = fix_string_value(node.value, is_docstring=is_docstring)
+                    new_value = fix_string_value(
+                        node.value, is_docstring=is_docstring
+                    )
                     node.value = new_value
                     # print(f'new_value={new_value}')
                 return super().visit(node)
@@ -161,10 +167,10 @@ def format_quotes_in_text(text, backend='parso'):
     elif backend == 'redbaron':
         # TODO: deprecate, redbaron is no longer maintained
         import redbaron
+
         red = redbaron.RedBaron(text)
 
         for found in red.find_all('string'):
-
             value = found.value
             if isinstance(found.parent, redbaron.RedBaron):
                 # module docstring or global string
@@ -235,6 +241,7 @@ def format_quotes(path, diff=True, write=False, verbose=3, recursive=True):
     # pat = search_replace.Pattern.coerce(str(path))
 
     import pathlib
+
     path = pathlib.Path(path)
 
     if path.is_file():
@@ -246,12 +253,14 @@ def format_quotes(path, diff=True, write=False, verbose=3, recursive=True):
             print('Format directory')
         import os
         from os.path import join
+
         for r, ds, fs in os.walk(path):
             for f in fs:
                 if f.endswith('.py'):
                     fpath = join(r, f)
                     format_quotes_in_file(
-                        fpath, diff=diff, write=write, verbose=verbose)
+                        fpath, diff=diff, write=write, verbose=verbose
+                    )
             if not recursive:
                 break
     else:
@@ -267,4 +276,5 @@ def format_quotes(path, diff=True, write=False, verbose=3, recursive=True):
 
 if __name__ == '__main__':
     import fire  # type: ignore
+
     fire.Fire(format_quotes)

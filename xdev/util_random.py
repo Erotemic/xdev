@@ -7,13 +7,15 @@ Implements a version of `ensure_rng` that does not require on numpy (but allows
 for it). This mirrors :kwarray:`ensure_rng`, which is a numpy-first
 implementation.
 """
+
 import random
+
 try:
     import numpy as np
 except ImportError:
     np = None  # type: ignore
 
-_SEED_MAX = int(2 ** 32 - 1)
+_SEED_MAX = int(2**32 - 1)
 
 
 def _npstate_to_pystate(npstate):
@@ -96,7 +98,8 @@ def _coerce_rng_type(rng):
         rng = int(rng)
     else:
         raise TypeError(
-            'Cannot coerce {!r} to a random object'.format(type(rng)))
+            'Cannot coerce {!r} to a random object'.format(type(rng))
+        )
     return rng
 
 

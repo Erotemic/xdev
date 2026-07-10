@@ -34,6 +34,7 @@ class InteractiveShellEmbedEnhanced(InteractiveShellEmbed):
     It may be because of that IPython compiles the whole cell and run it using exec(code, globals, locals).
     But globals and locals are calculated at the time this context manager is defined.
     """
+
     @property
     def user_global_ns(self):
         if getattr(self, 'embedded_outside_func', False):
@@ -56,7 +57,7 @@ class InteractiveShellEmbedEnhanced(InteractiveShellEmbed):
 
             # user aliases to input and output histories.  These shouldn't show up
             # in %who, as they can have very large reprs.
-            self._ns['In']  = self.history_manager.input_hist_parsed  # type: ignore
+            self._ns['In'] = self.history_manager.input_hist_parsed  # type: ignore
             self._ns['Out'] = self.history_manager.output_hist  # type: ignore
 
             # Store myself as the public api!!!
@@ -84,7 +85,7 @@ class InteractiveShellEmbedEnhanced(InteractiveShellEmbed):
         """
         share the locals to global manually
         """
-        if (id(self.user_ns) != id(self.user_module.__dict__)):
+        if id(self.user_ns) != id(self.user_module.__dict__):
             self.user_module.__dict__.update(self.user_ns)
 
 
@@ -98,14 +99,15 @@ def embed2(local_ns=None, **kwargs):
     import glob
     import os
     from IPython.core.interactiveshell import InteractiveShell
+
     config = kwargs.get('config')
-    header = kwargs.pop('header', u'')
+    header = kwargs.pop('header', '')
     compile_flags = kwargs.pop('compile_flags', None)
     if config is None:
         config = load_default_config()
         config.InteractiveShellEmbedEnhanced = config.TerminalInteractiveShell
         kwargs['config'] = config
-    #save ps1/ps2 if defined
+    # save ps1/ps2 if defined
     ps1 = None
     ps2 = None
     try:
@@ -113,7 +115,7 @@ def embed2(local_ns=None, **kwargs):
         ps2 = sys.ps2
     except AttributeError:
         pass
-    #save previous instance
+    # save previous instance
     saved_shell_instance = InteractiveShell._instance
     if saved_shell_instance is not None:
         cls = type(saved_shell_instance)
@@ -122,8 +124,10 @@ def embed2(local_ns=None, **kwargs):
 
     # shell is the ipython instance returned from get_ipython()
     # frame refers to the caller of this function
-    shell = InteractiveShellEmbedEnhanced.instance(_init_location_id='%s:%s' % (
-        frame.f_code.co_filename, frame.f_lineno), **kwargs)
+    shell = InteractiveShellEmbedEnhanced.instance(
+        _init_location_id='%s:%s' % (frame.f_code.co_filename, frame.f_lineno),
+        **kwargs,
+    )
     shell.init_frame(frame)
 
     #######################
@@ -136,8 +140,12 @@ def embed2(local_ns=None, **kwargs):
     global_ns['ipy'] = shell
     global_ns['share_locals'] = shell.share_locals
 
-    startup_files = glob.glob(os.path.join(shell.profile_dir.startup_dir, '*.py'))  # type: ignore
-    startup_files += glob.glob(os.path.join(shell.profile_dir.startup_dir, '*.ipy'))  # type: ignore
+    startup_files = glob.glob(
+        os.path.join(shell.profile_dir.startup_dir, '*.py')
+    )  # type: ignore
+    startup_files += glob.glob(
+        os.path.join(shell.profile_dir.startup_dir, '*.ipy')
+    )  # type: ignore
 
     if '__file__' in global_ns:
         hasfile = True
@@ -150,7 +158,9 @@ def embed2(local_ns=None, **kwargs):
             shell.safe_execfile_ipy(filename)
         else:
             global_ns['__file__'] = filename
-            shell.safe_execfile(filename, global_ns, raise_exceptions=True)  # this updates the global_ns
+            shell.safe_execfile(
+                filename, global_ns, raise_exceptions=True
+            )  # this updates the global_ns
 
     if hasfile:
         global_ns['__file__'] = cfile
@@ -160,10 +170,15 @@ def embed2(local_ns=None, **kwargs):
     ########################
     #  launch the shell
     #######################
-    shell(local_ns=local_ns, header=header, stack_depth=2, compile_flags=compile_flags,
-          _call_location_id='%s:%s' % (frame.f_code.co_filename, frame.f_lineno))
+    shell(
+        local_ns=local_ns,
+        header=header,
+        stack_depth=2,
+        compile_flags=compile_flags,
+        _call_location_id='%s:%s' % (frame.f_code.co_filename, frame.f_lineno),
+    )
     InteractiveShellEmbedEnhanced.clear_instance()
-    #restore previous instance
+    # restore previous instance
     if saved_shell_instance is not None:
         cls = type(saved_shell_instance)
         cls.clear_instance()

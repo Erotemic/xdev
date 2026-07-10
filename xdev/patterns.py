@@ -12,6 +12,7 @@ Note:
 TODO:
     rectify with xdev / whatever package this goes in
 """
+
 import os
 import re
 import fnmatch
@@ -27,9 +28,11 @@ else:
 try:
     import parse
 except ImportError:
+
     class FakeParseModule:
         def Parser(self, *args, **kwargs):
             raise ImportError('Unable to import parse')
+
     parse = FakeParseModule()  # type: ignore
 
 
@@ -79,7 +82,7 @@ def _maybe_expandable_glob(pat):
             strict matching). if True, then there are special glob characters
             in the string, but it is not guarenteed to be a valid glob pattern.
     """
-    return ('*' in pat or '?' in pat or ('[' in pat and ']' in pat))
+    return '*' in pat or '?' in pat or ('[' in pat and ']' in pat)
 
 
 class Pattern(PatternBase, ub.NiceRepr):
@@ -176,8 +179,9 @@ class Pattern(PatternBase, ub.NiceRepr):
         return new
 
     @classmethod
-    def from_regex(cls, data, flags=0, multiline=False, dotall=False,
-                   ignorecase=False):
+    def from_regex(
+        cls, data, flags=0, multiline=False, dotall=False, ignorecase=False
+    ):
         """
         Create a Pattern object with a regex backend.
         """
@@ -305,14 +309,17 @@ class Pattern(PatternBase, ub.NiceRepr):
             ub.Path
         """
         from ubelt.util_path import ChDir
+
         if self.backend == 'glob':
             import glob
+
             with ChDir(cwd):
-                yield from map(ub.Path, glob.glob(
-                    self.pattern, recursive=recursive))  # type: ignore
+                yield from map(
+                    ub.Path, glob.glob(self.pattern, recursive=recursive)
+                )  # type: ignore
         elif self.backend == 'strict':
             with ChDir(cwd):
-                p  = ub.Path(self.pattern)  # type: ignore
+                p = ub.Path(self.pattern)  # type: ignore
                 if p.exists():
                     yield p
         else:
@@ -445,7 +452,8 @@ class MultiPattern(PatternBase, ub.NiceRepr):
                 patterns = [pat]
                 self = MultiPattern(patterns, predicate)
             else:
-                self = MultiPattern([
-                    MultiPattern.coerce(d, hint)._squeeze()
-                    for d in data], predicate)
+                self = MultiPattern(
+                    [MultiPattern.coerce(d, hint)._squeeze() for d in data],
+                    predicate,
+                )
         return self

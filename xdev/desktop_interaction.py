@@ -1,6 +1,7 @@
 """
 Functions related to interacting with data via an OS Desktop GUI.
 """
+
 from os.path import normpath
 from os.path import exists
 import sys
@@ -37,22 +38,27 @@ def _coerce_editable_fpath(target):
     elif isinstance(target, os.PathLike):
         fpath = ub.Path(target)
     elif hasattr(target, '__module__'):
-        fpath =  ub.Path(sys.modules[target.__module__].__file__)  # type: ignore
+        fpath = ub.Path(sys.modules[target.__module__].__file__)  # type: ignore
     else:
-        raise TypeError(f"Unable to coerce {target} into a file path")
+        raise TypeError(f'Unable to coerce {target} into a file path')
 
     if fpath is None:
         # Is it a package name?
         import pkg_resources  # type: ignore
+
         try:
             distribution = pkg_resources.get_distribution(target)
-            top_level_names = list(distribution.get_metadata_lines("top_level.txt"))
+            top_level_names = list(
+                distribution.get_metadata_lines('top_level.txt')
+            )
             if len(top_level_names) == 0:
                 raise AssertionError('is this possible? I hope not')
             elif len(top_level_names) > 1:
                 import warnings
+
                 warnings.warn(
-                    'Multiple top-level names were installed for this package, only choosing the first')
+                    'Multiple top-level names were installed for this package, only choosing the first'
+                )
             name = top_level_names[0]
             fpath = ub.modname_to_modpath(name)
             if fpath is not None:
@@ -63,7 +69,9 @@ def _coerce_editable_fpath(target):
             ...
 
     if fpath is None:
-        raise Exception(f"Unable to interpret {target} as a module name or file path")
+        raise Exception(
+            f'Unable to interpret {target} as a module name or file path'
+        )
 
     # Resolve a pyc file to a py file if possible.
     if fpath.suffix == '.pyc':  # type: ignore
@@ -82,15 +90,17 @@ def _find_editor():
     editor_fpath = editor_name and ub.find_exe(editor_name)
     if editor_fpath is None:
         if editor_name is not None:
-            warnings.warn('User specified VISUAL={editor_name}, but it does not exist.', UserWarning)
+            warnings.warn(
+                'User specified VISUAL={editor_name}, but it does not exist.',
+                UserWarning,
+            )
         # Try and fallback on commonly installed editor
         # TODO: add more editors in an opinionated order
         editor_candidates = [
             'gvim',
             'code',  # visual studio code
             'gedit',
-            'TextEdit'
-            'Notepad',
+            'TextEditNotepad',
         ]
         for cand_name in editor_candidates:
             cand_fpath = ub.find_exe(cand_name)
@@ -165,10 +175,13 @@ def view_directory(dpath=None, verbose=False):
         try:
             import vimtk.xctrl
             import vimtk.cplat_ctrl
+
             if vimtk.xctrl.is_directory_open(dpath):
                 if verbose:
                     print('[xdev] dpath={!r} is already open'.format(dpath))
-                win = vimtk.cplat_ctrl.Window.find('Nautilus.*' + os.path.basename(dpath))
+                win = vimtk.cplat_ctrl.Window.find(
+                    'Nautilus.*' + os.path.basename(dpath)
+                )
                 win.focus()
                 return
         except Exception:
@@ -216,6 +229,7 @@ def startfile(fpath, verbose=True):
         raise Exception('Cannot start nonexistant file: {!r}'.format(fpath))
     if not ub.WIN32:
         import shlex
+
         fpath = shlex.quote(fpath)
     if ub.LINUX:
         info = ub.cmd(('xdg-open', fpath), detach=True, verbose=verbose)

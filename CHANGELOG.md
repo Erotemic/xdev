@@ -5,7 +5,16 @@ We are currently working on porting this changelog to the specifications in
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
-## Version 1.5.5 - Unreleased
+## Version 1.5.6 - Unreleased
+
+### Changed
+* Replace the `scriptconfig` runtime dependency and CLI definitions with
+  `kwconf >= 0.10.0`.
+* `dirstats` now respects Git ignore rules by default, with `--no-ignore`
+  aliases to restore unrestricted traversal.
+
+
+## Version 1.5.5 - Released 2026-05-22
 
 ### Added
 * `set_overlaps` now has an `n_samples` keyword argument.

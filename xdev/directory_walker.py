@@ -1,9 +1,277 @@
+import contextlib
 import os
+import subprocess
+
+import networkx as nx
 import rich
 import ubelt as ub
-import networkx as nx
-from xdev.patterns import MultiPattern
 from progiter.manager import ProgressManager
+
+from xdev.patterns import MultiPattern
+
+STAT_COLUMN_ORDER = [
+    'files',
+    'main_code',
+    'main_comments',
+    'size',
+    'test_code',
+    'test_comments',
+    'total',
+]
+
+LINE_ANALYSIS_COLUMNS = frozenset({
+    'main_code',
+    'main_comments',
+    'test_code',
+    'test_comments',
+    'code_lines',
+    'comment_lines',
+    'doc_lines',
+})
+
+
+class _GitIgnoreMatcher:
+    """Query Git's native ignore engine through one persistent subprocess."""
+
+    _QUERY_CHUNK_BYTES = 4096
+
+    def __init__(self, repo_root, proc):
+        self.repo_root = ub.Path(repo_root).absolute()
+        self.proc = proc
+
+    @classmethod
+    def from_path(cls, path):
+        """Create a matcher for the worktree containing ``path`` if any."""
+        path = ub.Path(path).absolute()
+        env = os.environ.copy()
+        env.setdefault('GIT_OPTIONAL_LOCKS', '0')
+        try:
+            info = subprocess.run(
+                ['git', '-C', os.fspath(path), 'rev-parse', '--show-toplevel'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                env=env,
+            )
+        except OSError:
+            return None
+        if info.returncode != 0:
+            return None
+
+        repo_root = ub.Path(os.fsdecode(info.stdout.rstrip(b'\r\n')))
+        try:
+            proc = subprocess.Popen(
+                [
+                    'git',
+                    '-C',
+                    os.fspath(repo_root),
+                    'check-ignore',
+                    '--stdin',
+                    '-z',
+                    '--verbose',
+                    '--non-matching',
+                    '--no-index',
+                ],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                env=env,
+            )
+        except OSError:
+            return None
+        return cls(repo_root, proc)
+
+    @staticmethod
+    def _read_nul_field(stream):
+        """Read one NUL-terminated byte field from a buffered stream."""
+        field = bytearray()
+        while True:
+            char = stream.read(1)
+            if not char:
+                raise EOFError('git check-ignore terminated unexpectedly')
+            if char == b'\0':
+                return bytes(field)
+            field.extend(char)
+
+    def _relative_query(self, path):
+        path = ub.Path(path).absolute()
+        try:
+            relpath = path.relative_to(self.repo_root)
+        except ValueError:
+            return None
+        query = os.fsencode(os.fspath(relpath))
+        if os.path.sep != '/':
+            query = query.replace(os.fsencode(os.path.sep), b'/')
+        return query
+
+    def ignored(self, paths):
+        """Return flags indicating which paths match an active ignore rule."""
+        paths = list(paths)
+        flags = [False] * len(paths)
+        if self.proc is None:
+            return flags
+
+        indexed_queries = []
+        for index, path in enumerate(paths):
+            query = self._relative_query(path)
+            if query is not None:
+                indexed_queries.append((index, query))
+
+        query_chunks = []
+        chunk = []
+        chunk_size = 0
+        for item in indexed_queries:
+            item_size = len(item[1]) + 1
+            if chunk and chunk_size + item_size > self._QUERY_CHUNK_BYTES:
+                query_chunks.append(chunk)
+                chunk = []
+                chunk_size = 0
+            chunk.append(item)
+            chunk_size += item_size
+        if chunk:
+            query_chunks.append(chunk)
+
+        try:
+            for chunk in query_chunks:
+                payload = b''.join(query + b'\0' for _, query in chunk)
+                self.proc.stdin.write(payload)
+                self.proc.stdin.flush()
+                for index, _query in chunk:
+                    source = self._read_nul_field(self.proc.stdout)
+                    _lineno = self._read_nul_field(self.proc.stdout)
+                    pattern = self._read_nul_field(self.proc.stdout)
+                    _pathname = self._read_nul_field(self.proc.stdout)
+                    flags[index] = bool(source) and not pattern.startswith(b'!')
+        except (BrokenPipeError, EOFError, OSError):
+            self.close()
+        return flags
+
+    def close(self):
+        proc = self.proc
+        self.proc = None
+        if proc is None:
+            return
+        try:
+            if proc.stdin is not None:
+                proc.stdin.close()
+            proc.wait(timeout=1)
+        except (OSError, subprocess.TimeoutExpired):
+            proc.kill()
+            proc.wait()
+        finally:
+            if proc.stdout is not None:
+                proc.stdout.close()
+
+
+class _GitIgnoreManager:
+    """Select the nearest Git worktree matcher while walking nested repos."""
+
+    def __init__(self, walk_root):
+        self.matchers = {}
+        self._register(walk_root)
+
+    def _register(self, path):
+        matcher = _GitIgnoreMatcher.from_path(path)
+        if matcher is None:
+            return None
+        existing = self.matchers.get(matcher.repo_root)
+        if existing is not None:
+            matcher.close()
+            return existing
+        self.matchers[matcher.repo_root] = matcher
+        return matcher
+
+    def _matcher_for(self, path):
+        path = ub.Path(path).absolute()
+        candidates = []
+        for repo_root, matcher in self.matchers.items():
+            try:
+                path.relative_to(repo_root)
+            except ValueError:
+                continue
+            candidates.append((len(repo_root.parts), matcher))
+        if candidates:
+            return max(candidates, key=lambda item: item[0])[1]
+        return None
+
+    def register_if_repo(self, root, dnames, fnames):
+        # A nested worktree can be represented by either a .git directory or
+        # a .git text file (worktrees and submodules use the latter).
+        root = ub.Path(root).absolute()
+        if (
+            root not in self.matchers
+            and ('.git' in dnames or '.git' in fnames)
+        ):
+            self._register(root)
+
+    def filter(self, root, dnames, fnames):
+        root = ub.Path(root).absolute()
+        matcher = self._matcher_for(root)
+        if matcher is None:
+            return
+
+        dpaths = [root / name for name in dnames]
+        fpaths = [root / name for name in fnames]
+        dflags = matcher.ignored(dpaths)
+        fflags = matcher.ignored(fpaths)
+        dnames[:] = [name for name, ignored in zip(dnames, dflags) if not ignored]
+        fnames[:] = [name for name, ignored in zip(fnames, fflags) if not ignored]
+
+    def close(self):
+        for matcher in self.matchers.values():
+            matcher.close()
+        self.matchers.clear()
+
+
+def _order_columns(df, extra_last=('name',)):
+    """Keep dirstats tables compact and stable."""
+    existing = list(df.columns)
+    preferred = [c for c in STAT_COLUMN_ORDER if c in existing]
+    extra_last = [c for c in extra_last if c in existing]
+    middle = [c for c in existing if c not in preferred and c not in extra_last]
+    return df[preferred + middle + extra_last]
+
+
+def _summarize_stats_for_display(stats):
+    """Return one coherent compact stats row from prefixed file stats.
+
+    Raw file stats are keyed by extension, e.g. ``rs.total`` and
+    ``md.total``.  Full extension tables preserve every extension row, but
+    compact path summaries should keep line-oriented columns in a coherent
+    file universe.  Prefer extensions that actually contributed line totals or
+    source-analysis breakdowns; fall back to all extensions when no line
+    information is present.
+    """
+    selected_exts = set()
+    all_exts = set()
+    for key in stats.keys():
+        if '.' not in key:
+            ext = ''
+            kind = key
+        else:
+            ext, kind = key.split('.', 1)
+        all_exts.add(ext)
+        if kind == 'total' or kind in LINE_ANALYSIS_COLUMNS:
+            selected_exts.add(ext)
+
+    if not selected_exts:
+        selected_exts = all_exts
+
+    summary = {}
+    for key, value in stats.items():
+        if '.' not in key:
+            ext = ''
+            kind = key
+        else:
+            ext, kind = key.split('.', 1)
+        if ext in selected_exts:
+            summary[kind] = summary.get(kind, 0) + value
+    return summary
+
+
+def _stats_total(stats):
+    """Display total logical text lines from a node stats dict."""
+    return _summarize_stats_for_display(stats).get('total', 0)
 
 
 class DirectoryWalker:
@@ -22,20 +290,26 @@ class DirectoryWalker:
         >>> self.write_network_text()
     """
 
-    def __init__(self,
-                 dpath,
-                 exclude_dnames=None,
-                 exclude_fnames=None,
-                 include_dnames=None,
-                 include_fnames=None,
-                 max_walk_depth=None,
-                 max_files=None,
-                 parse_content=False,
-                 show_progress=True,
-                 ignore_empty_dirs=False,
-                 sort=False,
-                 fs=None,
-                 **kwargs):
+    def __init__(
+        self,
+        dpath,
+        exclude_dnames=None,
+        exclude_fnames=None,
+        include_dnames=None,
+        include_fnames=None,
+        max_walk_depth=None,
+        max_files=None,
+        parse_content=False,
+        python=False,
+        rust=False,
+        textlines=None,
+        respect_gitignore=True,
+        show_progress=True,
+        ignore_empty_dirs=False,
+        sort=False,
+        fs=None,
+        **kwargs,
+    ):
         """
         Args:
             dpath (str | PathLike): the path to walk
@@ -59,7 +333,24 @@ class DirectoryWalker:
                 how far to recurse
 
             parse_content (bool):
-                if True, include content analysis
+                if True, count total lines for text-like files.
+
+            python (bool):
+                if True, enable Python code/doc line analysis.
+
+            rust (bool):
+                if True, enable Rust code/comment line analysis, with test splitting.
+
+            textlines (None | str | Iterable[str]):
+                Additional generic text extensions to count raw ``total``
+                lines for when language analyzers are enabled.  Extensions may
+                be given with or without leading dots.  Comma-separated strings
+                such as ``'md,rst'`` are accepted.
+
+            respect_gitignore (bool):
+                if True, exclude paths matched by Git ignore rules. This uses
+                nested ``.gitignore`` files, ``.git/info/exclude``, and the
+                configured global excludes file when walking a Git worktree.
 
             sort (bool):
                 if True, sort files and directories before adding them to the
@@ -72,7 +363,9 @@ class DirectoryWalker:
         """
         if 'block_fnames' in kwargs:
             ub.schedule_deprecation(
-                'xdev', 'DirectoryWalker block_fnames', 'arg',
+                'xdev',
+                'DirectoryWalker block_fnames',
+                'arg',
                 migration='Use exclude_fnames instead',
                 deprecate='now',
             )
@@ -81,7 +374,9 @@ class DirectoryWalker:
             exclude_fnames = kwargs.pop('block_fnames')
         if 'block_dnames' in kwargs:
             ub.schedule_deprecation(
-                'xdev', 'DirectoryWalker block_dnames', 'arg',
+                'xdev',
+                'DirectoryWalker block_dnames',
+                'arg',
                 migration='Use exclude_dnames instead',
                 deprecate='now',
             )
@@ -96,6 +391,10 @@ class DirectoryWalker:
         self.include_dnames = _null_coerce(MultiPattern, include_dnames)
         self.max_walk_depth = max_walk_depth
         self.parse_content = parse_content
+        self.python = python
+        self.rust = rust
+        self.textline_exts = _coerce_textline_exts(textlines)
+        self.respect_gitignore = respect_gitignore
         self.max_files = max_files
         self.show_progress = show_progress
         self.ignore_empty_dirs = ignore_empty_dirs
@@ -130,6 +429,173 @@ class DirectoryWalker:
 
     def write_network_text(self, **kwargs):
         nx.write_network_text(self.graph, rich.print, end='', **kwargs)
+
+    def _stats_table_for_node(self, node, humanize=False):
+        """
+        Return an extension-by-kind stats table for one graph node.
+
+        The table is intentionally compact and uses the same column naming
+        convention as the CLI display: ``main_*`` / ``test_*`` / ``total``.
+        """
+        import pandas as pd  # type: ignore
+
+        node_data = self.graph.nodes[node]  # type: ignore
+        stats = node_data.get('stats', {})
+        stat_rows = []
+        for key, value in stats.items():
+            ext, kind = key.split('.', 1)
+            if not ext:
+                ext = '*null*'
+            stat_rows.append({'ext': ext, 'kind': kind, 'value': value})
+
+        if stat_rows:
+            table = pd.DataFrame(stat_rows)
+            piv = table.pivot_table(
+                index='ext',
+                columns='kind',
+                values='value',
+                aggfunc='sum',
+                fill_value=0,
+            )
+            if 'size' in piv.columns:
+                piv = piv.sort_values('size')
+        else:
+            piv = pd.DataFrame(
+                [],
+                index=pd.Index([], name='ext'),
+                columns=pd.Index(['files', 'size'], name='kind'),
+            )
+
+        if len(piv):
+            totals = piv.sum(axis=0)
+        else:
+            totals = pd.Series({'files': 0, 'size': 0})
+        piv.loc['∑ total'] = totals
+
+        for col in piv.columns:
+            if col != 'size':
+                try:
+                    piv[col] = piv[col].fillna(0).astype(int)
+                except (TypeError, ValueError):
+                    pass
+
+        if humanize and 'size' in piv.columns:
+            piv = piv.copy()
+            piv['size'] = piv['size'].fillna(0).astype(int).apply(byte_str)
+
+        piv = _order_columns(piv, extra_last=())
+        return piv
+
+    def _summary_row_for_node(self, node, *, humanize=True):
+        """Return the compact aggregate row for a graph node.
+
+        When source-analysis columns such as ``main_code`` are present, keep
+        ``files`` / ``size`` / ``total`` in the same extension universe as the
+        breakdown columns.  Otherwise, aggregate all text-like totals.
+        """
+        node_data = self.graph.nodes[node]  # type: ignore
+        stats = node_data.get('stats', {})
+        if stats:
+            row = _summarize_stats_for_display(stats)
+        else:
+            row = {'files': 0, 'size': 0}
+        clean = {}
+        for key, value in row.items():
+            if key == 'size':
+                try:
+                    size = int(value)
+                except (TypeError, ValueError):
+                    size = 0
+                clean[key] = byte_str(size) if humanize else size
+            else:
+                try:
+                    clean[key] = int(value)
+                except (TypeError, ValueError):
+                    clean[key] = value
+        return clean
+
+    def stats_table(
+        self, max_depth=1, include_files=True, max_rows=None, humanize=True
+    ):
+        """
+        Return a path-by-stats table suitable for plain-text reports.
+
+        Args:
+            max_depth (int | None): maximum graph depth to include. ``None``
+                includes every node under the root.
+            include_files (bool): if False, only directory rows are emitted.
+            max_rows (int | None): optional row limit for very large reports.
+            humanize (bool): if True, format byte sizes for display.
+        """
+        import pandas as pd  # type: ignore
+
+        if self.graph is None:
+            raise RuntimeError('stats_table() requires build() first')
+        root = self.root
+        rows = []
+
+        def rec(node, depth):
+            if max_rows is not None and len(rows) >= max_rows:
+                return
+            node_data = self.graph.nodes[node]  # type: ignore
+            if depth > 0 and (include_files or node_data['type'] == 'dir'):
+                row = self._summary_row_for_node(node, humanize=humanize)
+                try:
+                    rel = node.relative_to(root)
+                    name = rel.as_posix()
+                except Exception:
+                    name = os.fspath(node)
+                row['name'] = name
+                rows.append(row)
+            if max_depth is not None and depth >= max_depth:
+                return
+            if node_data['type'] == 'dir':
+                for child in self.graph.succ[node]:  # type: ignore
+                    rec(child, depth + 1)
+
+        rec(root, 0)
+        df = pd.DataFrame(rows)
+        if len(df):
+            df = _order_columns(df, extra_last=('name',))
+        else:
+            df = pd.DataFrame(columns=STAT_COLUMN_ORDER + ['name'])
+        return df
+
+    def extension_stats_table(self, humanize=True):
+        """Return extension-level stats for the root node."""
+        if self.graph is None:
+            raise RuntimeError('extension_stats_table() requires build() first')
+        return self._stats_table_for_node(self.root, humanize=humanize)
+
+    def dirstats_text(self, max_depth=1, max_rows=None, include_files=True):
+        """Return a stable plain-text dirstats report."""
+        lines = []
+        lines.append(f'Stats root: {self.root}')
+        lines.append(
+            f'Max display depth: {max_depth if max_depth is not None else "full"}'
+        )
+        lines.append('')
+        lines.append('Path summary:')
+        path_df = self.stats_table(
+            max_depth=max_depth,
+            include_files=include_files,
+            max_rows=max_rows,
+            humanize=True,
+        )
+        if len(path_df):
+            lines.append(path_df.to_string(index=False))
+            if max_rows is not None and len(path_df) >= max_rows:
+                lines.append(f'... truncated after {max_rows} rows ...')
+        else:
+            lines.append('(no child paths)')
+        lines.append('')
+        lines.append('Extension summary:')
+        ext_df = self.extension_stats_table(humanize=True)
+        if len(ext_df):
+            lines.append(ext_df.to_string())
+        else:
+            lines.append('(no extension stats)')
+        return '\n'.join(lines)
 
     def write_report(self, max_nodes=10, **nxtxt_kwargs):
         """
@@ -201,7 +667,11 @@ class DirectoryWalker:
                 piv = table.pivot(index='ext', columns='kind', values='value')
                 piv = piv.sort_values('size')
             else:
-                piv = pd.DataFrame([], index=pd.Index([], name='ext'), columns=pd.Index(['size', 'files'], name='kind'))
+                piv = pd.DataFrame(
+                    [],
+                    index=pd.Index([], name='ext'),
+                    columns=pd.Index(['size', 'files'], name='kind'),
+                )
 
             totals = piv.sum(axis=0)
             disp_totals = totals.copy()
@@ -212,20 +682,21 @@ class DirectoryWalker:
             disp_piv = disp_piv.fillna('--')
             disp_piv.loc['∑ total'] = disp_totals
             disp_piv['files'] = disp_piv['files'].astype(int)
+            disp_piv = _order_columns(disp_piv, extra_last=())
             return disp_piv
 
         if root_node:
             child_rows = []
             for node in self.graph.succ[root_node]:  # type: ignore
-                disp_piv = _node_table(node)
-                row = disp_piv.iloc[-1].to_dict()
+                row = self._summary_row_for_node(node, humanize=True)
                 row['name'] = self.graph.nodes[node]['name']  # type: ignore
                 child_rows.append(row)
             if child_rows:
                 print('')
                 df = pd.DataFrame(child_rows)
-                if 'total_lines' in df.columns:
-                    df = df.sort_values('total_lines')
+                if 'total' in df.columns:
+                    df = df.sort_values('total')
+                df = _order_columns(df, extra_last=('name',))
                 rich.print(df)
                 # if self.graph.nodes[node]['type'] == 'dir':
                 # print(f'node={node}')
@@ -247,6 +718,7 @@ class DirectoryWalker:
             table = sorted(table, key=lambda r: r['path_stat'].st_mtime)
             for row in table:
                 import xdev
+
                 time = xdev.datetime.coerce(row['path_stat'].st_mtime)
                 if 'dev' in str(row['path']):
                     print(time, row['path'])
@@ -302,8 +774,14 @@ class DirectoryWalker:
 
         max_files = self.max_files
 
+        ignore_manager = None
+        if self.respect_gitignore and self.fs is None:
+            ignore_manager = _GitIgnoreManager(dpath)
+
         pman = ProgressManager(enabled=self.show_progress)
-        with pman:
+        with pman, contextlib.ExitStack() as stack:
+            if ignore_manager is not None:
+                stack.callback(ignore_manager.close)
             prog = pman.progiter(desc='Walking directory')
 
             if self.max_walk_depth is not None:
@@ -315,7 +793,6 @@ class DirectoryWalker:
                 walkgen = self.fs.walk(os.fspath(dpath))
 
             for root, dnames, fnames in walkgen:
-
                 if self.fs is not None:
                     root = ub.Path(root)
 
@@ -328,19 +805,26 @@ class DirectoryWalker:
 
                 if self.max_walk_depth is not None:
                     curr_depth = str(root).count(os.path.sep)
-                    rel_depth = (curr_depth - start_depth)
+                    rel_depth = curr_depth - start_depth
                     if rel_depth >= self.max_walk_depth:
                         del dnames[:]
+
+                if ignore_manager is not None:
+                    ignore_manager.register_if_repo(root, dnames, fnames)
 
                 # Remove directories / files that match the blocklist or dont
                 # match the include list
                 self._inplace_filter_dnames(dnames)
                 self._inplace_filter_fnames(fnames)
+                if ignore_manager is not None:
+                    ignore_manager.filter(root, dnames, fnames)
 
                 root_attrs['num_dirs'] = len(dnames)
                 root_attrs['num_files'] = num_files = len(fnames)
 
-                too_many_files = max_files is not None and num_files >= max_files
+                too_many_files = (
+                    max_files is not None and num_files >= max_files
+                )
                 if too_many_files:
                     root_attrs['too_many_files'] = too_many_files
 
@@ -362,12 +846,19 @@ class DirectoryWalker:
                 if not too_many_files:
                     for f in fnames:
                         fpath = root / f
-                        g.add_node(fpath, name=fpath.name, label=fpath.name, type='file')
+                        g.add_node(
+                            fpath,
+                            name=fpath.name,
+                            label=fpath.name,
+                            type='file',
+                        )
                         g.add_edge(root, fpath)
 
                 for d in dnames:
                     dpath = root / d
-                    g.add_node(dpath, name=dpath.name, label=dpath.name, type='dir')
+                    g.add_node(
+                        dpath, name=dpath.name, label=dpath.name, type='dir'
+                    )
                     g.add_edge(root, dpath)
 
         self._topo_order = list(nx.topological_sort(g))
@@ -430,13 +921,19 @@ class DirectoryWalker:
         fs = self.fs
 
         # Get size stats for each file.
-        pman = ProgressManager()
+        pman = ProgressManager(enabled=self.show_progress)
         with pman:
             prog = pman.progiter(desc='Parse File Info', total=len(g))  # type: ignore
             for fpath, node_data in g.nodes(data=True):  # type: ignore
                 if node_data['type'] == 'file':
-                    stats = parse_file_stats(fpath,
-                                             parse_content=self.parse_content, fs=fs)
+                    stats = parse_file_stats(
+                        fpath,
+                        parse_content=self.parse_content,
+                        parse_python=self.python,
+                        parse_rust=self.rust,
+                        textline_exts=self.textline_exts,
+                        fs=fs,
+                    )
                     node_data['stats'] = stats
                 prog.step()
         self._accum_stats()
@@ -445,13 +942,21 @@ class DirectoryWalker:
 
         # Variant that uses parallel process boilerplate
         def worker(fpath):
-            stats = parse_file_stats(fpath, parse_content=self.parse_content)
+            stats = parse_file_stats(
+                fpath,
+                parse_content=self.parse_content,
+                parse_python=self.python,
+                parse_rust=self.rust,
+                textline_exts=self.textline_exts,
+            )
             return stats
 
         self._parallel_process_files(worker, 'Parse File Info')
         self._accum_stats()
 
-    def _parallel_process_files(self, func, desc=None, max_workers=8, mode='thread'):
+    def _parallel_process_files(
+        self, func, desc=None, max_workers=8, mode='thread'
+    ):
         """
         Applies a function to every node.
         """
@@ -473,14 +978,16 @@ class DirectoryWalker:
                 for path, data in graph.nodes(data=True)  # type: ignore
                 if data['isfile']
             ]
-            prog = ub.ProgIter(fpaths, desc=submit_desc, total=len(fpaths),
-                               homogeneous=False)
+            prog = ub.ProgIter(
+                fpaths, desc=submit_desc, total=len(fpaths), homogeneous=False
+            )
             for fpath in prog:
                 job = jobs.submit(func, fpath)
                 job.fpath = fpath  # type: ignore
 
-            for job in ub.ProgIter(jobs.as_completed(), desc=collect_desc,
-                                   total=len(jobs)):
+            for job in ub.ProgIter(
+                jobs.as_completed(), desc=collect_desc, total=len(jobs)
+            ):
                 fpath = job.fpath  # type: ignore
                 result = job.result()
                 yield fpath, result
@@ -491,7 +998,9 @@ class DirectoryWalker:
         Combines stats over the a prefix
         """
         suffixes = [k.split('.', 1)[1] for k in stats.keys()]
-        _stats = ub.udict(ub.group_items(stats.values(), suffixes)).map_values(sum)
+        _stats = ub.udict(ub.group_items(stats.values(), suffixes)).map_values(
+            sum
+        )
         # _stats.update({k: v for k, v in stats.items() if k.endswith('.files')})
         return _stats
 
@@ -535,7 +1044,9 @@ class DirectoryWalker:
             if len(v) > 1:
                 dups.append(k)
         dup_hash_to_paths = hash_to_paths & dups  # type: ignore
-        print('dup_hash_to_paths = {}'.format(ub.urepr(dup_hash_to_paths, nl=2)))
+        print(
+            'dup_hash_to_paths = {}'.format(ub.urepr(dup_hash_to_paths, nl=2))
+        )
 
     def _update_path_metadata(self):
         g = self.graph
@@ -576,6 +1087,7 @@ class DirectoryWalker:
         Update how each node will be displayed
         """
         from os.path import relpath
+
         from rich.markup import escape
 
         label_options = self.label_options
@@ -635,9 +1147,7 @@ class DirectoryWalker:
                 else:
                     show_nfiles_ = show_nfiles
                 if show_nfiles_ and 'num_files' in node_data:
-                    prefix_parts.append(
-                        '[ {} ]'.format(node_data['num_files'])
-                    )
+                    prefix_parts.append('[ {} ]'.format(node_data['num_files']))
             elif node_type == 'file':
                 richlink = False
                 if node_data.get('X_ok', False):
@@ -666,15 +1176,21 @@ class DirectoryWalker:
                     targetrep = escape(targetrep)
                     if target_richlink:
                         import urllib.parse
-                        encoded_target = 'file://' + urllib.parse.quote(os.fspath(target))
+
+                        encoded_target = 'file://' + urllib.parse.quote(
+                            os.fspath(target)
+                        )
                         targetrep = f'[link={encoded_target}]{targetrep}[/link]'
                     targetrep = f'[{target_color}]{targetrep}[/{target_color}]'
 
             if colors:
                 if richlink:
                     import urllib.parse
+
                     pathrep = escape(pathrep)
-                    encoded_path = 'file://' + urllib.parse.quote(os.fspath(path))
+                    encoded_path = 'file://' + urllib.parse.quote(
+                        os.fspath(path)
+                    )
                     pathrep = f'[link={encoded_path}]{pathrep}[/link]'
                 pathrep = f'[{color}]{pathrep}[/{color}]'
 
@@ -696,7 +1212,13 @@ class DirectoryWalker:
             # Sort children by total lines
             children = g.succ[node]  # type: ignore
             children = ub.udict({c: g.nodes[c] for c in children})  # type: ignore
-            children = children.sorted_keys(lambda c: (g.nodes[c]['type'], g.nodes[c].get('stats', {}).get('total_lines', 0)), reverse=True)  # type: ignore
+            children = children.sorted_keys(
+                lambda c: (
+                    g.nodes[c]['type'],
+                    _stats_total(g.nodes[c].get('stats', {})),
+                ),
+                reverse=True,
+            )  # type: ignore
             for c, d in children.items():
                 ordered_nodes.pop(c, None)
                 ordered_nodes[c] = d
@@ -728,6 +1250,7 @@ class DirectoryWalker:
             True
         """
         import os
+
         import ubelt as ub
 
         demo_root = ub.Path.appdir('xdev/directory_walker/demo').ensuredir()
@@ -813,7 +1336,9 @@ class DirectoryWalker:
             ftypes = set(filetype)
             unknown = ftypes - {'f', 'd', 'l'}
             if unknown:
-                raise ValueError(f'unknown filetype chars={sorted(unknown)!r}, expected subset of {{"f","d","l"}}')
+                raise ValueError(
+                    f'unknown filetype chars={sorted(unknown)!r}, expected subset of {{"f","d","l"}}'
+                )
 
         for node in nodes:
             # Match only on node.name
@@ -824,11 +1349,11 @@ class DirectoryWalker:
 
             if ftypes is not None:
                 keep = False
-                if ('l' in ftypes and node_data['islink']):
+                if 'l' in ftypes and node_data['islink']:
                     keep = True
-                if ('f' in ftypes and node_data['isfile']):
+                if 'f' in ftypes and node_data['isfile']:
                     keep = True
-                if ('d' in ftypes and node_data['isdir']):
+                if 'd' in ftypes and node_data['isdir']:
                     keep = True
 
                 if not keep:
@@ -860,7 +1385,9 @@ class DirectoryWalker:
             >>> walker.find_one('foo.txt').name
             'foo.txt'
         """
-        matches = list(self.find(pattern, data=data, root=root, filetype=filetype))
+        matches = list(
+            self.find(pattern, data=data, root=root, filetype=filetype)
+        )
 
         if not matches:
             raise KeyError(f'find_one({pattern!r}) found no matches')
@@ -873,12 +1400,87 @@ class DirectoryWalker:
         return matches[0]
 
 
-def parse_file_stats(fpath, parse_content=True, fs=None):
+def _coerce_textline_exts(textline_exts):
+    """Normalize generic text-line extension configuration.
+
+    Returns:
+        None | set[str]: ``None`` means no explicit generic text-line
+        extension filter was requested.  Otherwise returns normalized suffixes
+        with leading dots, e.g. ``{'.md', '.rst'}``.
     """
-    Get information about a file, including things like number of code lines /
-    documentation lines, if that sort of information is available.
+    if textline_exts is None:
+        return None
+    if textline_exts is False:
+        return set()
+
+    if isinstance(textline_exts, str):
+        import csv
+
+        raw_items = next(csv.reader([textline_exts], skipinitialspace=True))
+    else:
+        raw_items = []
+        for item in textline_exts:
+            if item is None:
+                continue
+            if isinstance(item, str) and ',' in item:
+                import csv
+
+                raw_items.extend(
+                    next(csv.reader([item], skipinitialspace=True))
+                )
+            else:
+                raw_items.append(item)
+
+    exts = set()
+    for item in raw_items:
+        if item is None:
+            continue
+        part = str(item).strip().lower()
+        if not part:
+            continue
+        if part in {'none', 'false', '0'}:
+            continue
+        if part in {'*', 'all'}:
+            raise ValueError(
+                'textline_exts no longer accepts "all"; omit the option to '
+                'use broad text probing when no language analyzer is active'
+            )
+        if not part.startswith('.'):
+            part = '.' + part
+        exts.add(part)
+    return exts
+
+
+def parse_file_stats(
+    fpath,
+    parse_content=True,
+    parse_python=False,
+    parse_rust=False,
+    fs=None,
+    rust_backend=None,
+    textline_exts=None,
+):
+    """
+    Get information about a file.
+
+    ``parse_content`` enables content parsing.  Without language analyzers it
+    preserves the historical behavior of counting ``total`` lines for all
+    UTF-8-readable text-like files.  With language analyzers enabled, raw
+    ``total`` is counted for analyzed source extensions and for any generic
+    extensions explicitly listed in ``textline_exts``.
+
+    Args:
+        rust_backend (None | str): Explicit Rust backend to use for ``.rs``
+            files. If specified, Rust parsing is enabled even when
+            ``parse_rust`` is false. ``'legacy'`` preserves the historical
+            aggregate Rust columns and ``'tree-sitter'`` emits the compact
+            main/test Rust columns.
+        textline_exts (None | Iterable[str] | str): Generic text extensions
+            that should also receive raw ``total`` line counts when language
+            analyzers are active. Examples: ``'md,rst'`` or ``['md', 'rst']``.
     """
     ext = fpath.suffix
+    norm_ext = ext.lower()
     prefix = ext.lstrip('.') + '.'
     stats = {}
     try:
@@ -899,47 +1501,149 @@ def parse_file_stats(fpath, parse_content=True, fs=None):
     stats['files'] = 1
 
     if not is_broken and parse_content:
-        try:
-            text = fpath.read_text()
-        except UnicodeDecodeError:
-            # Binary file
-            ...
+        language_line_exts = set()
+        if parse_python:
+            language_line_exts.add('.py')
+        if parse_rust or rust_backend is not None:
+            language_line_exts.add('.rs')
+        normalized_textline_exts = _coerce_textline_exts(textline_exts)
+
+        has_language_analyzer = bool(language_line_exts)
+        is_language_ext = norm_ext in language_line_exts
+        if normalized_textline_exts is None:
+            # Historical behavior when no language analyzer is active: try all
+            # UTF-8-readable files.  With a language analyzer, avoid inflating
+            # ``total`` with every incidental text-like file unless explicitly
+            # requested via ``textline_exts`` / ``--textlines``.
+            is_generic_textline_ext = not has_language_analyzer
         else:
-            total_lines = text.count('\n')
-            stats['total_lines'] = total_lines
+            is_generic_textline_ext = norm_ext in normalized_textline_exts
+        should_read_content = is_language_ext or is_generic_textline_ext
 
-            if ext == '.py':
+        if should_read_content:
+            # ``Path.walk`` reports symlinked directories in ``fnames`` when it
+            # is not following symlinks. Treat those entries as file-like for
+            # size accounting, but do not try to read their contents.
+            try:
+                if fs is None:
+                    is_readable_file = fpath.is_file()
+                else:
+                    stat_type = stat_obj.get('type', None)
+                    is_readable_file = stat_type is None or stat_type == 'file'
+            except OSError:
+                is_readable_file = False
+
+            if is_readable_file:
                 try:
-                    raw_code = strip_comments_and_newlines(text)
-                    code_lines = raw_code.count('\n')
-                except Exception:
+                    if fs is None:
+                        text = fpath.read_text(encoding='utf8')
+                    else:
+                        with fs.open(
+                            os.fspath(fpath), 'rt', encoding='utf8'
+                        ) as file:
+                            text = file.read()
+                except (UnicodeDecodeError, IsADirectoryError, PermissionError):
+                    # Binary, non-UTF8, unreadable, or directory-like entries
+                    # count as files/bytes but not text.
                     ...
                 else:
-                    stats['code_lines'] = code_lines
+                    stats['total'] = _text_total_lines(text)
 
-                try:
-                    # TODO: this belongs more in the pypackage summarizer
-                    # from xdoctest.core import package_calldefs
-                    from xdoctest.static_analysis import TopLevelVisitor
-                    self = TopLevelVisitor.parse(text)
-                    calldefs = self.calldefs
-                    total_doclines = 0
-                    for k, v in calldefs.items():
-                        if v.docstr is not None:
-                            total_doclines += v.docstr.count('\n')
-                except Exception:
-                    ...
-                else:
-                    stats['doc_lines'] = total_doclines
+                    if parse_python and norm_ext == '.py':
+                        try:
+                            stats.update(parse_python_content_stats(text))
+                        except Exception:
+                            ...
 
-            elif ext == '.rs':
-                try:
-                    stats.update(parse_rust_content_stats(text))
-                except Exception:
-                    ...
+                    elif (
+                        (parse_rust or rust_backend is not None)
+                        and norm_ext == '.rs'
+                    ):
+                        try:
+                            if rust_backend is None:
+                                rust_stats = parse_rust_content_stats(
+                                    text, fpath=fpath
+                                )
+                            else:
+                                from xdev import rust_analysis
+
+                                rust_stats = rust_analysis.parse_rust_content_stats(
+                                    text, backend=rust_backend
+                                )
+                            stats.update(rust_stats)
+                        except Exception:
+                            ...
 
     stats = {prefix + k: v for k, v in stats.items()}
     return stats
+
+
+def _text_total_lines(text):
+    """Return the number of logical lines in text."""
+    if not text:
+        return 0
+    return len(text.splitlines())
+
+
+def parse_python_content_stats(source: str):
+    """
+    Count Python code and comment/docstring lines.
+
+    Python does not get a test split in dirstats. Test files are counted as
+    main Python text so the report stays compact and language-neutral.
+    """
+    import ast
+    import io
+    import tokenize
+
+    comment_lines = set()
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(source).readline)
+        for tok in tokens:
+            if tok.type == tokenize.COMMENT:
+                start, end = tok.start[0] - 1, tok.end[0] - 1
+                comment_lines.update(range(start, end + 1))
+    except Exception:
+        pass
+
+    try:
+        tree = ast.parse(source)
+    except Exception:
+        pass
+    else:
+        nodes = [tree]
+        nodes.extend(
+            n
+            for n in ast.walk(tree)
+            if isinstance(
+                n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            )
+        )
+        for node in nodes:
+            body = getattr(node, 'body', None)
+            if not body:
+                continue
+            first = body[0]
+            if (
+                isinstance(first, ast.Expr)
+                and isinstance(getattr(first, 'value', None), ast.Constant)
+                and isinstance(first.value.value, str)
+            ):
+                start = getattr(first, 'lineno', None)
+                end = getattr(first, 'end_lineno', start)
+                if start is not None:
+                    comment_lines.update(range(start - 1, end))
+
+    try:
+        raw_code = strip_comments_and_newlines(source)
+        code_lines = _text_total_lines(raw_code)
+    except Exception:
+        code_lines = 0
+
+    return {
+        'main_code': code_lines,
+        'main_comments': len(comment_lines),
+    }
 
 
 def strip_comments_and_newlines(source):
@@ -981,8 +1685,10 @@ def strip_comments_and_newlines(source):
         >>> assert non_comments.count('#') == 1
     """
     import tokenize
+
     if isinstance(source, str):
         import io
+
         f = io.StringIO(source)
         readline = f.readline
     else:
@@ -1004,7 +1710,9 @@ def strip_comments_and_newlines(source):
         prev_end_col = 0
         skipped_rows = 0
         for token_info in tokens:
-            typ, tok, (start_row, start_col), (end_row, end_col), line = token_info
+            typ, tok, (start_row, start_col), (end_row, end_col), line = (
+                token_info
+            )
             if typ in (tokenize.NL, tokenize.NEWLINE):
                 if prev_typ in (tokenize.NL, tokenize.NEWLINE, None):
                     skipped_rows += 1
@@ -1014,7 +1722,13 @@ def strip_comments_and_newlines(source):
                 end_col = start_col + 1
             prev_typ = typ
             prev_end_col = end_col
-            yield typ, tok, (start_row - skipped_rows, start_col), (end_row - skipped_rows, end_col), line
+            yield (
+                typ,
+                tok,
+                (start_row - skipped_rows, start_col),
+                (end_row - skipped_rows, end_col),
+                line,
+            )
 
     tokens = tokenize.generate_tokens(readline)
     tokens = strip_hashtag_comments(tokens)
@@ -1032,6 +1746,7 @@ def strip_docstrings(tokens):
     Indented docstrings are not yet recognised.
     """
     import tokenize
+
     stack = []
     state = 'wait_string'
     for t in tokens:
@@ -1048,7 +1763,13 @@ def strip_docstrings(tokens):
                     yield tokenize.NL, '\n', (i, 0), (i, 1), '\n'
                 for t in stack:
                     if t[0] in (tokenize.DEDENT, tokenize.INDENT):
-                        yield t[0], t[1], (i + 1, t[2][1]), (i + 1, t[3][1]), t[4]
+                        yield (
+                            t[0],
+                            t[1],
+                            (i + 1, t[2][1]),
+                            (i + 1, t[3][1]),
+                            t[4],
+                        )
                 del stack[:]
             else:
                 stack.append(t)
@@ -1088,31 +1809,75 @@ def byte_str(num, unit='auto', precision=2):
     """
     abs_num = abs(num)
     if unit == 'auto':
-        if abs_num < 2.0 ** 10:
+        if abs_num < 2.0**10:
             unit = 'KB'
-        elif abs_num < 2.0 ** 20:
+        elif abs_num < 2.0**20:
             unit = 'KB'
-        elif abs_num < 2.0 ** 30:
+        elif abs_num < 2.0**30:
             unit = 'MB'
-        elif abs_num < 2.0 ** 40:
+        elif abs_num < 2.0**40:
             unit = 'GB'
         else:
             unit = 'TB'
     if unit.lower().startswith('b'):
         num_unit = num
     elif unit.lower().startswith('k'):
-        num_unit =  num / (2.0 ** 10)
+        num_unit = num / (2.0**10)
     elif unit.lower().startswith('m'):
-        num_unit =  num / (2.0 ** 20)
+        num_unit = num / (2.0**20)
     elif unit.lower().startswith('g'):
-        num_unit = num / (2.0 ** 30)
+        num_unit = num / (2.0**30)
     elif unit.lower().startswith('t'):
-        num_unit = num / (2.0 ** 40)
+        num_unit = num / (2.0**40)
     else:
         raise ValueError('unknown num={!r} unit={!r}'.format(num, unit))
-    fmtstr = ('{:.' + str(precision) + 'f} {}')
+    fmtstr = '{:.' + str(precision) + 'f} {}'
     res = fmtstr.format(num_unit, unit)
     return res
+
+
+def dirstats_report_text(
+    dpath,
+    *,
+    exclude_dnames=None,
+    exclude_fnames=None,
+    include_dnames=None,
+    include_fnames=None,
+    max_walk_depth=None,
+    max_display_depth=1,
+    max_rows=None,
+    parse_content=True,
+    python=False,
+    rust=False,
+    respect_gitignore=True,
+    include_files=True,
+    show_progress=False,
+):
+    """
+    Build and return a stable plain-text dirstats report.
+
+    This is the programmatic counterpart to the interactive ``dirstats`` CLI.
+    It is intended for scripts that need deterministic report text without
+    progress bars or rich console formatting.
+    """
+    walker = DirectoryWalker(
+        dpath,
+        exclude_dnames=exclude_dnames,
+        exclude_fnames=exclude_fnames,
+        include_dnames=include_dnames,
+        include_fnames=include_fnames,
+        max_walk_depth=max_walk_depth,
+        parse_content=parse_content,
+        python=python,
+        rust=rust,
+        respect_gitignore=respect_gitignore,
+        show_progress=show_progress,
+    ).build()
+    return walker.dirstats_text(
+        max_depth=max_display_depth,
+        max_rows=max_rows,
+        include_files=include_files,
+    )
 
 
 def _null_coerce(cls, arg, **kwargs):
@@ -1136,13 +1901,18 @@ class DirectoryDiff:
         self = DirectoryDiff(walker1, walker2).build()
         self.write_report()
     """
+
     def __init__(self, walker1, walker2):
         self.walker1 = walker1
         self.walker2 = walker2
 
     def build(self):
-        rel_paths1 = {p.relative_to(self.walker1.dpath) for p in self.walker1.graph.nodes}
-        rel_paths2 = {p.relative_to(self.walker2.dpath) for p in self.walker2.graph.nodes}
+        rel_paths1 = {
+            p.relative_to(self.walker1.dpath) for p in self.walker1.graph.nodes
+        }
+        rel_paths2 = {
+            p.relative_to(self.walker2.dpath) for p in self.walker2.graph.nodes
+        }
         self.root1 = self.walker1.dpath
         self.root2 = self.walker2.dpath
         self.common_paths = rel_paths1 & rel_paths2
@@ -1207,6 +1977,7 @@ class DirectoryDiff:
 
     def summary(self):
         from collections import Counter
+
         error_hist = Counter({0: 0, 1: 0})
         error_hist.update(r['num_errors'] for r in self.common_table)
         summary = {
@@ -1225,38 +1996,46 @@ class DirectoryDiff:
 # TODO: move rust utils to helpers
 
 
-def parse_rust_content_stats(source: str):
-    """
+def parse_rust_content_stats(source: str, fpath=None):
+    r"""
     Count effective Rust lines of code.
 
     This counts non-empty lines after removing Rust comments, while preserving
     comment-like text inside normal strings, raw strings, byte strings, and C
-    strings. Rust nested block comments are handled.
+    strings. Rust nested block comments are handled. Trailing inline comments
+    after code are not counted as comment lines.
 
     Returns:
-        Dict[str, int]: contains code_lines, comment_lines, and doc_lines.
+        Dict[str, int]: contains ``main_code`` / ``main_comments`` and
+        ``test_code`` / ``test_comments`` when test code is detected by path
+        or ``#[cfg(test)]`` / ``#[test]`` spans. Doc comments are counted as
+        comments.
+
+    CommandLine:
+        xdoctest -m xdev.directory_walker parse_rust_content_stats
 
     Example:
         >>> import ubelt as ub
         >>> source = ub.codeblock(
-        >>>     r'''
-        >>>     // module comment
-        >>>
-        >>>     fn main() {
-        >>>         println!("http://example.com"); // trailing comment
-        >>>         let text = "/* not comment */";
-        >>>         let raw = r#"// not comment"#;
-        >>>         /*
-        >>>           block comment
-        >>>           /* nested */
-        >>>         */
-        >>>         /// doc comment
-        >>>         pub fn documented() {}
-        >>>     }
-        >>>     ''')
+        ...     r'''
+        ...     // module comment
+        ...
+        ...     fn main() {
+        ...         println!("http://example.com"); // trailing comment
+        ...         let text = "/* not comment */";
+        ...         let raw = r#"// not comment"#;
+        ...         /*
+        ...           block comment
+        ...           /* nested */
+        ...         */
+        ...         /// doc comment
+        ...         pub fn documented() {}
+        ...     }
+        ...     ''')
         >>> stats = parse_rust_content_stats(source)
-        >>> assert stats['code_lines'] == 6
-        >>> assert stats['doc_lines'] == 1
+        >>> print(f'stats = {ub.urepr(stats, nl=1)}')
+        >>> assert stats['main_code'] == 6
+        >>> assert stats['main_comments'] == 6
     """
     import collections
 
@@ -1265,16 +2044,13 @@ def parse_rust_content_stats(source: str):
     line = 0
     line_has_code = collections.defaultdict(bool)
     comment_lines = set()
-    doc_lines = set()
 
     def mark_comment_char(ch, is_doc):
         nonlocal line
         if ch == '\n':
             line += 1
-        elif not ch.isspace():
+        elif not ch.isspace() and not line_has_code[line]:
             comment_lines.add(line)
-            if is_doc:
-                doc_lines.add(line)
 
     def mark_code_span(start, stop):
         nonlocal line
@@ -1301,8 +2077,7 @@ def parse_rust_content_stats(source: str):
         # Rust nested block comments: /* ... */, /** ... */, /*! ... */
         if source.startswith('/*', i):
             is_doc = (
-                source.startswith('/**', i) and
-                not source.startswith('/***', i)
+                source.startswith('/**', i) and not source.startswith('/***', i)
             ) or source.startswith('/*!', i)
             depth = 0
             while i < n:
@@ -1339,9 +2114,8 @@ def parse_rust_content_stats(source: str):
 
         # Normal string-ish literals. This avoids treating // or /* inside a
         # string as a comment.
-        if (
-            ch == '"' or
-            (ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"')
+        if ch == '"' or (
+            ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"'
         ):
             stop = i + 1
             if ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"':
@@ -1370,11 +2144,126 @@ def parse_rust_content_stats(source: str):
 
         i += 1
 
+    code_lines = {k for k, v in line_has_code.items() if v}
+    comment_lines = comment_lines - code_lines
+    test_lines = _rust_test_line_numbers(source, fpath=fpath)
+
+    test_code_lines = len(code_lines & test_lines)
+    test_comment_lines = len(comment_lines & test_lines)
+
     return {
-        'code_lines': sum(line_has_code.values()),
-        'comment_lines': len(comment_lines),
-        'doc_lines': len(doc_lines),
+        'main_code': len(code_lines) - test_code_lines,
+        'main_comments': len(comment_lines) - test_comment_lines,
+        'test_code': test_code_lines,
+        'test_comments': test_comment_lines,
     }
+
+
+def _rust_test_line_numbers(source: str, fpath=None):
+    """
+    Return 0-based Rust source lines that belong to test code.
+
+    This intentionally stays lightweight: integration-test files are detected
+    by path, and unit-test spans are detected from ``#[cfg(test)]`` /
+    ``#[test]`` attributes with brace matching.
+    """
+    import bisect
+    import os
+    import re
+
+    total_lines = _text_total_lines(source)
+    if total_lines == 0:
+        return set()
+
+    if fpath is not None:
+        parts = set(os.fspath(fpath).replace('\\', '/').split('/'))
+        name = getattr(fpath, 'name', os.path.basename(os.fspath(fpath)))
+        if 'tests' in parts or name in {'tests.rs', 'test.rs'}:
+            return set(range(total_lines))
+
+    line_starts = [0]
+    for idx, ch in enumerate(source):
+        if ch == '\n':
+            line_starts.append(idx + 1)
+
+    def line_for_pos(pos):
+        return bisect.bisect_right(line_starts, pos) - 1
+
+    test_lines = set()
+    attr_pattern = re.compile(r'#\s*\[\s*(?:cfg\s*\(\s*test\s*\)|test)')
+    for match in attr_pattern.finditer(source):
+        start = match.start()
+        open_brace = source.find('{', match.end())
+        if open_brace < 0:
+            continue
+        close_brace = _find_matching_rust_brace(source, open_brace)
+        if close_brace is None:
+            close_brace = open_brace
+        first_line = line_for_pos(start)
+        last_line = line_for_pos(close_brace)
+        test_lines.update(range(first_line, last_line + 1))
+    return test_lines
+
+
+def _find_matching_rust_brace(source: str, open_pos: int):
+    """Find the matching brace, skipping common Rust string/comment forms."""
+    n = len(source)
+    i = open_pos
+    depth = 0
+    while i < n:
+        if source.startswith('//', i):
+            end = source.find('\n', i)
+            i = n if end < 0 else end + 1
+            continue
+        if source.startswith('/*', i):
+            comment_depth = 0
+            while i < n:
+                if source.startswith('/*', i):
+                    comment_depth += 1
+                    i += 2
+                    continue
+                if source.startswith('*/', i):
+                    i += 2
+                    comment_depth -= 1
+                    if comment_depth <= 0:
+                        break
+                    continue
+                i += 1
+            continue
+        close_delim = _rust_raw_string_close_delim(source, i)
+        if close_delim is not None:
+            open_quote = source.find('"', i)
+            stop = source.find(close_delim, open_quote + 1)
+            i = n if stop < 0 else stop + len(close_delim)
+            continue
+        ch = source[i]
+        if ch == '"' or (
+            ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"'
+        ):
+            i += (
+                2
+                if ch in {'b', 'c'} and i + 1 < n and source[i + 1] == '"'
+                else 1
+            )
+            escape = False
+            while i < n:
+                c = source[i]
+                i += 1
+                if escape:
+                    escape = False
+                elif c == '\\':
+                    escape = True
+                elif c == '"':
+                    break
+            continue
+        if ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+            if depth == 0:
+                return i
+        i += 1
+    return None
 
 
 def _rust_raw_string_close_delim(source: str, pos: int):
@@ -1395,6 +2284,6 @@ def _rust_raw_string_close_delim(source: str, pos: int):
         j += 1
 
     if j < n and source[j] == '"':
-        hashes = source[pos + prefix_len:j]
+        hashes = source[pos + prefix_len : j]
         return '"' + hashes
     return None

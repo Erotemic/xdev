@@ -61,7 +61,7 @@ def conj_phrase(list_, cond='or'):
 
 
 def take_column(list_, colx):
-    """ iterator version of take_column """
+    """iterator version of take_column"""
     if isinstance(colx, list):
         # multi select
         return [[row[colx_] for colx_ in colx] for row in list_]
