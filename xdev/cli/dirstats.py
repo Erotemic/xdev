@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
+import os
+
 import scriptconfig as scfg
 import ubelt as ub
-import os
 
 if not os.environ.get('_ARGCOMPLETE', ''):
     # Hack for backwards compat
@@ -89,6 +90,17 @@ class DirectoryStatsCLI(scfg.DataConfig):
             'broad UTF-8 text probing.'
         ),
         alias=['text_lines'],
+    )
+
+    respect_gitignore = scfg.Value(
+        True,
+        isflag=True,
+        alias=['ignore', 'ignore_vcs', 'gitignore'],
+        help=(
+            'respect Git ignore rules from .gitignore, .git/info/exclude, '
+            'and the configured global excludes file. Disable with '
+            '--no-ignore or --no-ignore-vcs.'
+        ),
     )
 
     ignore_dotprefix = scfg.Value(
@@ -179,6 +191,7 @@ def main(cmdline=1, **kwargs):
         'python',
         'rust',
         'textlines',
+        'respect_gitignore',
     }
     self = DirectoryWalker(**kwargs)
     self.build()

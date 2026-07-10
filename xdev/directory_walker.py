@@ -1,10 +1,13 @@
+import contextlib
 import os
+import subprocess
+
+import networkx as nx
 import rich
 import ubelt as ub
-import networkx as nx
-from xdev.patterns import MultiPattern
 from progiter.manager import ProgressManager
 
+from xdev.patterns import MultiPattern
 
 STAT_COLUMN_ORDER = [
     'files',
@@ -25,6 +28,199 @@ LINE_ANALYSIS_COLUMNS = frozenset({
     'comment_lines',
     'doc_lines',
 })
+
+
+class _GitIgnoreMatcher:
+    """Query Git's native ignore engine through one persistent subprocess."""
+
+    _QUERY_CHUNK_BYTES = 4096
+
+    def __init__(self, repo_root, proc):
+        self.repo_root = ub.Path(repo_root).absolute()
+        self.proc = proc
+
+    @classmethod
+    def from_path(cls, path):
+        """Create a matcher for the worktree containing ``path`` if any."""
+        path = ub.Path(path).absolute()
+        env = os.environ.copy()
+        env.setdefault('GIT_OPTIONAL_LOCKS', '0')
+        try:
+            info = subprocess.run(
+                ['git', '-C', os.fspath(path), 'rev-parse', '--show-toplevel'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                env=env,
+            )
+        except OSError:
+            return None
+        if info.returncode != 0:
+            return None
+
+        repo_root = ub.Path(os.fsdecode(info.stdout.rstrip(b'\r\n')))
+        try:
+            proc = subprocess.Popen(
+                [
+                    'git',
+                    '-C',
+                    os.fspath(repo_root),
+                    'check-ignore',
+                    '--stdin',
+                    '-z',
+                    '--verbose',
+                    '--non-matching',
+                    '--no-index',
+                ],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                env=env,
+            )
+        except OSError:
+            return None
+        return cls(repo_root, proc)
+
+    @staticmethod
+    def _read_nul_field(stream):
+        """Read one NUL-terminated byte field from a buffered stream."""
+        field = bytearray()
+        while True:
+            char = stream.read(1)
+            if not char:
+                raise EOFError('git check-ignore terminated unexpectedly')
+            if char == b'\0':
+                return bytes(field)
+            field.extend(char)
+
+    def _relative_query(self, path):
+        path = ub.Path(path).absolute()
+        try:
+            relpath = path.relative_to(self.repo_root)
+        except ValueError:
+            return None
+        query = os.fsencode(os.fspath(relpath))
+        if os.path.sep != '/':
+            query = query.replace(os.fsencode(os.path.sep), b'/')
+        return query
+
+    def ignored(self, paths):
+        """Return flags indicating which paths match an active ignore rule."""
+        paths = list(paths)
+        flags = [False] * len(paths)
+        if self.proc is None:
+            return flags
+
+        indexed_queries = []
+        for index, path in enumerate(paths):
+            query = self._relative_query(path)
+            if query is not None:
+                indexed_queries.append((index, query))
+
+        query_chunks = []
+        chunk = []
+        chunk_size = 0
+        for item in indexed_queries:
+            item_size = len(item[1]) + 1
+            if chunk and chunk_size + item_size > self._QUERY_CHUNK_BYTES:
+                query_chunks.append(chunk)
+                chunk = []
+                chunk_size = 0
+            chunk.append(item)
+            chunk_size += item_size
+        if chunk:
+            query_chunks.append(chunk)
+
+        try:
+            for chunk in query_chunks:
+                payload = b''.join(query + b'\0' for _, query in chunk)
+                self.proc.stdin.write(payload)
+                self.proc.stdin.flush()
+                for index, _query in chunk:
+                    source = self._read_nul_field(self.proc.stdout)
+                    _lineno = self._read_nul_field(self.proc.stdout)
+                    pattern = self._read_nul_field(self.proc.stdout)
+                    _pathname = self._read_nul_field(self.proc.stdout)
+                    flags[index] = bool(source) and not pattern.startswith(b'!')
+        except (BrokenPipeError, EOFError, OSError):
+            self.close()
+        return flags
+
+    def close(self):
+        proc = self.proc
+        self.proc = None
+        if proc is None:
+            return
+        try:
+            if proc.stdin is not None:
+                proc.stdin.close()
+            proc.wait(timeout=1)
+        except (OSError, subprocess.TimeoutExpired):
+            proc.kill()
+            proc.wait()
+        finally:
+            if proc.stdout is not None:
+                proc.stdout.close()
+
+
+class _GitIgnoreManager:
+    """Select the nearest Git worktree matcher while walking nested repos."""
+
+    def __init__(self, walk_root):
+        self.matchers = {}
+        self._register(walk_root)
+
+    def _register(self, path):
+        matcher = _GitIgnoreMatcher.from_path(path)
+        if matcher is None:
+            return None
+        existing = self.matchers.get(matcher.repo_root)
+        if existing is not None:
+            matcher.close()
+            return existing
+        self.matchers[matcher.repo_root] = matcher
+        return matcher
+
+    def _matcher_for(self, path):
+        path = ub.Path(path).absolute()
+        candidates = []
+        for repo_root, matcher in self.matchers.items():
+            try:
+                path.relative_to(repo_root)
+            except ValueError:
+                continue
+            candidates.append((len(repo_root.parts), matcher))
+        if candidates:
+            return max(candidates, key=lambda item: item[0])[1]
+        return None
+
+    def register_if_repo(self, root, dnames, fnames):
+        # A nested worktree can be represented by either a .git directory or
+        # a .git text file (worktrees and submodules use the latter).
+        root = ub.Path(root).absolute()
+        if (
+            root not in self.matchers
+            and ('.git' in dnames or '.git' in fnames)
+        ):
+            self._register(root)
+
+    def filter(self, root, dnames, fnames):
+        root = ub.Path(root).absolute()
+        matcher = self._matcher_for(root)
+        if matcher is None:
+            return
+
+        dpaths = [root / name for name in dnames]
+        fpaths = [root / name for name in fnames]
+        dflags = matcher.ignored(dpaths)
+        fflags = matcher.ignored(fpaths)
+        dnames[:] = [name for name, ignored in zip(dnames, dflags) if not ignored]
+        fnames[:] = [name for name, ignored in zip(fnames, fflags) if not ignored]
+
+    def close(self):
+        for matcher in self.matchers.values():
+            matcher.close()
+        self.matchers.clear()
 
 
 def _order_columns(df, extra_last=('name',)):
@@ -107,6 +303,7 @@ class DirectoryWalker:
         python=False,
         rust=False,
         textlines=None,
+        respect_gitignore=True,
         show_progress=True,
         ignore_empty_dirs=False,
         sort=False,
@@ -150,6 +347,11 @@ class DirectoryWalker:
                 be given with or without leading dots.  Comma-separated strings
                 such as ``'md,rst'`` are accepted.
 
+            respect_gitignore (bool):
+                if True, exclude paths matched by Git ignore rules. This uses
+                nested ``.gitignore`` files, ``.git/info/exclude``, and the
+                configured global excludes file when walking a Git worktree.
+
             sort (bool):
                 if True, sort files and directories before adding them to the
                 graph.
@@ -192,6 +394,7 @@ class DirectoryWalker:
         self.python = python
         self.rust = rust
         self.textline_exts = _coerce_textline_exts(textlines)
+        self.respect_gitignore = respect_gitignore
         self.max_files = max_files
         self.show_progress = show_progress
         self.ignore_empty_dirs = ignore_empty_dirs
@@ -571,8 +774,14 @@ class DirectoryWalker:
 
         max_files = self.max_files
 
+        ignore_manager = None
+        if self.respect_gitignore and self.fs is None:
+            ignore_manager = _GitIgnoreManager(dpath)
+
         pman = ProgressManager(enabled=self.show_progress)
-        with pman:
+        with pman, contextlib.ExitStack() as stack:
+            if ignore_manager is not None:
+                stack.callback(ignore_manager.close)
             prog = pman.progiter(desc='Walking directory')
 
             if self.max_walk_depth is not None:
@@ -600,10 +809,15 @@ class DirectoryWalker:
                     if rel_depth >= self.max_walk_depth:
                         del dnames[:]
 
+                if ignore_manager is not None:
+                    ignore_manager.register_if_repo(root, dnames, fnames)
+
                 # Remove directories / files that match the blocklist or dont
                 # match the include list
                 self._inplace_filter_dnames(dnames)
                 self._inplace_filter_fnames(fnames)
+                if ignore_manager is not None:
+                    ignore_manager.filter(root, dnames, fnames)
 
                 root_attrs['num_dirs'] = len(dnames)
                 root_attrs['num_files'] = num_files = len(fnames)
@@ -873,6 +1087,7 @@ class DirectoryWalker:
         Update how each node will be displayed
         """
         from os.path import relpath
+
         from rich.markup import escape
 
         label_options = self.label_options
@@ -1035,6 +1250,7 @@ class DirectoryWalker:
             True
         """
         import os
+
         import ubelt as ub
 
         demo_root = ub.Path.appdir('xdev/directory_walker/demo').ensuredir()
@@ -1633,6 +1849,7 @@ def dirstats_report_text(
     parse_content=True,
     python=False,
     rust=False,
+    respect_gitignore=True,
     include_files=True,
     show_progress=False,
 ):
@@ -1653,6 +1870,7 @@ def dirstats_report_text(
         parse_content=parse_content,
         python=python,
         rust=rust,
+        respect_gitignore=respect_gitignore,
         show_progress=show_progress,
     ).build()
     return walker.dirstats_text(
