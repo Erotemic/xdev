@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 
-import scriptconfig as scfg
+import kwconf
 import ubelt as ub
 
 if not os.environ.get('_ARGCOMPLETE', ''):
@@ -9,7 +9,7 @@ if not os.environ.get('_ARGCOMPLETE', ''):
     from xdev.directory_walker import DirectoryWalker  # NOQA
 
 
-class DirectoryStatsCLI(scfg.DataConfig):
+class DirectoryStatsCLI(kwconf.Config):
     """
     Analysis for code in a repository
 
@@ -19,70 +19,67 @@ class DirectoryStatsCLI(scfg.DataConfig):
 
     __command__ = 'dirstats'
 
-    dpath = scfg.Value(
+    dpath = kwconf.Value(
         '.',
-        type=str,
+        parser=str,
         help='path to the git repo. If prefixed with ``module:``, then treated as a python module',
         position=1,
     )
 
-    exclude_dnames = scfg.Value(
+    exclude_dnames = kwconf.Value(
         None,
         help='A coercable multi-pattern. If "py:auto" chooses sensible defaults for a Python dev.',
         nargs='+',
         alias=['block_dnames'],
     )
 
-    exclude_fnames = scfg.Value(
+    exclude_fnames = kwconf.Value(
         None,
         help='A coercable multi-pattern. If "py:auto" chooses sensible defaults for a Python dev.',
         nargs='+',
         alias=['block_fnames'],
     )
 
-    include_dnames = scfg.Value(
+    include_dnames = kwconf.Value(
         None,
         help='A coercable multi-pattern. Only directory names matching this pattern will be considered',
         nargs='+',
     )
-    include_fnames = scfg.Value(
+    include_fnames = kwconf.Value(
         None,
         help='A coercable multi-pattern. Only file names matching this pattern will be considered',
         nargs='+',
     )
 
-    parse_content = scfg.Value(
+    parse_content = kwconf.Flag(
         True,
-        isflag=True,
         help='if True count total lines for text-like files. Language flags add richer parsers.',
     )
-    max_files = scfg.Value(None)
-    # parse_meta_stats = scfg.Value(True, isflag=True, help='if True parse stats about the content of each file')
+    max_files = kwconf.Value(None)
+    # parse_meta_stats = kwconf.Value(True, isflag=True, help='if True parse stats about the content of each file')
 
-    max_walk_depth = scfg.Value(
+    max_walk_depth = kwconf.Value(
         None, short_alias=['L'], help='maximum depth to walk'
     )
-    max_display_depth = scfg.Value(
+    max_display_depth = kwconf.Value(
         None, short_alias=['D'], help='maximum depth to display'
     )
 
-    verbose = scfg.Value(0, isflag=True, short_alias=['v'])
-    version = scfg.Value(False, isflag=True, short_alias=['V'])
-    python = scfg.Value(
+    verbose = kwconf.Value(0, isflag='counter', short_alias=['v'])
+    version = kwconf.Flag(False, short_alias=['V'])
+    python = kwconf.Flag(
         False,
-        isflag=True,
         help='enable Python defaults and code/doc line analysis',
         alias=['pydev'],
     )
-    rust = scfg.Value(
+    rust = kwconf.Flag(
         False,
-        isflag=True,
         help='enable Rust defaults and code/comment/test line analysis',
         alias=['rsdev'],
     )
-    textlines = scfg.Value(
+    textlines = kwconf.Value(
         None,
-        type=str,
+        parser=str,
         help=(
             'Optional comma-separated generic text extensions to count raw '
             'total lines for when language analyzers are active, e.g. '
@@ -92,9 +89,8 @@ class DirectoryStatsCLI(scfg.DataConfig):
         alias=['text_lines'],
     )
 
-    respect_gitignore = scfg.Value(
+    respect_gitignore = kwconf.Flag(
         True,
-        isflag=True,
         alias=['ignore', 'ignore_vcs', 'gitignore'],
         help=(
             'respect Git ignore rules from .gitignore, .git/info/exclude, '
@@ -103,22 +99,41 @@ class DirectoryStatsCLI(scfg.DataConfig):
         ),
     )
 
-    ignore_dotprefix = scfg.Value(
+    ignore_dotprefix = kwconf.Flag(
         True,
-        isflag=True,
         help='if True ignore directories and folders with a dot prefix',
     )
 
     def __post_init__(config):
+        def _flatten_pattern_args(values):
+            """Preserve the historical comma-or-space list syntax."""
+            if values is None:
+                return []
+            if isinstance(values, str):
+                values = [values]
+            flattened = []
+            for value in values:
+                if isinstance(value, str):
+                    flattened.extend(value.split(','))
+                else:
+                    flattened.append(value)
+            return flattened
+
         if config.dpath.startswith('module:'):  # type: ignore
             config.dpath = ub.modname_to_modpath(
                 config.dpath.split('module:', 1)[1]
             )  # type: ignore
 
-        if config.exclude_fnames is None:
-            config.exclude_fnames = []
-        if config.exclude_dnames is None:
-            config.exclude_dnames = []
+        config.exclude_fnames = _flatten_pattern_args(config.exclude_fnames)
+        config.exclude_dnames = _flatten_pattern_args(config.exclude_dnames)
+        if config.include_fnames is not None:
+            config.include_fnames = _flatten_pattern_args(
+                config.include_fnames
+            )
+        if config.include_dnames is not None:
+            config.include_dnames = _flatten_pattern_args(
+                config.include_dnames
+            )
 
         if config.ignore_dotprefix:
             config.exclude_fnames.append('.*')  # type: ignore
@@ -161,15 +176,15 @@ __cli__ = DirectoryStatsCLI
 
 
 @__cli__._register_main
-def main(cmdline=1, **kwargs):
+def main(argv=1, **kwargs):
     """
     Example:
         >>> # xdoctest: +SKIP
-        >>> cmdline = 0
+        >>> argv = 0
         >>> kwargs = dict(dpath='module:watch')
-        >>> main(cmdline=cmdline, **kwargs)
+        >>> main(argv=argv, **kwargs)
     """
-    config = DirectoryStatsCLI.cli(cmdline=cmdline, data=kwargs, strict=True)  # type: ignore
+    config = DirectoryStatsCLI.cli(argv=argv, data=kwargs, strict=True)  # type: ignore
 
     import rich
 

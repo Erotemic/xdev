@@ -235,7 +235,7 @@ intersphinx_mapping = {
     'ubelt': ('https://ubelt.readthedocs.io/en/latest/', None),
     'xdoctest': ('https://xdoctest.readthedocs.io/en/latest/', None),
     'networkx': ('https://networkx.org/documentation/stable/', None),
-    'scriptconfig': ('https://scriptconfig.readthedocs.io/en/latest/', None),
+    'kwconf': ('https://kwconf.readthedocs.io/en/latest/', None),
     'rich': ('https://rich.readthedocs.io/en/latest/', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
     'sympy': ('https://docs.sympy.org/latest/', None),

@@ -100,13 +100,13 @@ def test_directory_walker_can_disable_gitignore(tmp_path):
 def test_dirstats_cli_gitignore_flags():
     from xdev.cli.dirstats import DirectoryStatsCLI
 
-    default = DirectoryStatsCLI.cli(cmdline=[], strict=True)
-    no_ignore = DirectoryStatsCLI.cli(cmdline=['--no-ignore'], strict=True)
+    default = DirectoryStatsCLI.cli(argv=[], strict=True)
+    no_ignore = DirectoryStatsCLI.cli(argv=['--no-ignore'], strict=True)
     no_ignore_vcs = DirectoryStatsCLI.cli(
-        cmdline=['--no-ignore-vcs'], strict=True
+        argv=['--no-ignore-vcs'], strict=True
     )
     no_gitignore = DirectoryStatsCLI.cli(
-        cmdline=['--no-gitignore'], strict=True
+        argv=['--no-gitignore'], strict=True
     )
 
     assert default.respect_gitignore is True

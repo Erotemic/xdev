@@ -28,11 +28,11 @@ Result is:
         --baz=biz
 """
 
-import scriptconfig as scfg
+import kwconf
 import ubelt as ub
 
 
-class CLIFormatterCLI(scfg.DataConfig):
+class CLIFormatterCLI(kwconf.Config):
     """
     The idea is that we can ingest a dictionary, argv list, or a command line
     string and convert between any of these formats.
@@ -40,27 +40,29 @@ class CLIFormatterCLI(scfg.DataConfig):
 
     __command__ = 'cli_formatter'
 
-    input = scfg.Value(None, type=str, help='the input', position=1)
+    input = kwconf.Value(None, parser=str, help='the input', position=1)
 
-    input_type = scfg.Value(
+    input_type = kwconf.Value(
         'auto', help='attempt to infer what type the input is'
     )
 
-    output_type = scfg.Value('all', help='output type to convert to.')
+    output_type = kwconf.Value(
+        'all', parser='csv', help='output type to convert to.'
+    )
 
     @classmethod
-    def main(cls, cmdline=1, **kwargs):
+    def main(cls, argv=1, **kwargs):
         """
         Example:
             >>> # xdoctest: +SKIP
             >>> from cli_formatter import *  # NOQA
-            >>> cmdline = 0
+            >>> argv = 0
             >>> kwargs = dict()
             >>> cls = CLIFormatterCLI
-            >>> cls.main(cmdline=cmdline, **kwargs)
+            >>> cls.main(argv=argv, **kwargs)
         """
         config = cls.cli(
-            cmdline=cmdline, data=kwargs, strict=True, verbose='auto'
+            argv=argv, data=kwargs, strict=True, verbose='auto'
         )  # type: ignore
         import kwutil  # type: ignore
 

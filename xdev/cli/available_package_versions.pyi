@@ -1,12 +1,12 @@
-import scriptconfig as scfg
+import kwconf
 from _typeshed import Incomplete
 
-class AvailablePackageConfig(scfg.DataConfig):
+class AvailablePackageConfig(kwconf.Config):
     package_name: Incomplete
     request_min: Incomplete
     refresh: Incomplete
 
-def main(cmdline: int = ..., **kwargs) -> None: ...
+def main(argv: int = ..., **kwargs) -> None: ...
 
 class ReqPythonVersionSpec:
     pattern: Incomplete

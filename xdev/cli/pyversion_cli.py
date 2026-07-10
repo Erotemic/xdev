@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # PYTHON_ARGCOMPLETE_OK
-import scriptconfig as scfg
+import kwconf
 import ubelt as ub
 
 
-class PyVersionCLI(scfg.DataConfig):
+class PyVersionCLI(kwconf.Config):
     """
     Detect and print the version of a Python module or package.
 
@@ -38,11 +38,11 @@ class PyVersionCLI(scfg.DataConfig):
     __command__ = 'pyversion'
     __alias__ = ['modversion']
 
-    modname = scfg.Value(
+    modname = kwconf.Value(
         None, position=1, help='The name of the module or package'
     )
 
-    backend = scfg.Value(
+    backend = kwconf.Value(
         'auto',
         help=ub.paragraph(
             """
@@ -55,14 +55,14 @@ class PyVersionCLI(scfg.DataConfig):
         choices=['auto', 'import', 'importlib', 'pkg_resources'],
     )
 
-    verbose = scfg.Value(False, isflag=True, help='if 1 prints out more info')
+    verbose = kwconf.Flag(False, help='if 1 prints out more info')
 
     @classmethod
-    def main(cls, cmdline=False, **kwargs):
-        args = cls.cli(cmdline=cmdline, data=kwargs)
+    def main(cls, argv=False, **kwargs):
+        args = cls.cli(argv=argv, data=kwargs)
         if args.verbose:
-            from rich.markup import escape
             import rich
+            from rich.markup import escape
 
             rich.print(f'args = {escape(ub.urepr(args, nl=1))}')
 

@@ -42,38 +42,38 @@ Ignore:
 """
 
 try:
-    from mypy.stubgen import (
-        ASTStubGenerator,
-        find_self_initializers,
-        FUNC,
-        EMPTY,  # type: ignore
-        METHODS_WITH_RETURN_VALUE,
-    )
-    from mypy.stubgen import is_none_expr  # type: ignore
     from mypy.nodes import (  # type: ignore
+        # FuncBase, Block,
+        # Statement, OverloadedFuncDef, ARG_POS,
+        ARG_STAR,
+        ARG_STAR2,
+        # ARG_NAMED,
         # Expression, IntExpr, UnaryExpr, StrExpr, BytesExpr, NameExpr, FloatExpr, MemberExpr,
         # TupleExpr, ListExpr, ComparisonExpr, CallExpr, IndexExpr, EllipsisExpr,
         # ClassDef, MypyFile, Decorator, AssignmentStmt, TypeInfo,
         # IfStmt, ImportAll, ImportFrom, Import,
         IS_ABSTRACT,
         FuncDef,
-        # FuncBase, Block,
-        # Statement, OverloadedFuncDef, ARG_POS,
-        ARG_STAR,
-        ARG_STAR2,
-        # ARG_NAMED,
     )
-    from mypy.types import (  # type: ignore
-        # Type, TypeStrVisitor,
-        CallableType,
-        # UnboundType, NoneType, TupleType, TypeList, Instance,
-        AnyType,
-        get_proper_type,
+    from mypy.stubgen import (
+        EMPTY,  # type: ignore
+        FUNC,
+        METHODS_WITH_RETURN_VALUE,
+        ASTStubGenerator,
+        find_self_initializers,
+        is_none_expr,  # type: ignore
     )
     from mypy.traverser import (  # type: ignore
         all_yield_expressions,
         has_return_statement,
         has_yield_expression,
+    )
+    from mypy.types import (  # type: ignore
+        # UnboundType, NoneType, TupleType, TypeList, Instance,
+        AnyType,
+        # Type, TypeStrVisitor,
+        CallableType,
+        get_proper_type,
     )
 except Exception:
     ASTStubGenerator = object  # type: ignore
@@ -92,7 +92,6 @@ from typing import (
 #     report_missing, fail_missing, remove_misplaced_type_comments, common_dir_prefix
 # )
 import ubelt as ub
-
 
 Stub = ...  # hack for mypy. Not sure why it is generated in the first place.
 
@@ -202,14 +201,16 @@ def generate_typed_stubs(modpath):
     # import pathlib
     # import ubelt as ub
     import os
-    from mypy import stubgen  # type: ignore
-    from mypy import defaults  # type: ignore
-    from xdoctest import static_analysis
 
     # from os.path import join
     import ubelt as ub
+    from mypy import (
+        defaults,  # type: ignore
+        stubgen,  # type: ignore
+    )
+    from xdoctest import static_analysis
 
-    # modname = 'scriptconfig'
+    # modname = 'kwconf'
     # module = ub.import_module_from_name(modname)
     # modpath = ub.Path(module.__file__).parent
 
@@ -394,6 +395,7 @@ def delete_unpaired_pyi_files(modpath):
     Cleanup pyi files corresponding to renamed or removed py files.
     """
     import os
+
     import xdev
 
     walker = xdev.DirectoryWalker(modpath, exclude_dnames=['__pycache__'])
@@ -1352,8 +1354,8 @@ class ExtendedStubGenerator(ASTStubGenerator):
         self._state = FUNC
 
     def process_decorator(self, o) -> None:
-        from mypy.stubgen import get_qualified_name  # type: ignore
         from mypy.nodes import CallExpr  # type: ignore
+        from mypy.stubgen import get_qualified_name  # type: ignore
 
         parent_mod = ub.import_module_from_name(self.module)  # type: ignore
         for decorator in o.original_decorators:
@@ -1439,10 +1441,11 @@ def modpath_coerce(modpath_coercable):
         >>> assert modpath_coerce(modpath) == modpath
         >>> assert modpath_coerce(xdev.__name__) == modpath
     """
-    import ubelt as ub
+    import pathlib
     import types
     from os.path import exists
-    import pathlib
+
+    import ubelt as ub
 
     if isinstance(modpath_coercable, types.ModuleType):
         modpath = modpath_coercable.__file__

@@ -22,22 +22,24 @@ Usage:
 """
 
 from __future__ import annotations
-import sys
+
 import csv
+import sys
 from typing import Any, List, Tuple
+
+import kwconf
 import ubelt as ub
-import scriptconfig as scfg
 
 
-class CSVFormatterCLI(scfg.DataConfig):
+class CSVFormatterCLI(kwconf.Config):
     """
     Read CSV from stdin and print aligned columns.
     """
 
-    delimiter = scfg.Value(
+    delimiter = kwconf.Value(
         None, short_alias=['d'], help='CSV delimiter (overrides sniffing).'
     )
-    quotechar = scfg.Value(
+    quotechar = kwconf.Value(
         None,
         short_alias=['q'],
         help=ub.paragraph(
@@ -46,15 +48,14 @@ class CSVFormatterCLI(scfg.DataConfig):
             """
         ),
     )
-    spacing = scfg.Value(
+    spacing = kwconf.Value(
         2,
-        type=int,
+        parser=int,
         short_alias=['s'],
         help='Spaces between columns (default: 2).',
     )
-    header_rule = scfg.Value(
+    header_rule = kwconf.Flag(
         False,
-        isflag=True,
         help=ub.paragraph(
             """
             Draw a rule line under the first row (useful if it is a
@@ -62,9 +63,8 @@ class CSVFormatterCLI(scfg.DataConfig):
             """
         ),
     )
-    no_sniff = scfg.Value(
+    no_sniff = kwconf.Flag(
         False,
-        isflag=True,
         help=ub.paragraph(
             """
             Do not sniff; use defaults (excel dialect) unless
@@ -73,17 +73,16 @@ class CSVFormatterCLI(scfg.DataConfig):
         ),
     )
 
-    data = scfg.Value(
+    data = kwconf.Value(
         None,
         position=1,
-        type=str,
+        parser=str,
         help='Input text or file path to format. If not given stdin is used',
     )
 
     # NEW: control trimming of each parsed CSV cell (default True)
-    strip_cells = scfg.Value(
+    strip_cells = kwconf.Flag(
         True,
-        type=bool,
         help='Strip leading/trailing whitespace from each CSV cell (default: True).',
     )
 

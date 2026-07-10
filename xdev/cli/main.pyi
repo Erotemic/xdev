@@ -1,112 +1,111 @@
-import scriptconfig as scfg
+import kwconf
 from _typeshed import Incomplete
-from scriptconfig.modal import ModalCLI
 
-class XdevCLI(ModalCLI):
-    class InfoCLI(scfg.DataConfig):
+class XdevCLI(kwconf.ModalCLI):
+    class InfoCLI(kwconf.Config):
         __command__: str
 
         @classmethod
-        def main(cls, cmdline: bool = ..., **kwargs) -> None: ...
+        def main(cls, argv: bool = ..., **kwargs) -> None: ...
 
-    class CodeblockCLI(scfg.DataConfig):
+    class CodeblockCLI(kwconf.Config):
         __command__: str
         __epilog__: str
         text: Incomplete
 
         @classmethod
-        def main(cls, cmdline: bool = ..., **kwargs) -> None: ...
+        def main(cls, argv: bool = ..., **kwargs) -> None: ...
 
-    class SedCLI(scfg.DataConfig):
+    class SedCLI(kwconf.Config):
         __command__: str
         __default__: Incomplete
 
         @classmethod
-        def main(cls, cmdline: bool = ..., **kwargs) -> None: ...
+        def main(cls, argv: bool = ..., **kwargs) -> None: ...
 
-    class FindCLI(scfg.DataConfig):
+    class FindCLI(kwconf.Config):
         __command__: str
         __default__: Incomplete
 
         @classmethod
-        def main(cls, cmdline: bool = ..., **kwargs) -> None: ...
+        def main(cls, argv: bool = ..., **kwargs) -> None: ...
 
-    class TreeCLI(scfg.DataConfig):
+    class TreeCLI(kwconf.Config):
         __command__: str
         __default__: Incomplete
 
         @classmethod
-        def main(cls, cmdline: bool = ..., **kwargs) -> None: ...
+        def main(cls, argv: bool = ..., **kwargs) -> None: ...
 
-    class PintCLI(scfg.DataConfig):
-        __command__: str
-        __alias__: Incomplete
-        __default__: Incomplete
-
-        @classmethod
-        def main(cls, cmdline: bool = ..., **kwargs) -> None: ...
-
-    class PyfileCLI(scfg.DataConfig):
+    class PintCLI(kwconf.Config):
         __command__: str
         __alias__: Incomplete
         __default__: Incomplete
 
         @classmethod
-        def main(cls, cmdline: bool = ..., **kwargs) -> None: ...
+        def main(cls, argv: bool = ..., **kwargs) -> None: ...
 
-    class PyVersionCLI(scfg.DataConfig):
+    class PyfileCLI(kwconf.Config):
         __command__: str
         __alias__: Incomplete
         __default__: Incomplete
 
         @classmethod
-        def main(cls, cmdline: bool = ..., **kwargs): ...
+        def main(cls, argv: bool = ..., **kwargs) -> None: ...
 
-    class EditfileCLI(scfg.DataConfig):
+    class PyVersionCLI(kwconf.Config):
         __command__: str
         __alias__: Incomplete
         __default__: Incomplete
 
         @classmethod
-        def main(cls, cmdline: bool = ..., **kwargs) -> None: ...
+        def main(cls, argv: bool = ..., **kwargs): ...
 
-    class FormatQuotesCLI(scfg.DataConfig):
-        __command__: str
-        __default__: Incomplete
-
-        @classmethod
-        def main(cls, cmdline: bool = ..., **kwargs) -> None: ...
-
-    class FreshPyenvCLI(scfg.DataConfig):
-        __command__: str
-        __default__: Incomplete
-
-        @classmethod
-        def main(cls, cmdline: bool = ..., **kwargs) -> None: ...
-
-    class DocstrStubgenCLI(scfg.DataConfig):
+    class EditfileCLI(kwconf.Config):
         __command__: str
         __alias__: Incomplete
         __default__: Incomplete
 
         @classmethod
-        def main(cls, cmdline: bool = ..., **kwargs) -> None: ...
+        def main(cls, argv: bool = ..., **kwargs) -> None: ...
 
-    class AvailablePackageCLI(scfg.DataConfig):
+    class FormatQuotesCLI(kwconf.Config):
+        __command__: str
+        __default__: Incomplete
+
+        @classmethod
+        def main(cls, argv: bool = ..., **kwargs) -> None: ...
+
+    class FreshPyenvCLI(kwconf.Config):
+        __command__: str
+        __default__: Incomplete
+
+        @classmethod
+        def main(cls, argv: bool = ..., **kwargs) -> None: ...
+
+    class DocstrStubgenCLI(kwconf.Config):
+        __command__: str
+        __alias__: Incomplete
+        __default__: Incomplete
+
+        @classmethod
+        def main(cls, argv: bool = ..., **kwargs) -> None: ...
+
+    class AvailablePackageCLI(kwconf.Config):
         __command__: str
         __alias__: Incomplete
         __default__: Incomplete
         __doc__: Incomplete
 
         @classmethod
-        def main(cls, cmdline: bool = ..., **kwargs) -> None: ...
+        def main(cls, argv: bool = ..., **kwargs) -> None: ...
 
-    class RegexCLI(scfg.DataConfig):
+    class RegexCLI(kwconf.Config):
         __command__: str
         backend: Incomplete
 
         @classmethod
-        def main(cls, cmdline: bool = ..., **kwargs) -> None: ...
+        def main(cls, argv: bool = ..., **kwargs) -> None: ...
 
 def rprint(*args) -> None: ...
 def main() -> None: ...

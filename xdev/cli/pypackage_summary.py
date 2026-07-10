@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-import scriptconfig as scfg
+import kwconf
 import ubelt as ub
 
 
-class PypackageSummaryCLI(scfg.DataConfig):
+class PypackageSummaryCLI(kwconf.Config):
     """
     Summarize the complexity of a Python package.
 
@@ -19,10 +19,10 @@ class PypackageSummaryCLI(scfg.DataConfig):
 
     __command__ = 'pypackage_summary'
 
-    dpath = scfg.Value(
-        '.', type=str, help='Path to the Python module or package'
+    dpath = kwconf.Value(
+        '.', parser=str, help='Path to the Python module or package'
     )
-    # param1 = scfg.Value(None, help='param1')
+    # param1 = kwconf.Value(None, help='param1')
 
     @classmethod
     def main(cls, argv=1, **kwargs):
@@ -87,7 +87,7 @@ class PypackageSummaryCLI(scfg.DataConfig):
             'kwplot',
             'kwimage',
             'delayed_image',
-            'scriptconfig',
+            'kwconf',
         }
         known_module_groups['ubiquitous'] = {
             'rich',

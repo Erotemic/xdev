@@ -19,12 +19,12 @@ CommandLine:
     xdev availpkg flex
 """
 
-import scriptconfig as scfg
+import kwconf
 import ubelt as ub
 from packaging.version import parse as Version
 
 
-class AvailablePackageConfig(scfg.DataConfig):
+class AvailablePackageConfig(kwconf.Config):
     """
     Print a table of available versions of a python package on Pypi
 
@@ -32,21 +32,21 @@ class AvailablePackageConfig(scfg.DataConfig):
     available versions of a python package that meet some critera
     """
 
-    package_name = scfg.Value(None, position=1, help='the pypi package name')
-    request_min = scfg.Value(None, help='request a minimum version', position=2)
-    refresh = scfg.Value(False, isflag=1, help='if True refresh the cache')  # type: ignore
+    package_name = kwconf.Value(None, position=1, help='the pypi package name')
+    request_min = kwconf.Value(None, help='request a minimum version', position=2)
+    refresh = kwconf.Flag(False, help='if True refresh the cache')
 
 
-def main(cmdline=1, **kwargs):
+def main(argv=1, **kwargs):
     """
     Example:
         >>> # xdoctest: +SKIP
-        >>> cmdline = 0
+        >>> argv = 0
         >>> kwargs = dict(
         >>> )
-        >>> main(cmdline=cmdline, **kwargs)
+        >>> main(argv=argv, **kwargs)
     """
-    config = AvailablePackageConfig.legacy(cmdline=cmdline, data=kwargs)  # type: ignore
+    config = AvailablePackageConfig.cli(argv=argv, data=kwargs)  # type: ignore
     print('config = ' + ub.urepr(dict(config), nl=1))
     minimum_cross_python_versions(**config)
 
@@ -274,8 +274,9 @@ def grab_pypi_items(package_name, refresh=False):
         package_name = 'ubelt'
         package_name = 'scikit-image'
     """
-    import pandas as pd  # type: ignore
     import json
+
+    import pandas as pd  # type: ignore
 
     url = 'https://pypi.org/pypi/{}/json'.format(package_name)
     if 0:

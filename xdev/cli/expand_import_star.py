@@ -24,35 +24,34 @@ import ast
 import builtins
 import importlib
 import os
-import scriptconfig as scfg
 from typing import Dict, List, Set, Tuple, cast
 
+import kwconf
 
-class ExpandImportStarCLI(scfg.DataConfig):
+
+class ExpandImportStarCLI(kwconf.Config):
     """
     Expands / Reifies implicit imports (star imports).
 
     Replace 'from <module> import *' with explicit imports for used names.
     """
 
-    path = scfg.Value(
+    path = kwconf.Value(
         None,
         position=1,
         required=True,
         help='Path to the Python file to rewrite',
     )
-    inplace = scfg.Value(
+    inplace = kwconf.Flag(
         False,
-        isflag=True,
         short_alias=['i'],
         help='if True overwrite the original file with the expanded args',
     )
-    check = scfg.Value(
+    check = kwconf.Flag(
         False,
-        isflag=True,
         help='if True check that the expanded import statement executes',
     )
-    verbose = scfg.Value(0, help='verbosity level')
+    verbose = kwconf.Value(0, help='verbosity level')
 
     @classmethod
     def main(cls, argv=None, **kwargs):
