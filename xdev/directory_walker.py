@@ -558,7 +558,7 @@ class DirectoryWalker:
         if len(df):
             df = _order_columns(df, extra_last=('name',))
         else:
-            df = pd.DataFrame(columns=tuple(STAT_COLUMN_ORDER + ['name']))
+            df = pd.DataFrame(columns=pd.Index(STAT_COLUMN_ORDER + ['name']))
         return df
 
     def extension_stats_table(self, humanize=True):
@@ -1631,10 +1631,9 @@ def parse_python_content_stats(source: str):
                 and isinstance(getattr(first, 'value', None), ast.Constant)
                 and isinstance(first.value.value, str)
             ):
-                start = getattr(first, 'lineno', None)
-                end = getattr(first, 'end_lineno', None) or start
-                if start is not None:
-                    comment_lines.update(range(start - 1, end))
+                start = first.lineno
+                end = first.end_lineno or start
+                comment_lines.update(range(start - 1, end))
 
     try:
         raw_code = strip_comments_and_newlines(source)
@@ -1981,7 +1980,11 @@ class DirectoryDiff:
         from collections import Counter
 
         error_hist: Counter[int] = Counter({0: 0, 1: 0})
-        error_hist.update(int(r['num_errors']) for r in self.common_table)
+        for row in self.common_table:
+            num_errors = row['num_errors']
+            if num_errors is None:
+                raise ValueError('Missing error count in comparison table')
+            error_hist[int(num_errors)] += 1
         summary = {
             'n_common_paths': len(self.common_paths),
             'n_unique_paths1': len(self.unique_paths1),

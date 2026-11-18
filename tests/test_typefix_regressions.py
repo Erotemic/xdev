@@ -42,3 +42,24 @@ def test_grep_format_text_honors_color_flag(monkeypatch):
     assert '<red:needle>' in result.format_text(color=True)
     assert '<red:needle>' not in result.format_text(color=False)
     assert 'a needle in a haystack' in result.format_text(color=False)
+
+
+def test_directory_diff_histogram_keeps_integer_counts():
+    from xdev.directory_walker import DirectoryDiff
+
+    diff = DirectoryDiff(None, None)
+    diff.common_paths = {'a', 'b', 'c'}
+    diff.unique_paths1 = set()
+    diff.unique_paths2 = set()
+    diff.common_table = [
+        {'num_errors': 0},
+        {'num_errors': 2},
+        {'num_errors': '2'},
+    ]
+    counts = diff.summary()['error_hist']
+    assert counts[0] == 1
+    assert counts[2] == 2
+
+    diff.common_table = [{'num_errors': None}]
+    with pytest.raises(ValueError, match='Missing error count'):
+        diff.summary()

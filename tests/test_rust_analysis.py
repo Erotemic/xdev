@@ -1,8 +1,13 @@
+from typing import TYPE_CHECKING, cast
+
 import pytest
 import ubelt as ub
 
 from xdev import rust_analysis
 from xdev.directory_walker import parse_file_stats
+
+if TYPE_CHECKING:
+    from tree_sitter import Node
 
 
 RUST_SAMPLE = ub.codeblock(
@@ -284,8 +289,9 @@ def test_treesitter_line_sets_partition_mixed_physical_lines(monkeypatch):
     class Root:
         pass
 
+    # The walkers are monkeypatched below, so the fake root is never inspected.
     parsed = rust_analysis.ParsedRustSource(
-        text=source.decode('utf8'), source=source, root=Root()
+        text=source.decode('utf8'), source=source, root=cast('Node', Root())
     )
     comment_spans = [
         (0, 7, False),    # leading comment before code: code line

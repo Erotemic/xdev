@@ -372,15 +372,18 @@ def generate_typed_stubs(modpath):
 
             user_header = None
             for d in mod.ast.defs:
-                if isinstance(d, mypy_nodes.AssignmentStmt):  # type: ignore
-                    try:
-                        if (
-                            len(d.lvalues) == 1
-                            and d.lvalues[0].name == '__docstubs__'
-                        ):
-                            user_header = d.rvalue.value
-                    except AttributeError:
-                        ...
+                if not isinstance(d, mypy_nodes.AssignmentStmt):
+                    continue
+                if len(d.lvalues) != 1:
+                    continue
+                lhs = d.lvalues[0]
+                rhs = d.rvalue
+                if (
+                    isinstance(lhs, mypy_nodes.NameExpr)
+                    and lhs.name == '__docstubs__'
+                    and isinstance(rhs, mypy_nodes.StrExpr)
+                ):
+                    user_header = rhs.value
 
             if user_header is not None:
                 gen._output = [user_header] + gen._output
@@ -1090,7 +1093,9 @@ class ExtendedStubGenerator(ASTStubGenerator):
             # when we visited the class, so now we have to use that info here.
             self_inits = find_self_initializers(o)
 
-            self_inits_lut = dict(self_inits)  # type: ignore
+            # Current mypy returns (name, expression, type); older versions
+            # returned pairs. Only the name and expression are used here.
+            self_inits_lut = {entry[0]: entry[1] for entry in self_inits}
             # The docstring is the single source of truth, respect it.
             pseudo_inits = []
             if self._docstring_class_attr_infos is None:
@@ -1140,6 +1145,13 @@ class ExtendedStubGenerator(ASTStubGenerator):
                         annotation = None
                     # import xdev
                     # xdev.embed()
+                if value is None:
+                    # An attribute documented but not assigned in __init__ has
+                    # no initializer AST. Represent an annotation-only field.
+                    from mypy.nodes import TempNode
+                    from mypy.types import TypeOfAny
+
+                    value = TempNode(AnyType(TypeOfAny.special_form), no_rhs=True)
                 init_code = self.get_init(init, value, annotation=annotation)
                 if init_code:
                     self.add(init_code)
@@ -1258,8 +1270,8 @@ class ExtendedStubGenerator(ASTStubGenerator):
                     args.append('*')
                 if not annotation:
                     typename = self.get_str_type_of_node(
-                        arg_.initializer, True, False
-                    )  # type: ignore
+                        arg_.initializer, can_be_incomplete=False
+                    )
                     if typename == '':
                         if XDEV_KEEP_SOME_DEFAULTS:
                             # TODO
@@ -1282,9 +1294,17 @@ class ExtendedStubGenerator(ASTStubGenerator):
                             annotation += '={!r}'.format(arg_.initializer.value)
                         elif isinstance(arg_.initializer, mypy_nodes.NameExpr):  # type: ignore
                             annotation += '={}'.format(arg_.initializer.name)
-                        elif isinstance(arg_.initializer, mypy_nodes.UnaryExpr):  # type: ignore
-                            annotation += '={}'.format(
-                                arg_.initializer.expr.value
+                        elif (
+                            isinstance(arg_.initializer, mypy_nodes.UnaryExpr)
+                            and arg_.initializer.op in ('+', '-')
+                            and isinstance(
+                                arg_.initializer.expr,
+                                (mypy_nodes.IntExpr, mypy_nodes.FloatExpr),
+                            )
+                        ):
+                            annotation += '={}{!r}'.format(
+                                arg_.initializer.op,
+                                arg_.initializer.expr.value,
                             )
                         else:
                             # fallback, unhandled default
