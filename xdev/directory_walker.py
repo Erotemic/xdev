@@ -697,7 +697,7 @@ class DirectoryWalker:
                 if 'total' in df.columns:
                     df = df.sort_values('total')
                 df = _order_columns(df, extra_last=('name',))
-                rich.print(df)
+                rich.print(df.to_string())
                 # if self.graph.nodes[node]['type'] == 'dir':
                 # print(f'node={node}')
 
