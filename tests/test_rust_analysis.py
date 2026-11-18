@@ -196,6 +196,7 @@ def test_rust_dirstats_does_not_probe_every_text_file_by_default(tmp_path):
         + row['test_comments']
     ) <= row['total']
 
+    pytest.importorskip('pandas')  # Only the extension table needs pandas.
     ext_table = walker._stats_table_for_node(crate, humanize=False)
     assert ext_table.loc['rs', 'total'] == rust_total
     assert ext_table.loc['md', 'files'] == 1
@@ -234,6 +235,7 @@ def test_textlines_option_adds_generic_text_to_rust_summary(tmp_path):
         + row['test_comments']
     ) <= row['total']
 
+    pytest.importorskip('pandas')  # Only the extension table needs pandas.
     ext_table = walker._stats_table_for_node(crate, humanize=False)
     assert ext_table.loc['rs', 'total'] == rust_total
     assert ext_table.loc['md', 'total'] == len(readme_lines)

@@ -119,10 +119,12 @@ class DirectoryStatsCLI(kwconf.Config):
                     flattened.append(value)
             return flattened
 
-        if config.dpath.startswith('module:'):  # type: ignore
-            config.dpath = ub.modname_to_modpath(
-                config.dpath.split('module:', 1)[1]
-            )  # type: ignore
+        if config.dpath.startswith('module:'):
+            modname = config.dpath.split('module:', 1)[1]
+            modpath = ub.modname_to_modpath(modname)
+            if modpath is None:
+                raise ValueError(f'Cannot resolve Python module: {modname!r}')
+            config.dpath = modpath
 
         config.exclude_fnames = _flatten_pattern_args(config.exclude_fnames)
         config.exclude_dnames = _flatten_pattern_args(config.exclude_dnames)

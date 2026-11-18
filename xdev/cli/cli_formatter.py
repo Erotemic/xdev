@@ -51,7 +51,7 @@ class CLIFormatterCLI(kwconf.Config):
     )
 
     @classmethod
-    def main(cls, argv=1, **kwargs):
+    def main(cls, argv=True, **kwargs):
         """
         Example:
             >>> # xdoctest: +SKIP

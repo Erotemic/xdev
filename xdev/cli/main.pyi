@@ -10,7 +10,7 @@ class XdevCLI(kwconf.ModalCLI):
 
     class CodeblockCLI(kwconf.Config):
         __command__: str
-        __epilog__: str
+        __epilog__: str | None
         text: Incomplete
 
         @classmethod

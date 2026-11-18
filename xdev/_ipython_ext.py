@@ -140,12 +140,12 @@ def embed2(local_ns=None, **kwargs):
     global_ns['ipy'] = shell
     global_ns['share_locals'] = shell.share_locals
 
-    startup_files = glob.glob(
-        os.path.join(shell.profile_dir.startup_dir, '*.py')
-    )  # type: ignore
-    startup_files += glob.glob(
-        os.path.join(shell.profile_dir.startup_dir, '*.ipy')
-    )  # type: ignore
+    startup_files = []
+    profile_dir = shell.profile_dir
+    if profile_dir is not None:
+        startup_dir = profile_dir.startup_dir
+        startup_files = glob.glob(os.path.join(startup_dir, '*.py'))
+        startup_files += glob.glob(os.path.join(startup_dir, '*.ipy'))
 
     if '__file__' in global_ns:
         hasfile = True
@@ -165,7 +165,7 @@ def embed2(local_ns=None, **kwargs):
     if hasfile:
         global_ns['__file__'] = cfile
     else:
-        del global_ns['__file__']
+        global_ns.pop('__file__', None)
 
     ########################
     #  launch the shell

@@ -1,4 +1,4 @@
-from pathlib import Path
+import pytest
 
 
 def test_dirstats_counts_text_total_lines(tmp_path):
@@ -115,6 +115,7 @@ def test_dirstats_does_not_read_symlinked_directories_as_text(tmp_path):
 
 
 def test_dirstats_report_text_surfaces_language_breakdown(tmp_path):
+    pytest.importorskip('pandas')  # Reporting tables require the optional extra.
     from xdev.directory_walker import dirstats_report_text
 
     src = tmp_path / 'src'
