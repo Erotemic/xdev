@@ -386,10 +386,9 @@ def snapshot(parent_ns=None, n=0):
         parent_ns = parent_globals.copy()
         parent_ns.update(parent_locals)
 
-    snapshot_state = {}
-    variables = snapshot_state['variables'] = {}
-    not_pickleable = snapshot_state['not_pickleable'] = []
-    imports = snapshot_state['imports'] = []
+    variables = {}
+    not_pickleable = []
+    imports = []
 
     for k, v in parent_ns.items():
         if isinstance(v, types.ModuleType):
@@ -418,7 +417,12 @@ def snapshot(parent_ns=None, n=0):
         context['modpath'] = modpath
         context['modname'] = modname
 
-    snapshot_state['context'] = context
+    snapshot_state = {
+        'variables': variables,
+        'not_pickleable': not_pickleable,
+        'imports': imports,
+        'context': context,
+    }
 
     if not_pickleable:
         if len(not_pickleable) < 20:

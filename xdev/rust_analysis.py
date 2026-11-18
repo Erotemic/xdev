@@ -14,7 +14,11 @@ import bisect
 import collections
 import dataclasses
 import functools
-from typing import Iterable, Iterator, Sequence
+from typing import TYPE_CHECKING, Iterable, Iterator, Sequence
+
+if TYPE_CHECKING:
+    from tree_sitter import Node
+
 
 RUST_BACKENDS = {'tree-sitter', 'legacy'}
 TEST_LIKE_ATTR_NAMES = {
@@ -31,7 +35,7 @@ class ParsedRustSource:
 
     text: str
     source: bytes
-    root: object
+    root: Node
 
 
 @dataclasses.dataclass(frozen=True)
@@ -253,39 +257,48 @@ def make_parser():
         return Parser(language)
     except TypeError:  # pragma: no cover - older py-tree-sitter API
         parser = Parser()
-        parser.set_language(language)
+        set_language = getattr(parser, 'set_language', None)
+        if set_language is None:
+            raise
+        set_language(language)
         return parser
 
 
-def node_text(source: bytes, node: object) -> str:
+def node_text(source: bytes, node: Node) -> str:
     return source[node.start_byte : node.end_byte].decode('utf-8')
 
 
-def child_count(node: object) -> int:
+def child_count(node: Node) -> int:
     return node.child_count
 
 
-def named_child_count(node: object) -> int:
+def named_child_count(node: Node) -> int:
     return node.named_child_count
 
 
-def child(node: object, index: int) -> object:
-    return node.child(index)
+def child(node: Node, index: int) -> Node:
+    result = node.child(index)
+    if result is None:
+        raise IndexError(index)
+    return result
 
 
-def named_child(node: object, index: int) -> object:
-    return node.named_child(index)
+def named_child(node: Node, index: int) -> Node:
+    result = node.named_child(index)
+    if result is None:
+        raise IndexError(index)
+    return result
 
 
-def children(node: object) -> list[object]:
+def children(node: Node) -> list[Node]:
     return [child(node, i) for i in range(child_count(node))]
 
 
-def named_children(node: object) -> list[object]:
+def named_children(node: Node) -> list[Node]:
     return [named_child(node, i) for i in range(named_child_count(node))]
 
 
-def same_node(left: object, right: object) -> bool:
+def same_node(left: Node, right: Node) -> bool:
     return (
         left.type == right.type
         and left.start_byte == right.start_byte
@@ -293,19 +306,19 @@ def same_node(left: object, right: object) -> bool:
     )
 
 
-def iter_descendants(node: object) -> Iterator[object]:
+def iter_descendants(node: Node) -> Iterator[Node]:
     yield node
     for child_ in children(node):
         yield from iter_descendants(child_)
 
 
-def iter_named_descendants(node: object) -> Iterator[object]:
+def iter_named_descendants(node: Node) -> Iterator[Node]:
     yield node
     for child_ in named_children(node):
         yield from iter_named_descendants(child_)
 
 
-def attrs_immediately_before(source: bytes, node: object) -> list[object]:
+def attrs_immediately_before(source: bytes, node: Node) -> list[Node]:
     """
     Return attribute-item siblings immediately preceding ``node``.
     """
@@ -321,7 +334,7 @@ def attrs_immediately_before(source: bytes, node: object) -> list[object]:
     if node_index is None:
         return []
 
-    attrs: list[object] = []
+    attrs: list[Node] = []
     index = node_index - 1
     while index >= 0 and siblings[index].type == 'attribute_item':
         attrs.append(siblings[index])
@@ -360,7 +373,7 @@ def attr_is_test_like(attr_text: str) -> bool:
     return name in TEST_LIKE_ATTR_NAMES or name.endswith('::test')
 
 
-def attrs_are_test_context(source: bytes, attrs: Sequence[object]) -> bool:
+def attrs_are_test_context(source: bytes, attrs: Sequence[Node]) -> bool:
     for attr in attrs:
         text = node_text(source, attr)
         if attr_is_cfg_test(text) or attr_is_test_like(text):
@@ -368,7 +381,7 @@ def attrs_are_test_context(source: bytes, attrs: Sequence[object]) -> bool:
     return False
 
 
-def collect_test_spans(source: bytes, root: object) -> list[tuple[int, int]]:
+def collect_test_spans(source: bytes, root: Node) -> list[tuple[int, int]]:
     """
     Return byte spans for syntax items governed by test-only attributes.
     """
@@ -384,7 +397,7 @@ def collect_test_spans(source: bytes, root: object) -> list[tuple[int, int]]:
 
 
 def collect_comment_spans(
-    source: bytes, root: object
+    source: bytes, root: Node
 ) -> list[tuple[int, int, bool]]:
     """
     Return ``(start_byte, end_byte, is_doc)`` for tree-sitter comment nodes.

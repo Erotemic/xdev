@@ -41,49 +41,68 @@ Ignore:
     print(lib.current_sourcecode())
 """
 
-try:
-    from mypy.nodes import (  # type: ignore
-        # FuncBase, Block,
-        # Statement, OverloadedFuncDef, ARG_POS,
-        ARG_STAR,
-        ARG_STAR2,
-        # ARG_NAMED,
-        # Expression, IntExpr, UnaryExpr, StrExpr, BytesExpr, NameExpr, FloatExpr, MemberExpr,
-        # TupleExpr, ListExpr, ComparisonExpr, CallExpr, IndexExpr, EllipsisExpr,
-        # ClassDef, MypyFile, Decorator, AssignmentStmt, TypeInfo,
-        # IfStmt, ImportAll, ImportFrom, Import,
-        IS_ABSTRACT,
-        FuncDef,
-    )
+from __future__ import annotations
+
+import sys
+from typing import TYPE_CHECKING, List
+
+import ubelt as ub
+
+if TYPE_CHECKING:
+    from mypy.nodes import ARG_STAR, ARG_STAR2, IS_ABSTRACT, FuncDef
     from mypy.stubgen import (
-        EMPTY,  # type: ignore
+        ASTStubGenerator,
+        EMPTY,
         FUNC,
         METHODS_WITH_RETURN_VALUE,
-        ASTStubGenerator,
         find_self_initializers,
-        is_none_expr,  # type: ignore
+        is_none_expr,
     )
-    from mypy.traverser import (  # type: ignore
+    from mypy.traverser import (
         all_yield_expressions,
         has_return_statement,
         has_yield_expression,
     )
-    from mypy.types import (  # type: ignore
-        # UnboundType, NoneType, TupleType, TypeList, Instance,
-        AnyType,
-        # Type, TypeStrVisitor,
-        CallableType,
-        get_proper_type,
-    )
-except Exception:
-    ASTStubGenerator = object  # type: ignore
-    FuncDef = None  # type: ignore
-    METHODS_WITH_RETURN_VALUE = []  # type: ignore
-
-import sys
-from typing import (
-    List,
-)
+    from mypy.types import AnyType, CallableType, get_proper_type
+else:
+    try:
+        from mypy.nodes import (  # type: ignore
+            # FuncBase, Block,
+            # Statement, OverloadedFuncDef, ARG_POS,
+            ARG_STAR,
+            ARG_STAR2,
+            # ARG_NAMED,
+            # Expression, IntExpr, UnaryExpr, StrExpr, BytesExpr, NameExpr, FloatExpr, MemberExpr,
+            # TupleExpr, ListExpr, ComparisonExpr, CallExpr, IndexExpr, EllipsisExpr,
+            # ClassDef, MypyFile, Decorator, AssignmentStmt, TypeInfo,
+            # IfStmt, ImportAll, ImportFrom, Import,
+            IS_ABSTRACT,
+            FuncDef,
+        )
+        from mypy.stubgen import (
+            EMPTY,  # type: ignore
+            FUNC,
+            METHODS_WITH_RETURN_VALUE,
+            ASTStubGenerator,
+            find_self_initializers,
+            is_none_expr,  # type: ignore
+        )
+        from mypy.traverser import (  # type: ignore
+            all_yield_expressions,
+            has_return_statement,
+            has_yield_expression,
+        )
+        from mypy.types import (  # type: ignore
+            # UnboundType, NoneType, TupleType, TypeList, Instance,
+            AnyType,
+            # Type, TypeStrVisitor,
+            CallableType,
+            get_proper_type,
+        )
+    except Exception:
+        ASTStubGenerator = object  # type: ignore
+        FuncDef = None  # type: ignore
+        METHODS_WITH_RETURN_VALUE = []  # type: ignore
 
 # from mypy.stubgenc import generate_stub_for_c_module
 # from mypy.stubutil import (
@@ -91,8 +110,6 @@ from typing import (
 #     walk_packages, find_module_path_and_all_py2, find_module_path_and_all_py3,
 #     report_missing, fail_missing, remove_misplaced_type_comments, common_dir_prefix
 # )
-import ubelt as ub
-
 Stub = ...  # hack for mypy. Not sure why it is generated in the first place.
 
 
@@ -220,7 +237,7 @@ def generate_typed_stubs(modpath):
 
     files = list(
         static_analysis.package_modpaths(
-            modpath, recursive=True, with_libs=0, with_pkg=0
+            os.fspath(modpath), recursive=True, with_libs=False, with_pkg=False
         )
     )  # type: ignore
 
@@ -351,11 +368,11 @@ def generate_typed_stubs(modpath):
                 ] + gen._output
 
             # Check for a special user header variable we pull in verbatim
-            import mypy  # type: ignore
+            from mypy import nodes as mypy_nodes
 
             user_header = None
             for d in mod.ast.defs:
-                if isinstance(d, mypy.nodes.AssignmentStmt):  # type: ignore
+                if isinstance(d, mypy_nodes.AssignmentStmt):  # type: ignore
                     try:
                         if (
                             len(d.lvalues) == 1
@@ -1253,19 +1270,19 @@ class ExtendedStubGenerator(ASTStubGenerator):
                         annotation = ': {} = ...'.format(typename)
                 else:
                     if XDEV_KEEP_SOME_DEFAULTS:
-                        import mypy  # type: ignore
+                        from mypy import nodes as mypy_nodes
 
                         # arg_.initializer.is_special_form
                         if isinstance(
                             arg_.initializer,
-                            (mypy.nodes.IntExpr, mypy.nodes.FloatExpr),
+                            (mypy_nodes.IntExpr, mypy_nodes.FloatExpr),
                         ):  # type: ignore
                             annotation += '={!r}'.format(arg_.initializer.value)
-                        elif isinstance(arg_.initializer, mypy.nodes.StrExpr):  # type: ignore
+                        elif isinstance(arg_.initializer, mypy_nodes.StrExpr):  # type: ignore
                             annotation += '={!r}'.format(arg_.initializer.value)
-                        elif isinstance(arg_.initializer, mypy.nodes.NameExpr):  # type: ignore
+                        elif isinstance(arg_.initializer, mypy_nodes.NameExpr):  # type: ignore
                             annotation += '={}'.format(arg_.initializer.name)
-                        elif isinstance(arg_.initializer, mypy.nodes.UnaryExpr):  # type: ignore
+                        elif isinstance(arg_.initializer, mypy_nodes.UnaryExpr):  # type: ignore
                             annotation += '={}'.format(
                                 arg_.initializer.expr.value
                             )

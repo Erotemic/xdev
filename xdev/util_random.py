@@ -62,6 +62,8 @@ def _pystate_to_npstate(pystate):
         >>> np_rng.set_state(npstate)
         >>> assert np_rng.rand() == py_rng.random()
     """
+    if np is None:
+        raise ImportError('Converting to NumPy random state requires numpy')
     NP_VERSION = 'MT19937'
     version, keys_pos_, cached_gaussian_ = pystate
     keys, pos = keys_pos_[:-1], keys_pos_[-1]
@@ -76,16 +78,22 @@ def _coerce_rng_type(rng):
     """
     Internal method that transforms input seeds into an integer form.
     """
-    if rng is None or isinstance(rng, (random.Random, np.random.RandomState)):
+    if (
+        rng is None
+        or isinstance(rng, random.Random)
+        or (np is not None and isinstance(rng, np.random.RandomState))
+    ):
         pass
     elif rng is random:
         rng = rng._inst
-    elif rng is np.random:
+    elif np is not None and rng is np.random:
         rng = np.random.mtrand._rand
     # elif isinstance(rng, str):
     #     # todo convert string to rng
     #     pass
-    elif isinstance(rng, (float, np.floating)):
+    elif isinstance(rng, float) or (
+        np is not None and isinstance(rng, np.floating)
+    ):
         rng = float(rng)
         # Coerce the float into an integer
         a, b = rng.as_integer_ratio()
@@ -94,7 +102,9 @@ def _coerce_rng_type(rng):
         else:
             s = max(a.bit_length(), b.bit_length())
             rng = (b << s) | a
-    elif isinstance(rng, (int, np.integer)):
+    elif isinstance(rng, int) or (
+        np is not None and isinstance(rng, np.integer)
+    ):
         rng = int(rng)
     else:
         raise TypeError(

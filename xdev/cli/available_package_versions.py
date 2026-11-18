@@ -19,9 +19,18 @@ CommandLine:
     xdev availpkg flex
 """
 
+from typing import TypedDict
+
 import kwconf
 import ubelt as ub
+from packaging.version import Version as PackagingVersion
 from packaging.version import parse as Version
+
+
+class _VersionConstraint(TypedDict):
+    opstr: str
+    idx: int | None
+    partver: PackagingVersion
 
 
 class AvailablePackageConfig(kwconf.Config):
@@ -75,7 +84,7 @@ class ReqPythonVersionSpec:
         self.parts = pattern.split(',')
         self.specifier = SpecifierSet(pattern)
 
-        self.constraints = []
+        self.constraints: list[_VersionConstraint] = []
         for part in self.parts:
             try:
                 oppat, partpat = part.split('=')
@@ -513,9 +522,9 @@ def summarize_package_availability(package_name):
                 .reset_index()
             )
         except KeyError:
-            counts = []
+            counts = pd.DataFrame()
 
-        if len(counts):
+        if not counts.empty:
             try:
                 counts = counts.iloc[
                     ub.argsort(counts['abi_tag'], key=cp_sorter)
@@ -751,10 +760,10 @@ def build_package_table(package_name, refresh=False):
                 import xdev
 
                 with xdev.embed_on_exception_context:
-                    min_pyver = reqspec.highest_explicit()
-                # min_pyver = min_pyver.vstring
-                min_pyver = min_pyver.base_version
-                last_min_pyver = min_pyver
+                    min_requirement = reqspec.highest_explicit()
+                if min_requirement is not None:
+                    min_pyver = min_requirement.base_version
+                    last_min_pyver = min_pyver
 
                 # Declared support is generally only good for the python
                 # versions that existed at the time.
@@ -766,7 +775,8 @@ def build_package_table(package_name, refresh=False):
                 heuristic_support = set(contemporary_pyvers) & set(
                     declared_support
                 )
-                max_pyver = max(heuristic_support, key=Version)
+                if heuristic_support:
+                    max_pyver = max(heuristic_support, key=Version)
 
             min_pyver = python_versions.resolve_pyversion(
                 min_pyver, maximize=False
@@ -823,11 +833,12 @@ def build_package_table(package_name, refresh=False):
                         for v in heuristic_support
                         if Version(v) <= Version(max_pyver)
                     ]
-                    heuristic_support = [
-                        v
-                        for v in heuristic_support
-                        if Version(v) >= Version(min_pyver)
-                    ]  # type: ignore
+                    if min_pyver is not None:
+                        heuristic_support = [
+                            v
+                            for v in heuristic_support
+                            if Version(v) >= Version(min_pyver)
+                        ]
                 hacked_pkgver_to_pyvers[pkg_version].update(heuristic_support)
 
             if min_pyver is not None:

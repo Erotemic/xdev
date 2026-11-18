@@ -558,7 +558,7 @@ class DirectoryWalker:
         if len(df):
             df = _order_columns(df, extra_last=('name',))
         else:
-            df = pd.DataFrame(columns=STAT_COLUMN_ORDER + ['name'])
+            df = pd.DataFrame(columns=tuple(STAT_COLUMN_ORDER + ['name']))
         return df
 
     def extension_stats_table(self, humanize=True):
@@ -1205,6 +1205,8 @@ class DirectoryWalker:
 
     def _sort(self):
         g = self.graph
+        if g is None:
+            raise RuntimeError('_sort() requires build() first')
         # Order nodes based on size
         ordered_nodes = dict(g.nodes(data=True))  # type: ignore
         ordered_edges = []
@@ -1630,7 +1632,7 @@ def parse_python_content_stats(source: str):
                 and isinstance(first.value.value, str)
             ):
                 start = getattr(first, 'lineno', None)
-                end = getattr(first, 'end_lineno', start)
+                end = getattr(first, 'end_lineno', None) or start
                 if start is not None:
                     comment_lines.update(range(start - 1, end))
 
@@ -1978,8 +1980,8 @@ class DirectoryDiff:
     def summary(self):
         from collections import Counter
 
-        error_hist = Counter({0: 0, 1: 0})
-        error_hist.update(r['num_errors'] for r in self.common_table)
+        error_hist: Counter[int] = Counter({0: 0, 1: 0})
+        error_hist.update(int(r['num_errors']) for r in self.common_table)
         summary = {
             'n_common_paths': len(self.common_paths),
             'n_unique_paths1': len(self.unique_paths1),

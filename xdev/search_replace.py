@@ -56,14 +56,14 @@ class GrepResult(ub.NiceRepr):
         fmt_str = '{} : {:' + ndigits + 'd} |{}'
         ret = 'Found {} line(s) in {!r}: '.format(len(self), self.fpath)
         app('----------------------')
-        color = 'red'
+        highlight_color = 'red'
         app(ret)
         for lx, line in zip(self.found_lxs, self.found_lines):
             line = line.replace('\n', '')
             if color and self.pattern:
                 found = self.pattern.search(line)
                 s, t = found.span()
-                line = line[:s] + ub.color_text(line[s:t], color) + line[t:]
+                line = line[:s] + ub.color_text(line[s:t], highlight_color) + line[t:]
             app(fmt_str.format(fname, lx, line))
 
         return '\n'.join(summary)

@@ -313,6 +313,8 @@ class Pattern(PatternBase, ub.NiceRepr):
         if self.backend == 'glob':
             import glob
 
+            if not isinstance(self.pattern, str):
+                raise TypeError('Filesystem glob patterns must be strings')
             with ChDir(cwd):
                 yield from map(
                     ub.Path, glob.glob(self.pattern, recursive=recursive)
