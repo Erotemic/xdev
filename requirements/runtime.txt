@@ -6,7 +6,7 @@ IPython >= 9.0.0  ; python_version >= '3.13'
 IPython >= 7.16.2 ; python_version < '3.13'
 parse >= 1.19.0
 pyflakes >= 2.5.0
-scriptconfig >= 0.8.4
+kwconf >= 0.10.0
 
 lazy_loader>=0.3
 

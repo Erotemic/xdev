@@ -1,11 +1,21 @@
 #!/usr/bin/env python3
 """
-Align the pipes in a Markdown table.
+Align Markdown table pipes without rewriting unrelated text.
 
-Reads a Markdown table from a positional argument, ``--file FILE``, or
-stdin. Parses rows, computes per-column widths, and re-emits the table so
-every pipe lines up. Recognized alignment markers (``:---``, ``---:``,
-``:---:``) are preserved.
+Reads Markdown from a positional argument, ``--file FILE``, or stdin. Only
+actual table blocks are reformatted: a candidate header row must be followed
+immediately by a valid Markdown delimiter row. Text containing ordinary pipe
+characters and fenced code blocks are left untouched.
+
+The formatter supports:
+
+* tables with or without leading/trailing pipes;
+* left, right, center, and default delimiter-row alignment;
+* ragged body rows (missing cells are padded to the table width);
+* escaped pipes, including correct odd/even backslash handling;
+* common blockquote prefixes and up to three spaces of indentation;
+* Unicode-aware source-column widths; and
+* preservation of the input newline convention and final newline.
 
 Examples:
 
@@ -18,199 +28,383 @@ Examples:
     # from a file
     align_md_table.py --file table.md
 """
+
 from __future__ import annotations
 
 import argparse
 import re
 import sys
-from typing import List, Tuple
+import unicodedata
+from dataclasses import dataclass
+from typing import List, Optional, Sequence, Tuple
 
 
-# Split on unescaped pipes. We allow ``\|`` to be a literal pipe within a
-# cell (rare, but a real Markdown rule).
-_CELL_SPLIT = re.compile(r'(?<!\\)\|')
+_ALIGNMENT_CELL_RE = re.compile(r":?-{3,}:?")
+_FENCE_RE = re.compile(r"^(?P<indent> {0,3})(?P<fence>`{3,}|~{3,})(?P<rest>.*)$")
+_CONTAINER_RE = re.compile(r"^(?P<prefix> {0,3}(?:> ?)+)(?P<body>.*)$")
+_INDENT_RE = re.compile(r"^(?P<prefix> {0,3})(?P<body>.*)$")
 
 
-def _strip_outer_pipes(line: str) -> str:
-    """Remove the leading and trailing pipe of a table row, if present."""
-    line = line.strip()
-    if line.startswith('|'):
-        line = line[1:]
-    if line.endswith('|'):
-        line = line[:-1]
-    return line
+@dataclass(frozen=True)
+class ParsedRow:
+    """One row-like Markdown source line."""
+
+    prefix: str
+    cells: List[str]
 
 
-def _split_row(line: str) -> List[str]:
-    """Split a row into stripped cell strings."""
-    inner = _strip_outer_pipes(line)
-    return [c.strip() for c in _CELL_SPLIT.split(inner)]
+@dataclass(frozen=True)
+class Fence:
+    """An open fenced-code block."""
+
+    char: str
+    length: int
+
+
+def _split_prefix(line: str) -> Tuple[str, str]:
+    """Return a lightweight Markdown container prefix and row body."""
+    match = _CONTAINER_RE.match(line)
+    if match:
+        return match.group("prefix"), match.group("body")
+
+    match = _INDENT_RE.match(line)
+    assert match is not None
+    return match.group("prefix"), match.group("body")
+
+
+def _pipe_is_escaped(text: str, index: int) -> bool:
+    """Whether ``text[index]`` is preceded by an odd run of backslashes."""
+    backslashes = 0
+    index -= 1
+    while index >= 0 and text[index] == "\\":
+        backslashes += 1
+        index -= 1
+    return backslashes % 2 == 1
+
+
+def _split_unescaped_pipes(text: str) -> Tuple[List[str], bool, bool, int]:
+    """
+    Split on Markdown pipe separators.
+
+    Returns ``(parts, leading_pipe, trailing_pipe, separator_count)``. A pipe
+    escaped by an odd number of immediately preceding backslashes is literal;
+    a pipe preceded by an even number remains a separator.
+    """
+    parts: List[str] = []
+    start = 0
+    separator_positions: List[int] = []
+
+    for index, char in enumerate(text):
+        if char == "|" and not _pipe_is_escaped(text, index):
+            parts.append(text[start:index])
+            separator_positions.append(index)
+            start = index + 1
+    parts.append(text[start:])
+
+    stripped_left = len(text) - len(text.lstrip())
+    stripped_right = len(text.rstrip())
+    first_content = stripped_left
+    last_content = stripped_right - 1
+
+    leading_pipe = bool(separator_positions and separator_positions[0] == first_content)
+    trailing_pipe = bool(
+        separator_positions
+        and last_content >= first_content
+        and separator_positions[-1] == last_content
+    )
+
+    if leading_pipe:
+        parts = parts[1:]
+    if trailing_pipe and parts:
+        parts = parts[:-1]
+
+    return parts, leading_pipe, trailing_pipe, len(separator_positions)
+
+
+def _parse_row(line: str) -> Optional[ParsedRow]:
+    """Parse a row-shaped source line, or return ``None`` if it has no separator."""
+    prefix, body = _split_prefix(line)
+
+    # Four-space indentation is an indented code block, not a table. The
+    # prefix splitter intentionally consumes at most three spaces, so reject
+    # a fourth one still present at the front of the body.
+    if body.startswith(" ") and not prefix.rstrip().endswith(">"):
+        return None
+
+    parts, _leading, _trailing, separator_count = _split_unescaped_pipes(body)
+    if separator_count == 0:
+        return None
+
+    cells = [part.strip() for part in parts]
+    if not cells:
+        return None
+    return ParsedRow(prefix=prefix, cells=cells)
 
 
 def _classify_align_cell(cell: str) -> Tuple[str, bool]:
     """
-    Return (alignment, is_alignment_cell) for a separator-row cell.
+    Return ``(alignment, is_delimiter_cell)`` for a delimiter-row cell.
 
-    alignment is one of: 'left', 'right', 'center', 'default'.
+    ``alignment`` is one of ``left``, ``right``, ``center``, or ``default``.
     """
-    s = cell.strip()
-    if not re.fullmatch(r':?-{3,}:?', s):
-        return 'default', False
-    left = s.startswith(':')
-    right = s.endswith(':')
+    value = cell.strip()
+    if _ALIGNMENT_CELL_RE.fullmatch(value) is None:
+        return "default", False
+
+    left = value.startswith(":")
+    right = value.endswith(":")
     if left and right:
-        return 'center', True
+        return "center", True
     if right:
-        return 'right', True
+        return "right", True
     if left:
-        return 'left', True
-    return 'default', True
+        return "left", True
+    return "default", True
 
 
-def _row_is_alignment(row: List[str]) -> bool:
-    """A row is the alignment row iff every cell is an alignment cell."""
-    return bool(row) and all(_classify_align_cell(c)[1] for c in row)
+def _row_is_delimiter(row: ParsedRow) -> bool:
+    """A delimiter row consists entirely of valid delimiter cells."""
+    return bool(row.cells) and all(_classify_align_cell(cell)[1] for cell in row.cells)
 
 
-def _visible_len(s: str) -> int:
+def _display_width(text: str) -> int:
     """
-    Best-effort visible length. Uses character count; treats wide characters
-    as width 1 because Python's stdlib doesn't expose East Asian width
-    cheaply. Good enough for the typical ASCII-heavy markdown table.
+    Estimate monospace source width without third-party dependencies.
+
+    Combining/control-format characters count as zero, East Asian wide/full
+    width characters count as two, and tabs advance to the next 4-column stop.
     """
-    return len(s)
+    width = 0
+    for char in text:
+        if char == "\t":
+            width += 4 - (width % 4)
+            continue
+        if unicodedata.combining(char):
+            continue
+        category = unicodedata.category(char)
+        if category in {"Cf", "Cc"}:
+            continue
+        width += 2 if unicodedata.east_asian_width(char) in {"W", "F"} else 1
+    return width
 
 
 def _pad_cell(cell: str, width: int, alignment: str) -> str:
-    pad = width - _visible_len(cell)
+    pad = width - _display_width(cell)
     if pad <= 0:
         return cell
-    if alignment == 'right':
-        return ' ' * pad + cell
-    if alignment == 'center':
+    if alignment == "right":
+        return " " * pad + cell
+    if alignment == "center":
         left = pad // 2
         right = pad - left
-        return ' ' * left + cell + ' ' * right
-    # 'left' and 'default' both left-align
-    return cell + ' ' * pad
+        return " " * left + cell + " " * right
+    return cell + " " * pad
 
 
-def _format_alignment_cell(width: int, alignment: str) -> str:
-    """
-    Build the dashes/colons for one cell of the alignment row, sized to
-    ``width``. Width here is the cell's content width (not counting the
-    surrounding spaces around the pipe).
-    """
-    # Always emit at least three dashes per the GFM spec.
-    width = max(width, 3)
-    if alignment == 'left':
-        return ':' + '-' * (width - 1)
-    if alignment == 'right':
-        return '-' * (width - 1) + ':'
-    if alignment == 'center':
-        return ':' + '-' * (width - 2) + ':'
-    return '-' * width
+def _minimum_delimiter_width(alignment: str) -> int:
+    """Minimum serialized width for three dashes plus alignment colons."""
+    if alignment == "center":
+        return 5
+    if alignment in {"left", "right"}:
+        return 4
+    return 3
+
+
+def _format_delimiter_cell(width: int, alignment: str) -> str:
+    width = max(width, _minimum_delimiter_width(alignment))
+    if alignment == "left":
+        return ":" + "-" * (width - 1)
+    if alignment == "right":
+        return "-" * (width - 1) + ":"
+    if alignment == "center":
+        return ":" + "-" * (width - 2) + ":"
+    return "-" * width
+
+
+def _same_container(a: ParsedRow, b: ParsedRow) -> bool:
+    """Require rows in one table to share their Markdown container prefix."""
+    return a.prefix == b.prefix
+
+
+def _table_start(lines: Sequence[str], index: int) -> Optional[Tuple[ParsedRow, ParsedRow]]:
+    """Recognize a table only from a header immediately followed by a delimiter."""
+    if index + 1 >= len(lines):
+        return None
+
+    header = _parse_row(lines[index])
+    delimiter = _parse_row(lines[index + 1])
+    if header is None or delimiter is None:
+        return None
+    if not _same_container(header, delimiter):
+        return None
+    if not _row_is_delimiter(delimiter):
+        return None
+    if len(header.cells) != len(delimiter.cells):
+        return None
+    return header, delimiter
+
+
+def _align_table_rows(rows: Sequence[ParsedRow]) -> List[str]:
+    """Format a recognized table whose second row is its delimiter row."""
+    if len(rows) < 2 or not _row_is_delimiter(rows[1]):
+        raise ValueError("expected header + delimiter table rows")
+
+    n_cols = max(len(row.cells) for row in rows)
+    alignments = [_classify_align_cell(cell)[0] for cell in rows[1].cells]
+    alignments.extend(["default"] * (n_cols - len(alignments)))
+
+    normalized = [row.cells + [""] * (n_cols - len(row.cells)) for row in rows]
+
+    widths = [0] * n_cols
+    for row_index, cells in enumerate(normalized):
+        if row_index == 1:
+            continue
+        for column, cell in enumerate(cells):
+            widths[column] = max(widths[column], _display_width(cell))
+
+    for column, alignment in enumerate(alignments):
+        widths[column] = max(widths[column], _minimum_delimiter_width(alignment))
+
+    prefix = rows[0].prefix
+    output: List[str] = []
+    for row_index, cells in enumerate(normalized):
+        if row_index == 1:
+            formatted = [
+                _format_delimiter_cell(widths[column], alignments[column])
+                for column in range(n_cols)
+            ]
+        else:
+            formatted = [
+                _pad_cell(cells[column], widths[column], alignments[column])
+                for column in range(n_cols)
+            ]
+        output.append(prefix + "| " + " | ".join(formatted) + " |")
+    return output
+
+
+def _fence_transition(line: str, open_fence: Optional[Fence]) -> Optional[Fence]:
+    """Track ordinary CommonMark-style fenced code blocks."""
+    _prefix, body = _split_prefix(line)
+    match = _FENCE_RE.match(body)
+    if match is None:
+        return open_fence
+
+    token = match.group("fence")
+    char = token[0]
+    length = len(token)
+
+    if open_fence is None:
+        return Fence(char=char, length=length)
+
+    rest = match.group("rest")
+    if char == open_fence.char and length >= open_fence.length and not rest.strip():
+        return None
+    return open_fence
+
+
+def _newline_style(text: str) -> str:
+    """Use the first newline sequence present, defaulting to LF."""
+    match = re.search(r"\r\n|\n|\r", text)
+    return match.group(0) if match else "\n"
 
 
 def align_markdown_table(text: str) -> str:
     """
-    Align the pipes in a single Markdown table.
+    Align every actual Markdown table in ``text``.
 
-    Lines that don't look like table rows (no ``|``) pass through verbatim,
-    so a table inside a larger document survives a round-trip.
+    Detection is deliberately conservative: a table begins only when a
+    row-shaped header is immediately followed by a valid delimiter row with
+    the same number of cells. Unrelated pipe-bearing text and fenced code are
+    preserved byte-for-byte apart from the document's table replacements.
     """
-    out_lines: List[str] = []
-    table_buf: List[str] = []
+    if not text:
+        return text
 
-    def flush_table():
-        if table_buf:
-            out_lines.append(_align_block(table_buf))
-            table_buf.clear()
+    newline = _newline_style(text)
+    had_final_newline = text.endswith(("\n", "\r"))
+    lines = text.splitlines()
 
-    for line in text.splitlines():
-        if '|' in line.strip():
-            table_buf.append(line)
-        else:
-            flush_table()
-            out_lines.append(line)
-    flush_table()
+    output: List[str] = []
+    index = 0
+    open_fence: Optional[Fence] = None
 
-    return '\n'.join(out_lines)
+    while index < len(lines):
+        line = lines[index]
 
-
-def _align_block(lines: List[str]) -> str:
-    rows = [_split_row(line) for line in lines]
-    n_cols = max(len(r) for r in rows)
-    # Pad ragged rows to the widest row so column indexing is uniform.
-    rows = [r + [''] * (n_cols - len(r)) for r in rows]
-
-    # Find the alignment row (typically the second row).
-    align_idx = next((i for i, r in enumerate(rows) if _row_is_alignment(r)), None)
-    if align_idx is not None:
-        alignments = [_classify_align_cell(c)[0] for c in rows[align_idx]]
-    else:
-        alignments = ['default'] * n_cols
-
-    # Compute per-column content widths (skip the alignment row when sizing
-    # columns -- the markers should grow to fit, not the other way around).
-    widths = [0] * n_cols
-    for i, row in enumerate(rows):
-        if i == align_idx:
+        next_fence = _fence_transition(line, open_fence)
+        if open_fence is not None or next_fence is not None:
+            output.append(line)
+            open_fence = next_fence
+            index += 1
             continue
-        for c, cell in enumerate(row):
-            widths[c] = max(widths[c], _visible_len(cell))
-    # Alignment markers need at least 3 dashes (plus optional colons).
-    for c in range(n_cols):
-        markers_min = 3 + sum(
-            1 for a in [alignments[c]] if a in ('left', 'right'))
-        markers_min += 1 if alignments[c] == 'center' else 0
-        widths[c] = max(widths[c], markers_min)
 
-    out_rows: List[str] = []
-    for i, row in enumerate(rows):
-        if i == align_idx:
-            cells = [_format_alignment_cell(widths[c], alignments[c])
-                     for c in range(n_cols)]
-        else:
-            cells = [_pad_cell(row[c], widths[c], alignments[c])
-                     for c in range(n_cols)]
-        out_rows.append('| ' + ' | '.join(cells) + ' |')
-    return '\n'.join(out_rows)
+        start = _table_start(lines, index)
+        if start is None:
+            output.append(line)
+            index += 1
+            continue
+
+        header, delimiter = start
+        rows: List[ParsedRow] = [header, delimiter]
+        cursor = index + 2
+        while cursor < len(lines):
+            candidate = _parse_row(lines[cursor])
+            if candidate is None or not _same_container(header, candidate):
+                break
+
+            # If this row itself begins another valid table, leave it for the
+            # outer loop instead of swallowing two adjacent tables.
+            if _table_start(lines, cursor) is not None:
+                break
+
+            rows.append(candidate)
+            cursor += 1
+
+        output.extend(_align_table_rows(rows))
+        index = cursor
+
+    result = newline.join(output)
+    if had_final_newline:
+        result += newline
+    return result
 
 
 def _read_input(args: argparse.Namespace) -> str:
     if args.file:
-        with open(args.file, 'r') as fp:
+        with open(args.file, "r", newline="") as fp:
             return fp.read()
     if args.text is not None:
         return args.text
     if sys.stdin.isatty():
         raise SystemExit(
-            'No input given. Pass a string argument, --file, or pipe via stdin.'
+            "No input given. Pass a string argument, --file, or pipe via stdin."
         )
     return sys.stdin.read()
 
 
-def main(argv=None) -> int:
+def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        prog='align_md_table',
+        prog="align_md_table",
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
-        'text', nargs='?', default=None,
-        help='markdown table (or document containing one) as a string',
+        "text",
+        nargs="?",
+        default=None,
+        help="markdown table (or document containing one) as a string",
     )
     parser.add_argument(
-        '-f', '--file',
-        help='read the markdown from this file instead of stdin / argv',
+        "-f",
+        "--file",
+        help="read the markdown from this file instead of stdin / argv",
     )
     args = parser.parse_args(argv)
 
     text = _read_input(args)
-    print(align_markdown_table(text))
+    sys.stdout.write(align_markdown_table(text))
     return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     raise SystemExit(main())

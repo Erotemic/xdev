@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
 import ubelt as ub
 
 
@@ -35,7 +40,7 @@ def quantum_random(pure=False):
         buf = memoryview(os.urandom(nbytes))
         pr_data16 = np.frombuffer(buf, dtype=qr_data16.dtype)
         # xor to mix data
-        data16 = (pr_data16 ^ qr_data16)
+        data16 = pr_data16 ^ qr_data16
 
     assert data16.flags['C_CONTIGUOUS']
     data32 = data16.view(np.dtype('uint32'))[0]
@@ -67,42 +72,42 @@ def byte_str(num, unit='auto', precision=2):
     """
     abs_num = abs(num)
     if unit == 'auto':
-        if abs_num < 2.0 ** 10:
+        if abs_num < 2.0**10:
             unit = 'KB'
-        elif abs_num < 2.0 ** 20:
+        elif abs_num < 2.0**20:
             unit = 'KB'
-        elif abs_num < 2.0 ** 30:
+        elif abs_num < 2.0**30:
             unit = 'MB'
-        elif abs_num < 2.0 ** 40:
+        elif abs_num < 2.0**40:
             unit = 'GB'
-        elif abs_num < 2.0 ** 50:
+        elif abs_num < 2.0**50:
             unit = 'TB'
-        elif abs_num < 2.0 ** 60:
+        elif abs_num < 2.0**60:
             unit = 'PB'
-        elif abs_num < 2.0 ** 70:
+        elif abs_num < 2.0**70:
             unit = 'EB'
-        elif abs_num < 2.0 ** 80:
+        elif abs_num < 2.0**80:
             unit = 'ZB'
         else:
             unit = 'YB'
     if unit.lower().startswith('b'):
         num_unit = num
     elif unit.lower().startswith('k'):
-        num_unit =  num / (2.0 ** 10)
+        num_unit = num / (2.0**10)
     elif unit.lower().startswith('m'):
-        num_unit =  num / (2.0 ** 20)
+        num_unit = num / (2.0**20)
     elif unit.lower().startswith('g'):
-        num_unit = num / (2.0 ** 30)
+        num_unit = num / (2.0**30)
     elif unit.lower().startswith('t'):
-        num_unit = num / (2.0 ** 40)
+        num_unit = num / (2.0**40)
     elif unit.lower().startswith('p'):
-        num_unit = num / (2.0 ** 50)
+        num_unit = num / (2.0**50)
     elif unit.lower().startswith('e'):
-        num_unit = num / (2.0 ** 60)
+        num_unit = num / (2.0**60)
     elif unit.lower().startswith('z'):
-        num_unit = num / (2.0 ** 70)
+        num_unit = num / (2.0**70)
     elif unit.lower().startswith('y'):
-        num_unit = num / (2.0 ** 80)
+        num_unit = num / (2.0**80)
     else:
         raise ValueError('unknown num={!r} unit={!r}'.format(num, unit))
     return ub.urepr(num_unit, precision=precision) + ' ' + unit
@@ -204,7 +209,10 @@ def set_overlaps(set1, set2, s1='s1', s2='s2', n_samples=None):
             f'{s2} - {s1}': set2.difference(set1),
         }
         from itertools import islice
-        overlaps['samples'] = {k: list(islice(v, n_samples)) for k, v in raw_samples.items()}  # type: ignore
+
+        overlaps['samples'] = {
+            k: list(islice(v, n_samples)) for k, v in raw_samples.items()
+        }  # type: ignore
     return overlaps
 
 
@@ -229,6 +237,7 @@ def nested_type(obj, unions=False):
         >>> print(nested_type(obj, unions=True))
         Dict[str, Dict[str, float | ndarray | str]]
     """
+
     def _resolve(_types):
         if len(_types) == 1:
             return ub.peek(_types)
@@ -238,7 +247,8 @@ def nested_type(obj, unions=False):
             else:
                 return 'Any'
 
-    from functools  import partial
+    from functools import partial
+
     _nested = partial(nested_type, unions=unions)
     if isinstance(obj, dict):
         keytypes = {_nested(k) for k in obj.keys()}
@@ -259,25 +269,36 @@ def nested_type(obj, unions=False):
         objtype = 'Tuple[{}]'.format(', '.join(itemtypes))
     else:
         import typing
+
         objtype = type(obj).__name__
         if hasattr(typing, '_normalize_alias'):
             objtype = typing._normalize_alias.get(objtype, objtype)
         else:
-            objtype = {'list': 'List',
-                       'tuple': 'Tuple',
-                       'dict': 'Dict',
-                       'set': 'Set',
-                       'frozenset': 'FrozenSet',
-                       'deque': 'Deque',
-                       'defaultdict': 'DefaultDict',
-                       'type': 'Type',
-                       'Set': 'AbstractSet'}.get(objtype, objtype)
+            objtype = {
+                'list': 'List',
+                'tuple': 'Tuple',
+                'dict': 'Dict',
+                'set': 'Set',
+                'frozenset': 'FrozenSet',
+                'deque': 'Deque',
+                'defaultdict': 'DefaultDict',
+                'type': 'Type',
+                'Set': 'AbstractSet',
+            }.get(objtype, objtype)
         return objtype
     return objtype
 
 
-def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
-             colored=False, style='ndiff', fromfile='', tofile=''):
+def difftext(
+    text1,
+    text2,
+    context_lines=0,
+    ignore_whitespace=False,
+    colored=False,
+    style='ndiff',
+    fromfile='',
+    tofile='',
+):
     r"""
     Uses difflib to return a difference string between two similar texts
 
@@ -354,9 +375,12 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
 
         # NOTE: lineterm='\n' avoids extra blank lines and matches typical patches
         diff_iter = difflib.unified_diff(
-            text1_lines, text2_lines,
-            fromfile=os.fspath(fromfile), tofile=os.fspath(tofile),
-            n=n, lineterm='\n'
+            text1_lines,
+            text2_lines,
+            fromfile=os.fspath(fromfile),
+            tofile=os.fspath(tofile),
+            n=n,
+            lineterm='\n',
         )
         text = ''.join(diff_iter)
         # For git patches, never colorize the output (would break `git apply`).
@@ -371,8 +395,9 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
     if ignore_whitespace:
         text1_lines = [t.rstrip() for t in text1_lines]
         text2_lines = [t.rstrip() for t in text2_lines]
-        ndiff_kw = dict(linejunk=difflib.IS_LINE_JUNK,
-                        charjunk=difflib.IS_CHARACTER_JUNK)
+        ndiff_kw = dict(
+            linejunk=difflib.IS_LINE_JUNK, charjunk=difflib.IS_CHARACTER_JUNK
+        )
     else:
         ndiff_kw = {}
 
@@ -382,15 +407,18 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
         diff_lines = all_diff_lines
     else:
         # boolean for every line if it is marked or not
-        ismarked_list = [len(line) > 0 and line[0] in '+-?'
-                         for line in all_diff_lines]
+        ismarked_list = [
+            len(line) > 0 and line[0] in '+-?' for line in all_diff_lines
+        ]
         # flag lines that are within context_lines away from a diff line
         isvalid_list = ismarked_list[:]
         for i in range(1, context_lines + 1):
-            isvalid_list[:-i] = list(map(any, zip(
-                isvalid_list[:-i], ismarked_list[i:])))
-            isvalid_list[i:] = list(map(any, zip(
-                isvalid_list[i:], ismarked_list[:-i])))
+            isvalid_list[:-i] = list(
+                map(any, zip(isvalid_list[:-i], ismarked_list[i:]))
+            )
+            isvalid_list[i:] = list(
+                map(any, zip(isvalid_list[i:], ismarked_list[:-i]))
+            )
 
         USE_BREAK_LINE = True
         if USE_BREAK_LINE:
@@ -398,7 +426,7 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
             diff_lines = []
             prev = False
             visual_break = '\n <... FILTERED CONTEXT ...> \n'
-            #print(isvalid_list)
+            # print(isvalid_list)
             for line, valid in zip(all_diff_lines, isvalid_list):
                 if valid:
                     diff_lines.append(line)
@@ -414,10 +442,20 @@ def difftext(text1, text2, context_lines=0, ignore_whitespace=False,
     return text
 
 
-def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
-              return_text=False, return_tree=False, pathstyle='name',
-              max_depth=None, with_type=False, abs_root_label=True,
-              ignore_dotprefix=True, colors=not ub.NO_COLOR):
+def tree_repr(
+    cwd=None,
+    max_files=100,
+    dirblocklist=None,
+    show_nfiles='auto',
+    return_text=False,
+    return_tree=False,
+    pathstyle='name',
+    max_depth=None,
+    with_type=False,
+    abs_root_label=True,
+    ignore_dotprefix=True,
+    colors=not ub.NO_COLOR,
+):
     """
     Filesystem tree representation
 
@@ -487,7 +525,9 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
         if dirblocklist is None:
             dirblocklist = MultiPattern.coerce('.*', hint='glob')
         else:
-            dirblocklist = MultiPattern.coerce([dirblocklist, '.*'], hint='glob')
+            dirblocklist = MultiPattern.coerce(
+                [dirblocklist, '.*'], hint='glob'
+            )
 
     walker = dirstats.DirectoryWalker(
         cwd,
@@ -506,6 +546,7 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
 
     from xdev.util_networkx import write_network_text
     import io
+
     file = io.StringIO()
     write_network_text(tree, file)
     text = file.getvalue()
@@ -517,6 +558,7 @@ def tree_repr(cwd=None, max_files=100, dirblocklist=None, show_nfiles='auto',
     else:
         if colors:
             from rich import print as rprint
+
             rprint(text)
         else:
             print(text)
@@ -532,7 +574,13 @@ def textfind(text, pattern):
     Return a colored text that highlights the pattern
     """
     import re
+
     pat = re.compile('(' + pattern + ')')
     parts = pat.split(text)
-    new_text = ''.join([p if idx % 2 == 0 else ub.color_text(p, 'red') for idx, p in enumerate(parts)])
+    new_text = ''.join(
+        [
+            p if idx % 2 == 0 else ub.color_text(p, 'red')
+            for idx, p in enumerate(parts)
+        ]
+    )
     print(new_text)

@@ -41,6 +41,7 @@ class ChDir:
         >>>         assert ub.Path.cwd() == dir1
         >>>     assert ub.Path.cwd() == dpath
     """
+
     def __init__(self, dpath):
         self.context_dpath = dpath
         self.orig_dpath = None
@@ -56,8 +57,9 @@ class ChDir:
             os.chdir(self.orig_dpath)  # type: ignore
 
 
-def sidecar_glob(main_pat, sidecar_ext, main_key='main', sidecar_key=None,
-                 recursive=0):
+def sidecar_glob(
+    main_pat, sidecar_ext, main_key='main', sidecar_key=None, recursive=0
+):
     """
     Similar to a regular glob, but returns a dictionary with associated
     main-file / sidecar-file pairs.
@@ -127,6 +129,7 @@ def sidecar_glob(main_pat, sidecar_ext, main_key='main', sidecar_key=None,
     from xdev import patterns as util_pattern
     import warnings
     import os
+
     _len_ext = len(sidecar_ext)
     main_pat = os.fspath(main_pat)
     glob_patterns = [main_pat]
@@ -174,6 +177,7 @@ def sidecar_glob(main_pat, sidecar_ext, main_key='main', sidecar_key=None,
                     row[other_key] = other_path
             if needs_yeild:
                 yield row
+
     # without this, yilded rows might modify themselves later, that is
     # confusing for a user. Don't do it or come up with a scheme where we
     # detect if a row is "complete" and only yeild it then
@@ -203,6 +207,7 @@ def tree(path):
     """
     import os
     from os.path import join
+
     for r, fs, ds in os.walk(path):
         for f in fs:
             yield join(r, f)

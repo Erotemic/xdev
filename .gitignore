@@ -90,3 +90,5 @@ ENV/
 .ropeproject
 
 .pytest_cache
+*.tar.gz
+git-of-theseus

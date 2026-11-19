@@ -32,6 +32,8 @@ ipython-pygments-lexers==1.1.1 ; python_full_version >= '3.11'
     # via ipython
 jedi==0.20.0
     # via ipython
+kwconf==0.10.0
+    # via xdev
 lazy-loader==0.5
     # via xdev
 markdown-it-py==3.0.0 ; python_full_version < '3.11'
@@ -93,16 +95,12 @@ pytest==9.0.3
     #   xdev
 pytest-cov==7.1.0
     # via xdev
-pyyaml==6.0.3 ; python_full_version < '4'
-    # via scriptconfig
 redbaron==0.9.2
     # via xinspect
 rich==15.0.0
     # via xdev
 rply==0.7.8
     # via baron
-scriptconfig==0.9.1
-    # via xdev
 stack-data==0.6.3
     # via ipython
 tomli==2.4.1 ; python_full_version <= '3.11'
@@ -119,7 +117,6 @@ typing-extensions==4.15.0 ; python_full_version < '3.12'
     #   ipython
 ubelt==1.4.2
     # via
-    #   scriptconfig
     #   xdev
     #   xinspect
 wcwidth==0.7.0

@@ -1,6 +1,7 @@
 """
 Utilities to just-in-time-cythonize a module at runtime.
 """
+
 from collections import defaultdict
 from os.path import dirname, join, basename, splitext, exists
 import os
@@ -18,8 +19,15 @@ MAX_AUTOJIT_TRIES = float('inf')
 # 1
 
 
-def import_module_from_pyx(fname, dpath=None, error="raise", autojit=True,
-                           verbose=1, recompile=False, annotate=False):
+def import_module_from_pyx(
+    fname,
+    dpath=None,
+    error='raise',
+    autojit=True,
+    verbose=1,
+    recompile=False,
+    annotate=False,
+):
     """
     Attempts to import a module corresponding to a pyx file.
 
@@ -60,7 +68,7 @@ def import_module_from_pyx(fname, dpath=None, error="raise", autojit=True,
         print('[xdev.import] pyx_fpath = {!r}'.format(pyx_fpath))
 
     if not exists(pyx_fpath):
-        raise AssertionError("pyx file {!r} does not exist".format(pyx_fpath))
+        raise AssertionError('pyx file {!r} does not exist'.format(pyx_fpath))
 
     try:
         # This functionality depends on ubelt
@@ -68,15 +76,14 @@ def import_module_from_pyx(fname, dpath=None, error="raise", autojit=True,
         import ubelt as ub
     except Exception:
         if verbose:
-            print("Autojit requires ubelt, which failed to import")
-        if error == "ignore":
+            print('Autojit requires ubelt, which failed to import')
+        if error == 'ignore':
             module = None
-        elif error == "raise":
+        elif error == 'raise':
             raise
         else:
             raise KeyError(error)
     else:
-
         if autojit:
             if verbose > 3:
                 print('autojit = {!r}'.format(autojit))
@@ -90,13 +97,17 @@ def import_module_from_pyx(fname, dpath=None, error="raise", autojit=True,
                 if verbose > 3:
                     print('try it')
                 try:
-                    _autojit_cython(pyx_fpath, verbose=verbose,
-                                    recompile=recompile, annotate=annotate)
+                    _autojit_cython(
+                        pyx_fpath,
+                        verbose=verbose,
+                        recompile=recompile,
+                        annotate=annotate,
+                    )
                     if verbose > 3:
                         print('got it')
                 except Exception as ex:
-                    warnings.warn("Cython autojit failed: ex={!r}".format(ex))
-                    if error == "raise":
+                    warnings.warn('Cython autojit failed: ex={!r}'.format(ex))
+                    if error == 'raise':
                         raise
 
         try:
@@ -107,9 +118,9 @@ def import_module_from_pyx(fname, dpath=None, error="raise", autojit=True,
             #     sys.modules.pop(modname, None)
             module = ub.import_module_from_path(pyx_fpath)
         except Exception:
-            if error == "ignore":
+            if error == 'ignore':
                 module = None
-            elif error == "raise":
+            elif error == 'raise':
                 raise
             else:
                 raise KeyError(error)
@@ -126,15 +137,15 @@ def _platform_pylib_exts():  # nocover
 
     valid_exts = []
     # handle PEP 3149 -- ABI version tagged .so files
-    base_ext = "." + sysconfig.get_config_var("EXT_SUFFIX").split(".")[-1]
+    base_ext = '.' + sysconfig.get_config_var('EXT_SUFFIX').split('.')[-1]
     # ABI = application binary interface
     tags = [
-        sysconfig.get_config_var("SOABI"),
-        "abi3",  # not sure why this one is valid, but it is
+        sysconfig.get_config_var('SOABI'),
+        'abi3',  # not sure why this one is valid, but it is
     ]
     tags = [t for t in tags if t]
     for tag in tags:
-        valid_exts.append("." + tag + base_ext)
+        valid_exts.append('.' + tag + base_ext)
     # return with and without API flags
     valid_exts.append(base_ext)
     valid_exts = tuple(valid_exts)
@@ -156,12 +167,13 @@ def _autojit_cython(pyx_fpath, verbose=1, recompile=False, annotate=False):
         higher is more verbose.
     """
     import shutil
+
     if verbose > 3:
         print('_autojit_cython')
 
     # TODO: move necessary ubelt utilities to nx.utils?
     # Separate this into its own util?
-    if shutil.which("cythonize"):
+    if shutil.which('cythonize'):
         pyx_dpath = dirname(pyx_fpath)
 
         if verbose > 3:
@@ -200,8 +212,8 @@ def _autojit_cython(pyx_fpath, verbose=1, recompile=False, annotate=False):
             content = ub.readfrom(pyx_fpath)
             mtime = os.stat(pyx_fpath).st_mtime
 
-            depends = [ub.hash_data(content, hasher="sha1"), mtime]
-            stamp_fname = ub.augpath(so_fname, ext=".jit.stamp")
+            depends = [ub.hash_data(content, hasher='sha1'), mtime]
+            stamp_fname = ub.augpath(so_fname, ext='.jit.stamp')
             stamp = ub.CacheStamp(
                 stamp_fname,
                 dpath=pyx_dpath,
@@ -219,25 +231,40 @@ def _autojit_cython(pyx_fpath, verbose=1, recompile=False, annotate=False):
                 if needs_numpy:
                     import numpy as np
                     import pathlib
+
                     numpy_include_dpath = pathlib.Path(np.get_include())
                     numpy_dpath = (numpy_include_dpath / '../..').resolve()
                     # cythonize_env['CPATH'] = numpy_include_dpath + ':' + cythonize_env.get('CPATH', '')
-                    cythonize_env['CFLAGS'] = ' '.join([
-                        '-I{}'.format(numpy_include_dpath),
-                    ]) + cythonize_env.get('CFLAGS', '')
+                    cythonize_env['CFLAGS'] = ' '.join(
+                        [
+                            '-I{}'.format(numpy_include_dpath),
+                        ]
+                    ) + cythonize_env.get('CFLAGS', '')
 
-                    cythonize_env['LDFLAGS'] = ' '.join([
-                        '-L{} -lnpyrandom'.format(numpy_dpath / 'random/lib'),
-                        '-L{} -lnpymath'.format(numpy_dpath / 'core/lib'),
-                    ]) + cythonize_env.get('LDFLAGS', '')
+                    cythonize_env['LDFLAGS'] = ' '.join(
+                        [
+                            '-L{} -lnpyrandom'.format(
+                                numpy_dpath / 'random/lib'
+                            ),
+                            '-L{} -lnpymath'.format(numpy_dpath / 'core/lib'),
+                        ]
+                    ) + cythonize_env.get('LDFLAGS', '')
                 if annotate:
                     cythonize_args.append('-a')
                 cythonize_args.append('-i {}'.format(pyx_fpath))
                 cythonize_cmd = ' '.join(cythonize_args)
                 if needs_numpy:
-                    print('CFLAGS="{}" '.format(cythonize_env['CFLAGS']) + 'LDFLAGS="{}" '.format(cythonize_env['LDFLAGS']) + cythonize_cmd)
-                ub.cmd(cythonize_cmd, verbose=verbose, check=True,
-                       env=cythonize_env)
+                    print(
+                        'CFLAGS="{}" '.format(cythonize_env['CFLAGS'])
+                        + 'LDFLAGS="{}" '.format(cythonize_env['LDFLAGS'])
+                        + cythonize_cmd
+                    )
+                ub.cmd(
+                    cythonize_cmd,
+                    verbose=verbose,
+                    check=True,
+                    env=cythonize_env,
+                )
                 stamp.renew()
             return True
     else:

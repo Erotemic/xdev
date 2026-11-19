@@ -23,14 +23,15 @@ class DummyProfiler:
     def __call__(self, func):
         return func
 
-    def add_module(self, mod=None):
-        ...
+    def add_module(self, mod=None): ...
 
     def print_report(self):
         print('Profiling was not enabled')
 
+
 if IS_PROFILING:
     import line_profiler  # type: ignore
+
     profile = line_profiler.profile
     profile.enable()
 else:
@@ -70,6 +71,7 @@ def profile_now(func):
              6         1      22618.0  22618.0     81.5      set(range(1000))
     """
     import line_profiler  # type: ignore
+
     profile = line_profiler.LineProfiler()
     new_func = profile(func)
     new_func.profile = profile
@@ -86,6 +88,7 @@ def profile_now(func):
             pass
         finally:
             new_func.print_report()
+
     wraper.new_func = new_func  # type: ignore
     return wraper
 
@@ -95,6 +98,7 @@ def profile_globals():
     Adds the profile decorator to all global functions
     """
     import inspect
+
     parent_frame = inspect.currentframe().f_back  # type: ignore
 
     parent_frame.f_globals  # type: ignore
@@ -103,6 +107,7 @@ def profile_globals():
 
     from xdoctest.dynamic_analysis import is_defined_by_module
     import xdev
+
     for k, v in module.__dict__.items():
         if is_defined_by_module(v, module):
             if callable(v):
@@ -116,4 +121,5 @@ if __name__ == '__main__':
         python -m xdev.profiler all
     """
     import xdoctest
+
     xdoctest.doctest_module(__file__)

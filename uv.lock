@@ -22,6 +22,9 @@ resolution-markers = [
 [options]
 exclude-newer = "2026-05-23T04:00:00Z"
 
+[options.exclude-newer-package]
+kwconf = false
+
 [[package]]
 name = "alabaster"
 version = "1.0.0"
@@ -1817,18 +1820,13 @@ wheels = [
 ]
 
 [[package]]
-name = "scriptconfig"
-version = "0.9.1"
+name = "kwconf"
+version = "0.10.0"
 source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyyaml", marker = "python_full_version < '4'" },
-    { name = "ubelt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a4/4c/6d0ecc5e29b498dc6b5402a0c561e97dd00ce1aeebdc5e494cc5fa8a0b6b/scriptconfig-0.9.1.tar.gz", hash = "sha256:9766c2ee601c4b8d97753ba13a914f8c0a212da4f6d2aec18ad628fd8b53d7ef", size = 112424, upload-time = "2026-03-02T17:33:34.405Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a8/60/8c9001edf2683355343806382c2606890c3ccb6373ee17b821e7f1b3141e/kwconf-0.10.0.tar.gz", hash = "sha256:eb4bd0586fc2fd015d5738d65231163a81840815235fc588d13dcc139a843239", size = 118990, upload-time = "2026-06-19T17:39:19.744Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/57/00/2bf691dfc2b0170013d466fcdbbfc9d036e26d6049d74efaf7775401321d/scriptconfig-0.9.1-py3-none-any.whl", hash = "sha256:4b69e2f4eb681ec4480e9bb5d6c82d2f8c82a9badc703a261ee8940736101d86", size = 87103, upload-time = "2026-03-02T17:33:31.394Z" },
+    { url = "https://files.pythonhosted.org/packages/de/84/19e8037d5d99896a48bf94d85199edba4f331c92a82a2d3ccbb35c431ebd/kwconf-0.10.0-py3-none-any.whl", hash = "sha256:f4ef2dd871748acdf565de61bfbcca028b9736de37ff2d6483757a114bdbde49", size = 92221, upload-time = "2026-06-19T17:39:17.929Z" },
 ]
-
 [[package]]
 name = "six"
 version = "1.17.0"
@@ -2508,7 +2506,7 @@ dependencies = [
     { name = "pyflakes" },
     { name = "pygments" },
     { name = "rich" },
-    { name = "scriptconfig" },
+    { name = "kwconf" },
     { name = "ubelt" },
     { name = "xinspect" },
 ]
@@ -2619,7 +2617,7 @@ requires-dist = [
     { name = "python-dateutil", marker = "extra == 'optional'", specifier = ">=2.8.2" },
     { name = "pytimeparse", marker = "extra == 'optional'", specifier = ">=1.1.8" },
     { name = "rich", specifier = ">=12.3.0" },
-    { name = "scriptconfig", specifier = ">=0.8.4" },
+    { name = "kwconf", specifier = ">=0.10.0" },
     { name = "sphinx", marker = "extra == 'docs'", specifier = ">=4.3.2" },
     { name = "sphinx-autoapi", marker = "extra == 'docs'", specifier = ">=1.8.4" },
     { name = "sphinx-autobuild", marker = "extra == 'docs'", specifier = ">=2021.3.14" },

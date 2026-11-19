@@ -2,7 +2,6 @@ from _typeshed import Incomplete
 from collections.abc import Generator
 from typing import Any
 
-
 class _AsciiBaseGlyphs:
     empty: str
     newtree_last: str
@@ -11,20 +10,17 @@ class _AsciiBaseGlyphs:
     within_forest: str
     within_tree: str
 
-
 class AsciiDirectedGlyphs(_AsciiBaseGlyphs):
     last: str
     mid: str
     backedge: str
     vertical_edge: str
 
-
 class AsciiUndirectedGlyphs(_AsciiBaseGlyphs):
     last: str
     mid: str
     backedge: str
     vertical_edge: str
-
 
 class _UtfBaseGlyphs:
     empty: str
@@ -34,13 +30,11 @@ class _UtfBaseGlyphs:
     within_forest: str
     within_tree: str
 
-
 class UtfDirectedGlyphs(_UtfBaseGlyphs):
     last: str
     mid: str
     backedge: str
     vertical_edge: str
-
 
 class UtfUndirectedGlyphs(_UtfBaseGlyphs):
     last: str
@@ -48,31 +42,28 @@ class UtfUndirectedGlyphs(_UtfBaseGlyphs):
     backedge: str
     vertical_edge: str
 
-
 def generate_network_text(
-        graph,
-        with_labels: bool = ...,
-        sources: Incomplete | None = ...,
-        max_depth: Incomplete | None = ...,
-        ascii_only: bool = ...,
-        vertical_chains: bool = ...) -> Generator[Any, None, Any]:
-    ...
-
-
-def write_network_text(graph,
-                       path: Incomplete | None = ...,
-                       with_labels: bool = ...,
-                       sources: Incomplete | None = ...,
-                       max_depth: Incomplete | None = ...,
-                       ascii_only: bool = ...,
-                       end: str = ...,
-                       vertical_chains: bool = ...) -> None:
-    ...
-
-
-def graph_str(graph,
-              with_labels: bool = ...,
-              sources: Incomplete | None = ...,
-              write: Incomplete | None = ...,
-              ascii_only: bool = ...):
-    ...
+    graph,
+    with_labels: bool = ...,
+    sources: Incomplete | None = ...,
+    max_depth: Incomplete | None = ...,
+    ascii_only: bool = ...,
+    vertical_chains: bool = ...,
+) -> Generator[Any, None, Any]: ...
+def write_network_text(
+    graph,
+    path: Incomplete | None = ...,
+    with_labels: bool = ...,
+    sources: Incomplete | None = ...,
+    max_depth: Incomplete | None = ...,
+    ascii_only: bool = ...,
+    end: str = ...,
+    vertical_chains: bool = ...,
+) -> None: ...
+def graph_str(
+    graph,
+    with_labels: bool = ...,
+    sources: Incomplete | None = ...,
+    write: Incomplete | None = ...,
+    ascii_only: bool = ...,
+): ...

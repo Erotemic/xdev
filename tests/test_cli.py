@@ -1,9 +1,8 @@
-
-
 def test_xdev_cli():
     import ubelt as ub
     import xdev
     import sys
+
     py_exe = sys.executable
 
     info = ub.cmd(f'{py_exe} -m xdev --help', verbose=3)

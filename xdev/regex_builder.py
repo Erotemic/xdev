@@ -1,6 +1,7 @@
 """
 Helpers to build cross-flavor regular expressions.
 """
+
 import re
 
 
@@ -17,14 +18,32 @@ class RegexBuilder:
         import re
         pat = re.compile('[A-Z-]+')
     """
+
     common_patterns = [
-        {'key': 'word',      'pattern': r'\w', 'docs': r'An alphanumeric word, i.e. [a-zA-Z0-9_] (also matches unicode characters in Python)'},
-        {'key': 'non-word',  'pattern': r'\W', 'docs': r'Anything not a word'},
-        {'key': 'space',     'pattern': r'\s', 'docs': r'Any space character including: " " "\t", "\n", "\r"'},
-        {'key': 'non-space', 'pattern': r'\S', 'docs': r'Any non-space character'},
-        {'key': 'digit',     'pattern': r'\d', 'docs': r'any number 0-9'},
-        {'key': 'digit',     'pattern': r'\D', 'docs': r'any non-digit'},
-        {'key': 'zero_or_more', 'pattern': r'*', 'docs': r'zero or more of the pattern to the left', 'alias': ['kleene_star']},
+        {
+            'key': 'word',
+            'pattern': r'\w',
+            'docs': r'An alphanumeric word, i.e. [a-zA-Z0-9_] (also matches unicode characters in Python)',
+        },
+        {'key': 'non-word', 'pattern': r'\W', 'docs': r'Anything not a word'},
+        {
+            'key': 'space',
+            'pattern': r'\s',
+            'docs': r'Any space character including: " " "\t", "\n", "\r"',
+        },
+        {
+            'key': 'non-space',
+            'pattern': r'\S',
+            'docs': r'Any non-space character',
+        },
+        {'key': 'digit', 'pattern': r'\d', 'docs': r'any number 0-9'},
+        {'key': 'digit', 'pattern': r'\D', 'docs': r'any non-digit'},
+        {
+            'key': 'zero_or_more',
+            'pattern': r'*',
+            'docs': r'zero or more of the pattern to the left',
+            'alias': ['kleene_star'],
+        },
     ]
 
     def __init__(self):
@@ -38,10 +57,14 @@ class RegexBuilder:
         """
         if positive is not None:
             import ubelt as ub
+
             ub.schedule_deprecation(
-                'xdev', 'positive', 'arg to lookbehind',
+                'xdev',
+                'positive',
+                'arg to lookbehind',
                 migration='use mode=positive or mode=negative instead',
-                deprecate='now')
+                deprecate='now',
+            )
             mode = 'positive' if positive else 'negative'
 
         if mode == 'positive':
@@ -57,10 +80,14 @@ class RegexBuilder:
         """
         if positive is not None:
             import ubelt as ub
+
             ub.schedule_deprecation(
-                'xdev', 'positive', 'arg to lookbehind',
+                'xdev',
+                'positive',
+                'arg to lookbehind',
                 migration='use mode=positive or mode=negative instead',
-                deprecate='now')
+                deprecate='now',
+            )
             mode = 'positive' if positive else 'negative'
 
         if mode == 'positive':
@@ -197,8 +224,14 @@ class VimRegexBuilder(RegexBuilder):
     """
 
     vim_patterns = [
-        {'key': 'nongreedy_zero_or_more', 'pattern': r'\{-}', 'docs': r'non-greedily matches zero or more of the pattern to the left', 'alias': ['nongreedy_kleene_star']},
+        {
+            'key': 'nongreedy_zero_or_more',
+            'pattern': r'\{-}',
+            'docs': r'non-greedily matches zero or more of the pattern to the left',
+            'alias': ['nongreedy_kleene_star'],
+        },
     ]
+
     def __init__(self):
         self.constructs = {}
         self.constructs['positive_lookahead'] = r'\({pat}\)\@='
@@ -302,12 +335,26 @@ class PythonRegexBuilder(RegexBuilder):
     """
 
     python_patterns = [
-        {'key': 'nongreedy_zero_or_more', 'pattern': r'*?', 'docs': r'non-greedily matches zero or more of the pattern to the left', 'alias': ['nongreedy_kleene_star']},
-        {'key': 'boundary', 'pattern': r'\b', 'docs': r'The boundary at the start or end of a word'},
+        {
+            'key': 'nongreedy_zero_or_more',
+            'pattern': r'*?',
+            'docs': r'non-greedily matches zero or more of the pattern to the left',
+            'alias': ['nongreedy_kleene_star'],
+        },
+        {
+            'key': 'boundary',
+            'pattern': r'\b',
+            'docs': r'The boundary at the start or end of a word',
+        },
         {'key': 'non-boundary', 'pattern': r'\B'},
         {'key': 'left-expr', 'pattern': r'\A'},
-        {'key': 'right-expr', 'pattern': r'\Z', 'docs': 'Matches only at the end of the string'},
+        {
+            'key': 'right-expr',
+            'pattern': r'\Z',
+            'docs': 'Matches only at the end of the string',
+        },
     ]
+
     def __init__(self):
         self.constructs = {}
         self.constructs['positive_lookahead'] = r'(?={pat})'

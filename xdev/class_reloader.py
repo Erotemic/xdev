@@ -2,6 +2,7 @@
 Candidate for deprecation. (I haven't used this in ages; not sure if it still
 works)
 """
+
 import types
 import ubelt as ub
 import sys
@@ -27,7 +28,9 @@ def reload_class(self, verbose=True, reload_module=True):
                 print('[class] calling _on_reload for ' + classname)
             self._on_reload()
         elif verbose > 1:
-            print('[class] ' + classname + ' does not have an _on_reload function')
+            print(
+                '[class] ' + classname + ' does not have an _on_reload function'
+            )
 
         # Do for all inheriting classes
         def find_base_clases(_class, find_base_clases=None):
@@ -45,12 +48,15 @@ def reload_class(self, verbose=True, reload_module=True):
         # HACK
         # ignore = {HashComparable2}
         ignore = {}
-        class_list = [_class for _class in class_list
-                      if _class not in ignore]
+        class_list = [_class for _class in class_list if _class not in ignore]
         for _class in class_list:
             if verbose:
-                print('[class] reloading parent ' + _class.__name__ +
-                      ' from ' + _class.__module__)
+                print(
+                    '[class] reloading parent '
+                    + _class.__name__
+                    + ' from '
+                    + _class.__module__
+                )
             if _class.__module__ == '__main__':
                 # Attempt to find the module that is the main module
                 # This may be very hacky and potentially break
@@ -61,13 +67,19 @@ def reload_class(self, verbose=True, reload_module=True):
                 module_ = sys.modules[_class.__module__]
             if reload_module:
                 import imp
+
                 if verbose:
-                    print('[class] reloading ' + _class.__module__ + ' with imp')
+                    print(
+                        '[class] reloading ' + _class.__module__ + ' with imp'
+                    )
                 try:
                     imp.reload(module_)
                 except (ImportError, AttributeError):
-                    print('[class] fallback reloading ' + _class.__module__ +
-                          ' with imp')
+                    print(
+                        '[class] fallback reloading '
+                        + _class.__module__
+                        + ' with imp'
+                    )
                     # one last thing to try. probably used
                     # import_module_from_fpath when importing this module
                     imp.load_source(module_.__name__, module_.__file__)  # type: ignore
@@ -82,7 +94,11 @@ def reload_class(self, verbose=True, reload_module=True):
                 print('[class] calling _initialize_self for ' + classname)
             self._initialize_self()
         elif verbose > 1:
-            print('[class] ' + classname + ' does not have an _initialize_self function')
+            print(
+                '[class] '
+                + classname
+                + ' does not have an _initialize_self function'
+            )
     except Exception:
         raise
 

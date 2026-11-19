@@ -1,4 +1,9 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (
+    absolute_import,
+    division,
+    print_function,
+    unicode_literals,
+)
 import numpy as np
 import decimal
 from collections import defaultdict
@@ -35,13 +40,13 @@ def edit_distance(string1, string2):
     """
 
     import Levenshtein  # type: ignore
+
     isiter1 = ub.iterable(string1)
     isiter2 = ub.iterable(string2)
     strs1 = string1 if isiter1 else [string1]
     strs2 = string2 if isiter2 else [string2]
     distmat = [
-        [Levenshtein.distance(str1, str2) for str2 in strs2]
-        for str1 in strs1
+        [Levenshtein.distance(str1, str2) for str2 in strs2] for str1 in strs1
     ]
     # broadcast
     if not isiter2:
@@ -150,7 +155,7 @@ def knapsack(items, maxweight, method='iterative'):
         return knapsack_ilp(items, maxweight)
     else:
         raise NotImplementedError('[util_alg] knapsack method=%r' % (method,))
-        #return knapsack_iterative_numpy(items, maxweight)
+        # return knapsack_iterative_numpy(items, maxweight)
 
 
 def knapsack_ilp(items, maxweight, verbose=False):
@@ -174,21 +179,23 @@ def knapsack_ilp(items, maxweight, verbose=False):
         >>> print('items_subset = %s' % (ub.repr2(items_subset, nl=1),))
     """
     import pulp  # type: ignore
+
     # Given Input
-    values  = [t[0] for t in items]
+    values = [t[0] for t in items]
     weights = [t[1] for t in items]
     indices = [t[2] for t in items]
     # Formulate integer program
-    prob = pulp.LpProblem("Knapsack", pulp.LpMaximize)
+    prob = pulp.LpProblem('Knapsack', pulp.LpMaximize)
     # Solution variables
-    x = pulp.LpVariable.dicts(name='x', indexs=indices,
-                              lowBound=0, upBound=1, cat=pulp.LpInteger)
+    x = pulp.LpVariable.dicts(
+        name='x', indexs=indices, lowBound=0, upBound=1, cat=pulp.LpInteger
+    )
     # maximize objective function
     prob.objective = sum(v * x[i] for v, i in zip(values, indices))
     # subject to
     prob.add(sum(w * x[i] for w, i in zip(weights, indices)) <= maxweight)
     # Solve using with solver like CPLEX, GLPK, or SCIP.
-    #pulp.CPLEX().solve(prob)
+    # pulp.CPLEX().solve(prob)
     pulp.PULP_CBC_CMD().solve(prob)
     # Read solution
     flags = [x[i].varValue for i in indices]
@@ -198,7 +205,11 @@ def knapsack_ilp(items, maxweight, verbose=False):
     if verbose:
         print(prob)
         print('OPT:')
-        print('\n'.join(['    %s = %s' % (x[i].name, x[i].varValue) for i in indices]))
+        print(
+            '\n'.join(
+                ['    %s = %s' % (x[i].name, x[i].varValue) for i in indices]
+            )
+        )
         print('total_value = %r' % (total_value,))
     return total_value, items_subset
 
@@ -226,7 +237,7 @@ def knapsack_iterative(items, maxweight):
     # Knapsack requires integral weights
     weights = [t[1] for t in items]
     max_exp = max([number_of_decimals(w_) for w_ in weights])
-    coeff = 10 ** max_exp
+    coeff = 10**max_exp
     # Adjust weights to be integral
     int_maxweight = int(maxweight * coeff)
     int_items = [(v, int(w * coeff), idx) for v, w, idx in items]
@@ -271,7 +282,7 @@ def knapsack_iterative_int(items, maxweight):
         DPMAT = [[dpmat[r][c] for c in range(maxweight)] for r in range(len(items))]
         KMAT  = [[kmat[r][c] for c in range(maxweight)] for r in range(len(items))]
     """
-    values  = [t[0] for t in items]
+    values = [t[0] for t in items]
     weights = [t[1] for t in items]
     maxsize = maxweight + 1
     # Sparse representation seems better
@@ -325,15 +336,15 @@ def knapsack_iterative_numpy(items, maxweight):
         dpmat[i, w] is the total value of the items with weight at most W
         T is the set of indicies in the optimal solution
     """
-    #import numpy as np
+    # import numpy as np
     items = np.array(items)
     weights = items.T[1]
     # Find maximum decimal place (this problem is in NP)
     max_exp = max([number_of_decimals(w_) for w_ in weights])
-    coeff = 10 ** max_exp
+    coeff = 10**max_exp
     # Adjust weights to be integral
     weights = (weights * coeff).astype(np.int64)
-    values  = items.T[0]
+    values = items.T[0]
     MAXWEIGHT = int(maxweight * coeff)
     W_SIZE = MAXWEIGHT + 1
 
@@ -368,7 +379,7 @@ def knapsack_iterative_numpy(items, maxweight):
     return total_value, items_subset
 
 
-#def knapsack_all_solns(items, maxweight):
+# def knapsack_all_solns(items, maxweight):
 #    """
 #    TODO: return all optimal solutions to the knapsack problem
 
@@ -425,4 +436,5 @@ if __name__ == '__main__':
         python ~/code/xdev/xdev/algo.py all
     """
     import xdoctest
+
     xdoctest.doctest_module(__file__)

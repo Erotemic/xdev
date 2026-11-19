@@ -42,6 +42,8 @@ ipython-pygments-lexers==1.1.1 ; python_full_version >= '3.11'
     # via ipython
 jedi==0.20.0
     # via ipython
+kwconf==0.10.0
+    # via xdev
 kwutil==0.3.8
     # via xdev
 lazy-loader==0.5
@@ -140,8 +142,6 @@ pytimeparse==1.1.8
     # via xdev
 pytz==2026.2 ; python_full_version < '3.11'
     # via pandas
-pyyaml==6.0.3 ; python_full_version < '4'
-    # via scriptconfig
 rapidfuzz==3.14.5 ; python_full_version < '4'
     # via levenshtein
 redbaron==0.9.2
@@ -150,8 +150,6 @@ rich==15.0.0
     # via xdev
 rply==0.7.8
     # via baron
-scriptconfig==0.9.1
-    # via xdev
 six==1.17.0
     # via python-dateutil
 stack-data==0.6.3
@@ -182,7 +180,6 @@ tzdata==2026.2 ; (python_full_version < '4' and sys_platform == 'emscripten') or
 ubelt==1.4.2
     # via
     #   kwutil
-    #   scriptconfig
     #   xdev
     #   xinspect
 wcwidth==0.7.0

@@ -2,6 +2,7 @@
 A simple way to interactively control the iteratin of a loop. Useful for
 viewing multiple things sequentially.
 """
+
 import ubelt as ub
 import numpy as np
 from . import embeding
@@ -55,9 +56,18 @@ class InteractiveIter:
         >>>     InteractiveIter.draw()
 
     """
-    def __init__(iiter, iterable=None, enabled=True, startx=0,
-                 default_action='next', custom_actions=[], wraparound=False,
-                 display_item=False, verbose=True):
+
+    def __init__(
+        iiter,
+        iterable=None,
+        enabled=True,
+        startx=0,
+        default_action='next',
+        custom_actions=[],
+        wraparound=False,
+        display_item=False,
+        verbose=True,
+    ):
         r"""
         Args:
             iterable (None): (default = None)
@@ -83,15 +93,17 @@ class InteractiveIter:
         iiter.custom_funcs = util.take_column(custom_actions, 3)
         iiter.action_tuples = [
             # (name, list, help)
-            ('next',   ['n'], 'move to the next index'),
-            ('prev',   ['p'], 'move to the previous index'),
+            ('next', ['n'], 'move to the next index'),
+            ('prev', ['p'], 'move to the previous index'),
             ('reload', ['r'], 'stay at the same index'),
-            ('index',  ['x', 'i', 'index'], 'move to that index'),
-            ('set',    ['set'], 'set current index value'),
-            ('ipy',    ['ipy', 'ipython', 'cmd'], 'start IPython'),
-            ('quit',   ['q', 'exit', 'quit'], 'quit'),
+            ('index', ['x', 'i', 'index'], 'move to that index'),
+            ('set', ['set'], 'set current index value'),
+            ('ipy', ['ipy', 'ipython', 'cmd'], 'start IPython'),
+            ('quit', ['q', 'exit', 'quit'], 'quit'),
         ] + iiter.custom_actions
-        default_action_index = util.take_column(iiter.action_tuples, 0).index(default_action)
+        default_action_index = util.take_column(iiter.action_tuples, 0).index(
+            default_action
+        )
         iiter.action_tuples[default_action_index][1].append('')
         iiter.action_keys = {tup[0]: tup[1] for tup in iiter.action_tuples}
         iiter.index = startx
@@ -115,22 +127,32 @@ class InteractiveIter:
         global LIVE_INTERACTIVE_ITER
         LIVE_INTERACTIVE_ITER = iiter
         if not iiter.enabled:
-            for item in ub.ProgIter(iiter.iterable, desc='nointeract: ', freq=1, adjust=False):
+            for item in ub.ProgIter(
+                iiter.iterable, desc='nointeract: ', freq=1, adjust=False
+            ):
                 yield item
             return
             # raise StopIteration()
         # assert isinstance(iiter.iterable, INDEXABLE_TYPES), 'input is not iterable'
         iiter.num_items = len(iiter.iterable)  # type: ignore
         if iiter.verbose:
-            print('[IITER] Begin interactive iteration: %r items\n' % (iiter.num_items))
+            print(
+                '[IITER] Begin interactive iteration: %r items\n'
+                % (iiter.num_items)
+            )
         if iiter.num_items == 0:
             return
             # raise StopIteration
         # TODO: replace with ub.ProgIter
         # mark_, end_ = util_progress.log_progress(length=iiter.num_items,
         #                                          lbl='interaction: ', freq=1)
-        prog = ub.ProgIter(total=iiter.num_items, desc='interaction: ', freq=1,
-                           show_times=True, verbose=2)
+        prog = ub.ProgIter(
+            total=iiter.num_items,
+            desc='interaction: ',
+            freq=1,
+            show_times=True,
+            verbose=2,
+        )
 
         prog.begin()
         prompt_on_start = False
@@ -207,10 +229,15 @@ class InteractiveIter:
         preforms an actionm based on a user answer
         """
         ans = ans_.strip(' ')
+
         def parse_str_value(ans):
             return ' '.join(ans.split(' ')[1:])
+
         def chack_if_answer_was(valid_keys):
-            return any([ans == key or ans.startswith(key + ' ') for key in valid_keys])
+            return any(
+                [ans == key or ans.startswith(key + ' ') for key in valid_keys]
+            )
+
         # Handle standard actions
         if ans in iiter.action_keys['quit']:
             raise StopIteration()
@@ -237,10 +264,11 @@ class InteractiveIter:
             for func, tup in zip(iiter.custom_funcs, iiter.custom_actions):
                 key = tup[0]
                 if chack_if_answer_was(iiter.action_keys[key]):
-                    value  = parse_str_value(ans)
+                    value = parse_str_value(ans)
                     # cal custom function
                     print('Calling custom action func')
                     import inspect
+
                     argspec = inspect.getfullargspec(func)
                     if len(argspec.args) == 3:
                         # Forgot why I had custom functions take args in the first place
@@ -256,8 +284,11 @@ class InteractiveIter:
     def prompt(iiter):
         def _or_phrase(list_):
             return util.conj_phrase(list(map(repr, map(str, list_))), 'or')
-        msg_list = ['enter %s to %s' % (_or_phrase(tup[1]), tup[2])
-                    for tup in iiter.action_tuples]
+
+        msg_list = [
+            'enter %s to %s' % (_or_phrase(tup[1]), tup[2])
+            for tup in iiter.action_tuples
+        ]
         msg = ub.indent('\n'.join(msg_list), ' | * ')
         msg = ''.join([' +-----------', msg, '\n L-----------\n'])
         # TODO: timeout, help message
@@ -280,5 +311,6 @@ class InteractiveIter:
         for that task.
         """
         from matplotlib import pyplot as plt  # type: ignore
+
         fig = plt.gcf()
         fig.canvas.draw()
